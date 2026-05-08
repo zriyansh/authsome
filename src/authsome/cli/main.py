@@ -899,21 +899,14 @@ def doctor(ctx_obj: ContextObj) -> None:
     else:
         all_ok = results.get("status") == "ready"
         for key, val in results.get("checks", {}).items():
+            ok = val == "ok"
             ctx_obj.echo(f"{key}: ", nl=False)
-            if val == "ok":
-                ctx_obj.echo("OK", color="green")
-            elif val == "warn":
-                ctx_obj.echo("WARN", color="yellow")
-            else:
-                ctx_obj.echo("FAIL", color="red")
+            ctx_obj.echo("OK" if ok else "FAIL", color="green" if ok else "red")
         issues = results.get("issues", [])
         if issues:
-            ctx_obj.echo("\nIssues/warnings found:")
+            ctx_obj.echo("\nIssues found:", color="red")
             for issue in issues:
-                if issue.startswith("warning:"):
-                    ctx_obj.echo(f" - {issue}", color="yellow")
-                else:
-                    ctx_obj.echo(f" - {issue}", color="red")
+                ctx_obj.echo(f" - {issue}", color="red")
 
         if not all_ok:
             sys.exit(1)
