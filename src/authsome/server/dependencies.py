@@ -8,6 +8,7 @@ from pathlib import Path
 from authsome.auth import AuthService
 from authsome.auth.providers.registry import ProviderRegistry
 from authsome.identity import current
+from authsome.server.urls import build_server_base_url
 from authsome.store.local import LocalAppStore
 from authsome.vault import Vault
 
@@ -15,6 +16,11 @@ from authsome.vault import Vault
 def get_authsome_home() -> Path:
     """Return the local Authsome home directory."""
     return Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
+
+
+def get_server_base_url() -> str:
+    """Return the daemon's canonical external base URL."""
+    return build_server_base_url()
 
 
 def create_auth_service(home: Path | None = None) -> AuthService:

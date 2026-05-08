@@ -868,11 +868,13 @@ def daemon() -> None:
 
 
 @daemon.command(name="serve")
-def daemon_serve() -> None:
+@click.option("--host", default="127.0.0.1", show_default=True, help="Host interface to bind.")
+@click.option("--port", default=7998, type=int, show_default=True, help="TCP port to listen on.")
+def daemon_serve(host: str, port: int) -> None:
     """Run the daemon in the foreground."""
     from authsome.server.daemon import serve
 
-    serve()
+    serve(host=host, port=port)
 
 
 @daemon.command(name="start")

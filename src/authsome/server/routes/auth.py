@@ -12,7 +12,7 @@ from authsome.auth import AuthService
 from authsome.auth.input_provider import InputField
 from authsome.auth.models.enums import FlowType
 from authsome.auth.sessions import AuthSession, AuthSessionStatus, AuthSessionStore
-from authsome.server.routes._deps import get_auth_service, get_auth_sessions
+from authsome.server.routes._deps import get_auth_service, get_auth_sessions, get_server_base_url
 from authsome.server.schemas import (
     AuthSessionResponse,
     NoneAction,
@@ -21,12 +21,10 @@ from authsome.server.schemas import (
     StartAuthSessionRequest,
 )
 from authsome.server.ui import pages
+from authsome.server.urls import build_auth_input_url, build_callback_url, build_device_url
 from authsome.utils import utc_now
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-LOCAL_BASE_URL = "http://127.0.0.1:7998"
-OAUTH_CALLBACK_URL = f"{LOCAL_BASE_URL}/auth/callback/oauth"
 
 
 @router.post("/sessions", response_model=AuthSessionResponse)
@@ -35,6 +33,7 @@ def start_session(
     background_tasks: BackgroundTasks,
     auth: AuthService = Depends(get_auth_service),
     sessions: AuthSessionStore = Depends(get_auth_sessions),
+    server_base_url: str = Depends(get_server_base_url),
 ) -> AuthSessionResponse:
     definition = auth.get_provider(body.provider)
     flow = FlowType(body.flow) if body.flow else definition.flow
@@ -45,6 +44,7 @@ def start_session(
         flow_type=flow.value,
     )
     session.payload["force"] = body.force
+    session.payload["callback_url_override"] = build_callback_url(server_base_url)
     if body.scopes is not None:
         session.payload["requested_scopes"] = body.scopes
     if body.base_url is not None:
@@ -60,7 +60,7 @@ def start_session(
             ):
                 session.state = AuthSessionStatus.COMPLETED
                 session.status_message = "Already connected"
-                return _session_response(session)
+                return _session_response(session, server_base_url)
         except Exception:
             pass
 
@@ -68,7 +68,7 @@ def start_session(
     if fields:
         session.state = AuthSessionStatus.WAITING_FOR_USER
         session.payload["input_fields"] = [_field_to_payload(field) for field in fields]
-        return _session_response(session)
+        return _session_response(session, server_base_url)
 
     auth.begin_login_flow(
         session=session,
@@ -80,15 +80,16 @@ def start_session(
         _update_device_code_expiry(sessions, session)
         background_tasks.add_task(auth.background_resume, session)
     sessions.index_oauth_state(session)
-    return _session_response(session)
+    return _session_response(session, server_base_url)
 
 
 @router.get("/sessions/{session_id}", response_model=AuthSessionResponse)
 def get_session(
     session_id: str,
     sessions: AuthSessionStore = Depends(get_auth_sessions),
+    server_base_url: str = Depends(get_server_base_url),
 ) -> AuthSessionResponse:
-    return _session_response(sessions.get(session_id))
+    return _session_response(sessions.get(session_id), server_base_url)
 
 
 @router.post("/sessions/{session_id}/resume", response_model=AuthSessionResponse)
@@ -97,6 +98,7 @@ def resume_session(
     body: ResumeAuthSessionRequest,
     auth: AuthService = Depends(get_auth_service),
     sessions: AuthSessionStore = Depends(get_auth_sessions),
+    server_base_url: str = Depends(get_server_base_url),
 ) -> AuthSessionResponse:
     session = sessions.get(session_id)
     try:
@@ -110,7 +112,7 @@ def resume_session(
         session.state = AuthSessionStatus.FAILED
         session.error_message = str(exc)
         raise
-    return _session_response(session)
+    return _session_response(session, server_base_url)
 
 
 @router.get("/callback/oauth", response_class=HTMLResponse)
@@ -192,6 +194,7 @@ async def submit_input(
     background_tasks: BackgroundTasks,
     auth: AuthService = Depends(get_auth_service),
     sessions: AuthSessionStore = Depends(get_auth_sessions),
+    server_base_url: str = Depends(get_server_base_url),
 ):
     session = sessions.get(session_id)
     form = await request.form()
@@ -206,6 +209,7 @@ async def submit_input(
         session.status_message = "Login successful"
         return HTMLResponse(pages.message_page("Authentication successful", "You can close this window."))
 
+    session.payload["callback_url_override"] = build_callback_url(server_base_url)
     auth.begin_login_flow(
         session=session,
         scopes=session.payload.get("requested_scopes"),
@@ -216,7 +220,7 @@ async def submit_input(
         _update_device_code_expiry(sessions, session)
         background_tasks.add_task(auth.background_resume, session)
         if session.payload.get("user_code") and session.payload.get("verification_uri"):
-            return RedirectResponse(url=f"{LOCAL_BASE_URL}/auth/sessions/{session.session_id}/device", status_code=303)
+            return RedirectResponse(url=build_device_url(server_base_url, session.session_id), status_code=303)
 
     sessions.index_oauth_state(session)
 
@@ -234,17 +238,17 @@ def _update_device_code_expiry(sessions: AuthSessionStore, session: AuthSession)
             pass
 
 
-def _session_response(session: AuthSession) -> AuthSessionResponse:
+def _session_response(session: AuthSession, server_base_url: str) -> AuthSessionResponse:
     action: OpenUrlAction | NoneAction = NoneAction()
     input_fields = session.payload.get("input_fields")
     if input_fields and session.state != AuthSessionStatus.COMPLETED:
-        action = OpenUrlAction(type="open_url", url=f"{LOCAL_BASE_URL}/auth/sessions/{session.session_id}/input")
+        action = OpenUrlAction(type="open_url", url=build_auth_input_url(server_base_url, session.session_id))
     elif session.payload.get("auth_url"):
         action = OpenUrlAction(type="open_url", url=str(session.payload["auth_url"]))
     elif session.payload.get("verification_uri") and session.payload.get("user_code"):
         action = OpenUrlAction(
             type="open_url",
-            url=f"{LOCAL_BASE_URL}/auth/sessions/{session.session_id}/device",
+            url=build_device_url(server_base_url, session.session_id),
         )
     return AuthSessionResponse(
         id=session.session_id,
