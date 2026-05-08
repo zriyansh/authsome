@@ -71,4 +71,5 @@ def _patch_runtime(mock_client: MagicMock, monkeypatch: pytest.MonkeyPatch, tmp_
     monkeypatch.setattr(main_mod.audit, "log", lambda *a, **kw: None)
 
     import webbrowser
+
     monkeypatch.setattr(webbrowser, "open", lambda *a, **kw: True)
