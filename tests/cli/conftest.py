@@ -69,3 +69,6 @@ def _patch_runtime(mock_client: MagicMock, monkeypatch: pytest.MonkeyPatch, tmp_
     monkeypatch.setattr(main_mod, "resolve_runtime_client", lambda: mock_client)
     monkeypatch.setattr(main_mod.audit, "setup", lambda *a, **kw: None)
     monkeypatch.setattr(main_mod.audit, "log", lambda *a, **kw: None)
+
+    import webbrowser
+    monkeypatch.setattr(webbrowser, "open", lambda *a, **kw: True)
