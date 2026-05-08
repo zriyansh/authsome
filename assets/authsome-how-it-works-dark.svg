@@ -1,79 +1,150 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 480" fill="none">
   <style>
-    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    text { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
   </style>
+
   <defs>
-    <marker id="arrowhead" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="7" orient="auto-start-reverse">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#19BA5D" fill-opacity="0.7"/>
+    <!-- Arrowhead: soft white -->
+    <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <polygon points="0 0, 10 3.5, 0 7" fill="white" fill-opacity="0.35"/>
     </marker>
-    <filter id="shadow">
-      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.35"/>
+
+    <!-- Subtle glow for Authsome zone -->
+    <filter id="copper-glow" x="-8%" y="-8%" width="116%" height="116%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feFlood flood-color="#cc8066" flood-opacity="0.12" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="shadow"/>
+      <feMerge><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+
+    <!-- Card drop shadow -->
+    <filter id="card-shadow" x="-4%" y="-4%" width="108%" height="116%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+
+    <!-- Authsome zone gradient border simulation via linearGradient -->
+    <linearGradient id="copper-border" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#cc8066" stop-opacity="0.55"/>
+      <stop offset="50%" stop-color="#cc8066" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#cc8066" stop-opacity="0.45"/>
+    </linearGradient>
+
+    <!-- Subtle card border gradient -->
+    <linearGradient id="card-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0.04"/>
+    </linearGradient>
+
+    <!-- Highlight card border (Local Auth Proxy) -->
+    <linearGradient id="highlight-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#cc8066" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#cc8066" stop-opacity="0.18"/>
+    </linearGradient>
+
+    <!-- Background noise / subtle texture using a pattern -->
+    <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="20" cy="20" r="0.6" fill="white" fill-opacity="0.04"/>
+    </pattern>
   </defs>
 
-  <rect width="1160" height="480" rx="16" fill="#0d1117"/>
+  <!-- Canvas -->
+  <rect width="1160" height="480" rx="20" fill="#09090b"/>
+  <!-- Subtle dot texture -->
+  <rect width="1160" height="480" rx="20" fill="url(#dots)"/>
+  <!-- Vignette edges -->
+  <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+    <stop offset="0%" stop-color="transparent"/>
+    <stop offset="100%" stop-color="#09090b" stop-opacity="0.6"/>
+  </radialGradient>
+  <rect width="1160" height="480" rx="20" fill="url(#vignette)"/>
 
-  <text x="580" y="28" text-anchor="middle" fill="#8b949e" font-size="11" font-weight="600" letter-spacing="0.6">AI AGENTS</text>
+  <!-- ── SECTION LABEL: AI AGENTS ── -->
+  <text x="580" y="30" text-anchor="middle" fill="#71717a" font-size="10" font-weight="600" letter-spacing="2">AI AGENTS</text>
 
-  <rect x="52" y="42" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
-  <text x="148" y="73" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Claude Code</text>
+  <!-- Agent Cards (top row) -->
+  <!-- Claude Code -->
+  <rect x="52" y="42" width="192" height="52" rx="10" fill="white" fill-opacity="0.03" stroke="url(#card-border)" stroke-width="1"/>
+  <text x="148" y="73" text-anchor="middle" fill="#f4f4f5" font-size="13" font-weight="500" letter-spacing="-0.2">Claude Code</text>
 
-  <rect x="268" y="42" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
-  <text x="364" y="73" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Codex</text>
+  <!-- Codex -->
+  <rect x="268" y="42" width="192" height="52" rx="10" fill="white" fill-opacity="0.03" stroke="url(#card-border)" stroke-width="1"/>
+  <text x="364" y="73" text-anchor="middle" fill="#f4f4f5" font-size="13" font-weight="500" letter-spacing="-0.2">Codex</text>
 
-  <rect x="484" y="42" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
-  <text x="580" y="73" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">OpenClaw</text>
+  <!-- OpenClaw -->
+  <rect x="484" y="42" width="192" height="52" rx="10" fill="white" fill-opacity="0.03" stroke="url(#card-border)" stroke-width="1"/>
+  <text x="580" y="73" text-anchor="middle" fill="#f4f4f5" font-size="13" font-weight="500" letter-spacing="-0.2">OpenClaw</text>
 
-  <rect x="700" y="42" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
-  <text x="796" y="73" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Hermes</text>
+  <!-- Hermes -->
+  <rect x="700" y="42" width="192" height="52" rx="10" fill="white" fill-opacity="0.03" stroke="url(#card-border)" stroke-width="1"/>
+  <text x="796" y="73" text-anchor="middle" fill="#f4f4f5" font-size="13" font-weight="500" letter-spacing="-0.2">Hermes</text>
 
-  <rect x="916" y="42" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
-  <text x="1012" y="73" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Any Agent</text>
+  <!-- Any Agent -->
+  <rect x="916" y="42" width="192" height="52" rx="10" fill="white" fill-opacity="0.03" stroke="url(#card-border)" stroke-width="1"/>
+  <text x="1012" y="73" text-anchor="middle" fill="#f4f4f5" font-size="13" font-weight="500" letter-spacing="-0.2">Any Agent</text>
 
-  <line x1="148" y1="94" x2="148" y2="154" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
-  <line x1="364" y1="94" x2="364" y2="154" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
-  <line x1="580" y1="94" x2="580" y2="154" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
-  <line x1="796" y1="94" x2="796" y2="154" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
-  <line x1="1012" y1="94" x2="1012" y2="154" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
+  <!-- Arrows: agents → Authsome -->
+  <line x1="148" y1="94" x2="148" y2="152" stroke="white" stroke-width="1" stroke-opacity="0.2" marker-end="url(#arrow)"/>
+  <line x1="364" y1="94" x2="364" y2="152" stroke="white" stroke-width="1" stroke-opacity="0.2" marker-end="url(#arrow)"/>
+  <line x1="580" y1="94" x2="580" y2="152" stroke="white" stroke-width="1" stroke-opacity="0.2" marker-end="url(#arrow)"/>
+  <line x1="796" y1="94" x2="796" y2="152" stroke="white" stroke-width="1" stroke-opacity="0.2" marker-end="url(#arrow)"/>
+  <line x1="1012" y1="94" x2="1012" y2="152" stroke="white" stroke-width="1" stroke-opacity="0.2" marker-end="url(#arrow)"/>
 
-  <rect x="36" y="158" width="1088" height="156" rx="16" fill="none" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.18"/>
-  <text x="580" y="184" text-anchor="middle" fill="#19BA5D" font-size="11" font-weight="700" letter-spacing="1.8">AUTHSOME</text>
+  <!-- ── AUTHSOME ZONE ── -->
+  <!-- Outer glow rect -->
+  <rect x="34" y="156" width="1092" height="160" rx="14" fill="#cc8066" fill-opacity="0.03" filter="url(#copper-glow)"/>
+  <!-- Border -->
+  <rect x="34" y="156" width="1092" height="160" rx="14" fill="none" stroke="url(#copper-border)" stroke-width="1"/>
 
-  <rect x="74" y="194" width="312" height="88" rx="12" fill="#161b22" stroke="#30363d" filter="url(#shadow)"/>
-  <text x="230" y="228" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="600">CLI</text>
-  <text x="230" y="248" text-anchor="middle" fill="#8b949e" font-size="11">Login, export, and run commands</text>
+  <!-- Zone label -->
+  <text x="580" y="178" text-anchor="middle" fill="#cc8066" font-size="10" font-weight="600" letter-spacing="2.5" fill-opacity="0.9">AUTHSOME</text>
 
-  <rect x="424" y="194" width="312" height="88" rx="12" fill="#161b22" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" filter="url(#shadow)"/>
-  <text x="580" y="228" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="600">Local Auth Proxy</text>
-  <text x="580" y="248" text-anchor="middle" fill="#8b949e" font-size="11">Injects fresh credentials at request time</text>
+  <!-- CLI card -->
+  <rect x="72" y="190" width="310" height="92" rx="10" fill="white" fill-opacity="0.035" stroke="url(#card-border)" stroke-width="1" filter="url(#card-shadow)"/>
+  <text x="227" y="226" text-anchor="middle" fill="#f4f4f5" font-size="14" font-weight="600" letter-spacing="-0.3">CLI</text>
+  <text x="227" y="248" text-anchor="middle" fill="#71717a" font-size="11">Login, export, and run commands</text>
 
-  <rect x="774" y="194" width="312" height="88" rx="12" fill="#161b22" stroke="#30363d" filter="url(#shadow)"/>
-  <text x="930" y="228" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="600">Encrypted Vault</text>
-  <text x="930" y="248" text-anchor="middle" fill="#8b949e" font-size="11">Local storage and token refresh</text>
+  <!-- Local Auth Proxy card (highlighted with copper) -->
+  <rect x="422" y="190" width="316" height="92" rx="10" fill="#cc8066" fill-opacity="0.06" stroke="url(#highlight-border)" stroke-width="1" filter="url(#card-shadow)"/>
+  <text x="580" y="226" text-anchor="middle" fill="#f4f4f5" font-size="14" font-weight="600" letter-spacing="-0.3">Local Auth Proxy</text>
+  <text x="580" y="248" text-anchor="middle" fill="#a1a1aa" font-size="11">Injects fresh credentials at request time</text>
 
-  <line x1="386" y1="238" x2="424" y2="238" stroke="#8b949e" stroke-width="1" stroke-dasharray="4 3" stroke-opacity="0.45"/>
-  <line x1="736" y1="238" x2="774" y2="238" stroke="#8b949e" stroke-width="1" stroke-dasharray="4 3" stroke-opacity="0.45"/>
+  <!-- Encrypted Vault card -->
+  <rect x="778" y="190" width="310" height="92" rx="10" fill="white" fill-opacity="0.035" stroke="url(#card-border)" stroke-width="1" filter="url(#card-shadow)"/>
+  <text x="933" y="226" text-anchor="middle" fill="#f4f4f5" font-size="14" font-weight="600" letter-spacing="-0.3">Encrypted Vault</text>
+  <text x="933" y="248" text-anchor="middle" fill="#71717a" font-size="11">Local storage and token refresh</text>
 
-  <line x1="148" y1="314" x2="148" y2="374" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
-  <line x1="364" y1="314" x2="364" y2="374" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
-  <line x1="580" y1="314" x2="580" y2="374" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
-  <line x1="796" y1="314" x2="796" y2="374" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
-  <line x1="1012" y1="314" x2="1012" y2="374" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
+  <!-- Dashed connectors inside Authsome zone -->
+  <line x1="382" y1="236" x2="422" y2="236" stroke="white" stroke-width="1" stroke-dasharray="3 4" stroke-opacity="0.15"/>
+  <line x1="738" y1="236" x2="778" y2="236" stroke="white" stroke-width="1" stroke-dasharray="3 4" stroke-opacity="0.15"/>
 
-  <text x="580" y="394" text-anchor="middle" fill="#8b949e" font-size="11" font-weight="600" letter-spacing="0.6">EXTERNAL SERVICES</text>
+  <!-- Arrows: Authsome → services -->
+  <line x1="148" y1="316" x2="148" y2="370" stroke="white" stroke-width="1" stroke-opacity="0.2" marker-end="url(#arrow)"/>
+  <line x1="364" y1="316" x2="364" y2="370" stroke="white" stroke-width="1" stroke-opacity="0.2" marker-end="url(#arrow)"/>
+  <line x1="580" y1="316" x2="580" y2="370" stroke="white" stroke-width="1" stroke-opacity="0.2" marker-end="url(#arrow)"/>
+  <line x1="796" y1="316" x2="796" y2="370" stroke="white" stroke-width="1" stroke-opacity="0.2" marker-end="url(#arrow)"/>
+  <line x1="1012" y1="316" x2="1012" y2="370" stroke="white" stroke-width="1" stroke-opacity="0.2" marker-end="url(#arrow)"/>
 
-  <rect x="52" y="408" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
-  <text x="148" y="439" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Stripe</text>
+  <!-- ── SECTION LABEL: EXTERNAL SERVICES ── -->
+  <text x="580" y="390" text-anchor="middle" fill="#71717a" font-size="10" font-weight="600" letter-spacing="2">EXTERNAL SERVICES</text>
 
-  <rect x="268" y="408" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
-  <text x="364" y="439" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Github</text>
+  <!-- Service cards (bottom row) -->
+  <!-- Stripe -->
+  <rect x="52" y="404" width="192" height="52" rx="10" fill="white" fill-opacity="0.03" stroke="url(#card-border)" stroke-width="1"/>
+  <text x="148" y="435" text-anchor="middle" fill="#f4f4f5" font-size="13" font-weight="500" letter-spacing="-0.2">Stripe</text>
 
-  <rect x="484" y="408" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
-  <text x="580" y="439" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Posthog</text>
+  <!-- Github -->
+  <rect x="268" y="404" width="192" height="52" rx="10" fill="white" fill-opacity="0.03" stroke="url(#card-border)" stroke-width="1"/>
+  <text x="364" y="435" text-anchor="middle" fill="#f4f4f5" font-size="13" font-weight="500" letter-spacing="-0.2">Github</text>
 
-  <rect x="700" y="408" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
-  <text x="796" y="439" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Gmail</text>
+  <!-- Posthog -->
+  <rect x="484" y="404" width="192" height="52" rx="10" fill="white" fill-opacity="0.03" stroke="url(#card-border)" stroke-width="1"/>
+  <text x="580" y="435" text-anchor="middle" fill="#f4f4f5" font-size="13" font-weight="500" letter-spacing="-0.2">Posthog</text>
 
-  <rect x="916" y="408" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
-  <text x="1012" y="439" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Any App</text>
+  <!-- Gmail -->
+  <rect x="700" y="404" width="192" height="52" rx="10" fill="white" fill-opacity="0.03" stroke="url(#card-border)" stroke-width="1"/>
+  <text x="796" y="435" text-anchor="middle" fill="#f4f4f5" font-size="13" font-weight="500" letter-spacing="-0.2">Gmail</text>
+
+  <!-- Any App -->
+  <rect x="916" y="404" width="192" height="52" rx="10" fill="white" fill-opacity="0.03" stroke="url(#card-border)" stroke-width="1"/>
+  <text x="1012" y="435" text-anchor="middle" fill="#f4f4f5" font-size="13" font-weight="500" letter-spacing="-0.2">Any App</text>
 </svg>
