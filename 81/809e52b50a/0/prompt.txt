@@ -1,0 +1,9 @@
+continue
+
+---
+
+Configure dependabot, create a pr template, add min_release_age to 10 days, enable secret scanning as well, env is not needed at all, ty is configured for strict typing, add check for naming consistency and cyclomatic complexity too. Work in a branch
+
+---
+
+Create issue for auto doc generation,
