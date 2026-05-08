@@ -250,7 +250,7 @@ def _validate_provider_endpoints(definition: Any, ctx_obj: ContextObj) -> list[t
 @click.option(
     "--log-file",
     "log_file",
-    default=str(Path.home() / ".authsome" / "logs" / "authsome.log"),
+    default=str(Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome"))) / "logs" / "authsome.log"),
     show_default=True,
     help="Path for the rotating log file. Pass empty string to disable.",
 )
@@ -665,6 +665,7 @@ def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, 
                 )
             if ctx_obj.json_output:
                 ctx_obj.print_json({field: data[field]})
+                sys.exit(0)
             else:
                 ctx_obj.echo(str(data[field]))
         else:
@@ -681,6 +682,7 @@ def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, 
 
     if ctx_obj.json_output:
         ctx_obj.print_json(data)
+        sys.exit(0)
     else:
         for k, v in data.items():
             ctx_obj.echo(f"{k}: {v}")
