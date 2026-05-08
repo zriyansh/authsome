@@ -1,0 +1,7 @@
+<task-notification>
+<task-id>bihasla8f</task-id>
+<tool-use-id>toolu_014NqUPPmuAA67MQs2QgAfxQ</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-mbajaj-src-for-agents-authsome/a37c92d5-b179-40b9-b5fa-7a79f36ad4f6/tasks/bihasla8f.output</output-file>
+<status>killed</status>
+<summary>Background command "Register dummy provider with empty string header_prefix" was stopped</summary>
+</task-notification>
