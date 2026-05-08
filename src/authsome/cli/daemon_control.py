@@ -35,8 +35,7 @@ def ensure_daemon() -> AuthsomeApiClient:
     client = AuthsomeApiClient(DEFAULT_DAEMON_URL)
     if _is_ready(client):
         return client
-    if _pid_file_process_alive():
-        stop_daemon()
+    stop_daemon()
     start_daemon()
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
@@ -71,7 +70,17 @@ def start_daemon() -> None:
 
 
 def stop_daemon() -> None:
-    pid = _read_pid()
+    pid = None
+    client = AuthsomeApiClient(DEFAULT_DAEMON_URL)
+    try:
+        health_data = client.health()
+        pid = health_data.get("pid")
+    except Exception:
+        pass
+
+    if pid is None:
+        pid = _read_pid()
+
     if pid is None:
         return
     try:
@@ -104,7 +113,23 @@ def daemon_status() -> dict[str, Any]:
 
 def _is_ready(client: AuthsomeApiClient) -> bool:
     try:
-        if client.health().get("status") != "ok":
+        health = client.health()
+        from authsome import __version__
+
+        if health.get("version") != __version__:
+            return False
+
+        # If we are in local development, auto-restart the daemon if any code file changes.
+        if STATE_FILE.exists():
+            daemon_start_time = STATE_FILE.stat().st_mtime
+            src_dir = Path(__file__).parent.parent
+            for path in src_dir.glob("**/*"):
+                if path.is_file() and not any(part.startswith("__") or part == ".pytest_cache" for part in path.parts):
+                    if path.suffix in (".py", ".json", ".html", ".css", ".js"):
+                        if path.stat().st_mtime > daemon_start_time:
+                            return False
+
+        if health.get("status") != "ok":
             return False
         client.ready()
         return True
