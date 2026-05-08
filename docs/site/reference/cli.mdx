@@ -160,10 +160,10 @@ uvx authsome remove acmecrm
 ### `register`
 
 ```bash
-uvx authsome register <path/to/provider.json> [--force]
+uvx authsome register <path/to/provider.json> [--yes] [--force]
 ```
 
-Validates the JSON, copies it into `~/.authsome/providers/`, and confirms the new provider appears in `authsome list`. Use `--force` to overwrite an existing provider with the same name.
+Validates the JSON, copies it into `~/.authsome/providers/`, and confirms the new provider appears in `authsome list`. Use `--yes` to skip the confirmation prompt in scripts, and `--force` to overwrite an existing provider with the same name.
 
 See [Custom providers](/guides/custom-providers) for full templates.
 

@@ -748,10 +748,11 @@ def run(ctx_obj: ContextObj, command: tuple[str]) -> None:
 @cli.command()
 @click.argument("path")
 @click.option("--force", is_flag=True, help="Force overwrite if provider exists.")
+@click.option("--yes", is_flag=True, help="Skip the registration confirmation prompt.")
 @common_options
 @pass_ctx
 @handle_errors
-def register(ctx_obj: ContextObj, path: str, force: bool) -> None:
+def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> None:
     """Register a provider definition from a local JSON file path."""
 
     actx = ctx_obj.initialize()
@@ -770,7 +771,7 @@ def register(ctx_obj: ContextObj, path: str, force: bool) -> None:
         endpoints_to_check = _validate_provider_endpoints(definition, ctx_obj)
 
         # 3. Confirmation prompt
-        if not ctx_obj.json_output and not ctx_obj.quiet and not force:
+        if not ctx_obj.json_output and not ctx_obj.quiet and not yes:
             ctx_obj.echo(f"Registering '{definition.name}' provider:")
             for name, val, _ in endpoints_to_check:
                 ctx_obj.echo(f"  - {name}: {val}")
