@@ -129,8 +129,7 @@ def _is_ready(client: AuthsomeApiClient) -> bool:
                         if path.stat().st_mtime > daemon_start_time:
                             return False
 
-        return health.get("status") == "ok" and client.ready().get("status") == "ready"
-        if client.health().get("status") != "ok":
+        if health.get("status") != "ok":
             return False
         client.ready()
         return True
