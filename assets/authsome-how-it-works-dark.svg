@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 520" fill="none" role="img" aria-labelledby="title desc">
-  <title id="title">How Authsome works</title>
-  <desc id="desc">AI agents send requests through Authsome, where the CLI, local auth proxy, and encrypted vault provide fresh credentials before requests reach external services.</desc>
+  <title id="title">authsome architecture diagram</title>
+  <desc id="desc">AI agents route through authsome's CLI, local auth proxy, and encrypted vault before reaching external services.</desc>
 
   <style>
     text {
@@ -11,271 +11,195 @@
   <defs>
     <linearGradient id="stage" x1="0" y1="0" x2="1160" y2="520" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#09090B"/>
-      <stop offset="0.48" stop-color="#000000"/>
+      <stop offset="0.52" stop-color="#000000"/>
       <stop offset="1" stop-color="#09090B"/>
     </linearGradient>
 
-    <radialGradient id="horizon" cx="50%" cy="48%" r="58%">
-      <stop offset="0" stop-color="#334155" stop-opacity="0.28"/>
-      <stop offset="0.28" stop-color="#6D8FD6" stop-opacity="0.18"/>
-      <stop offset="0.54" stop-color="#4A241D" stop-opacity="0.12"/>
+    <radialGradient id="core-haze" cx="50%" cy="50%" r="48%">
+      <stop offset="0" stop-color="#172A4A" stop-opacity="0.16"/>
+      <stop offset="0.46" stop-color="#4A241D" stop-opacity="0.08"/>
       <stop offset="1" stop-color="#09090B" stop-opacity="0"/>
     </radialGradient>
-
-    <radialGradient id="blue-bloom" cx="50%" cy="45%" r="42%">
-      <stop offset="0" stop-color="#6D8FD6" stop-opacity="0.18"/>
-      <stop offset="0.42" stop-color="#3B5F9F" stop-opacity="0.08"/>
-      <stop offset="1" stop-color="#09090B" stop-opacity="0"/>
-    </radialGradient>
-
-    <radialGradient id="copper-bloom" cx="48%" cy="51%" r="46%">
-      <stop offset="0" stop-color="#CC8066" stop-opacity="0.16"/>
-      <stop offset="0.44" stop-color="#4A241D" stop-opacity="0.1"/>
-      <stop offset="1" stop-color="#09090B" stop-opacity="0"/>
-    </radialGradient>
-
-    <linearGradient id="left-overlay" x1="0" y1="0" x2="760" y2="0" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#09090B" stop-opacity="0.94"/>
-      <stop offset="0.58" stop-color="#09090B" stop-opacity="0.46"/>
-      <stop offset="1" stop-color="#09090B" stop-opacity="0"/>
-    </linearGradient>
-
-    <linearGradient id="bottom-overlay" x1="0" y1="520" x2="0" y2="140" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#09090B" stop-opacity="0.98"/>
-      <stop offset="0.45" stop-color="#09090B" stop-opacity="0.42"/>
-      <stop offset="1" stop-color="#09090B" stop-opacity="0"/>
-    </linearGradient>
 
     <linearGradient id="glass-border" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22"/>
-      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="0.6" stop-color="#FFFFFF" stop-opacity="0.08"/>
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.03"/>
     </linearGradient>
 
-    <linearGradient id="auth-border" x1="34" y1="154" x2="1126" y2="338" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#6D8FD6" stop-opacity="0.68"/>
-      <stop offset="0.36" stop-color="#FFFFFF" stop-opacity="0.24"/>
-      <stop offset="0.62" stop-color="#CC8066" stop-opacity="0.54"/>
-      <stop offset="1" stop-color="#3B5F9F" stop-opacity="0.48"/>
+    <linearGradient id="module-fill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.085"/>
+      <stop offset="0.46" stop-color="#FFFFFF" stop-opacity="0.034"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.012"/>
     </linearGradient>
 
-    <linearGradient id="card-sheen" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.1"/>
-      <stop offset="0.42" stop-color="#FFFFFF" stop-opacity="0.035"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.015"/>
+    <linearGradient id="auth-border" x1="34" y1="180" x2="1126" y2="342" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6D8FD6" stop-opacity="0.46"/>
+      <stop offset="0.36" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="0.66" stop-color="#CC8066" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#334155" stop-opacity="0.38"/>
     </linearGradient>
 
-    <linearGradient id="copper-line" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#CC8066" stop-opacity="0"/>
-      <stop offset="0.34" stop-color="#CC8066" stop-opacity="0.78"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.12"/>
+    <linearGradient id="proxy-fill" x1="422" y1="225" x2="738" y2="318" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#172A4A" stop-opacity="0.28"/>
+      <stop offset="0.52" stop-color="#FFFFFF" stop-opacity="0.04"/>
+      <stop offset="1" stop-color="#4A241D" stop-opacity="0.18"/>
     </linearGradient>
 
-    <linearGradient id="steel-line" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#64748B" stop-opacity="0"/>
-      <stop offset="0.42" stop-color="#FFFFFF" stop-opacity="0.8"/>
-      <stop offset="1" stop-color="#334155" stop-opacity="0.14"/>
+    <linearGradient id="blue-arrow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B5F9F" stop-opacity="0.2"/>
+      <stop offset="0.45" stop-color="#6D8FD6" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.48"/>
     </linearGradient>
 
-    <linearGradient id="blue-line" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#6D8FD6" stop-opacity="0"/>
-      <stop offset="0.26" stop-color="#6D8FD6" stop-opacity="0.86"/>
-      <stop offset="0.54" stop-color="#FFFFFF" stop-opacity="0.68"/>
-      <stop offset="1" stop-color="#3B5F9F" stop-opacity="0.18"/>
+    <linearGradient id="copper-arrow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4A241D" stop-opacity="0.22"/>
+      <stop offset="0.45" stop-color="#CC8066" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.36"/>
     </linearGradient>
 
-    <linearGradient id="mixed-line" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#334155" stop-opacity="0"/>
-      <stop offset="0.26" stop-color="#6D8FD6" stop-opacity="0.5"/>
-      <stop offset="0.48" stop-color="#FFFFFF" stop-opacity="0.58"/>
-      <stop offset="0.72" stop-color="#CC8066" stop-opacity="0.36"/>
-      <stop offset="1" stop-color="#172A4A" stop-opacity="0.12"/>
+    <linearGradient id="steel-arrow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#162033" stop-opacity="0.24"/>
+      <stop offset="0.5" stop-color="#334155" stop-opacity="0.86"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.3"/>
     </linearGradient>
 
-    <linearGradient id="deep-copper-line" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#4A241D" stop-opacity="0"/>
-      <stop offset="0.36" stop-color="#CC8066" stop-opacity="0.5"/>
-      <stop offset="0.64" stop-color="#FFFFFF" stop-opacity="0.34"/>
-      <stop offset="1" stop-color="#4A241D" stop-opacity="0.14"/>
+    <linearGradient id="mixed-arrow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6D8FD6" stop-opacity="0.72"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#CC8066" stop-opacity="0.72"/>
     </linearGradient>
 
-    <linearGradient id="blue-reflection" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#6D8FD6" stop-opacity="0.06"/>
-      <stop offset="0.44" stop-color="#6D8FD6" stop-opacity="0.54"/>
-      <stop offset="1" stop-color="#172A4A" stop-opacity="0.1"/>
-    </linearGradient>
-
-    <linearGradient id="flow-line" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.16"/>
-      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.48"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.18"/>
-    </linearGradient>
-
-    <filter id="soft-glow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="7" result="blur"/>
-      <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0.38 0 1 0 0 0.52 0 0 1 0 0.84 0 0 0 0.6 0" result="glow"/>
-      <feMerge>
-        <feMergeNode in="glow"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-
-    <filter id="blue-glow" x="-34%" y="-34%" width="168%" height="168%">
-      <feGaussianBlur stdDeviation="9" result="blur"/>
-      <feFlood flood-color="#6D8FD6" flood-opacity="0.28" result="color"/>
-      <feComposite in="color" in2="blur" operator="in" result="glow"/>
-      <feMerge>
-        <feMergeNode in="glow"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-
-    <filter id="glass-shadow" x="-8%" y="-18%" width="116%" height="136%">
+    <filter id="module-shadow" x="-8%" y="-18%" width="116%" height="136%">
       <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.42"/>
     </filter>
 
-    <filter id="tiny-blur" x="-10%" y="-10%" width="120%" height="120%">
-      <feGaussianBlur stdDeviation="1.8"/>
+    <filter id="arrow-glow" x="-80%" y="-50%" width="260%" height="200%">
+      <feGaussianBlur stdDeviation="1.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
 
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-      <path d="M1 1 L9 5 L1 9" stroke="#FFFFFF" stroke-opacity="0.72" stroke-width="1.4" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
+    <filter id="core-glow" x="-18%" y="-28%" width="136%" height="156%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feFlood flood-color="#6D8FD6" flood-opacity="0.12" result="blue"/>
+      <feComposite in="blue" in2="blur" operator="in" result="blueGlow"/>
+      <feFlood flood-color="#CC8066" flood-opacity="0.1" result="copper"/>
+      <feComposite in="copper" in2="blur" operator="in" result="copperGlow"/>
+      <feMerge>
+        <feMergeNode in="blueGlow"/>
+        <feMergeNode in="copperGlow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M1.3 1.6 L8.2 5 L1.3 8.4" stroke="#6D8FD6" stroke-opacity="0.9" stroke-width="1.25" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
+    </marker>
+
+    <marker id="arrow-copper" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M1.3 1.6 L8.2 5 L1.3 8.4" stroke="#CC8066" stroke-opacity="0.9" stroke-width="1.25" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
+    </marker>
+
+    <marker id="arrow-steel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M1.3 1.6 L8.2 5 L1.3 8.4" stroke="#334155" stroke-opacity="0.9" stroke-width="1.25" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
     </marker>
   </defs>
 
-  <rect width="1160" height="520" rx="0" fill="url(#stage)"/>
-  <rect width="1160" height="520" fill="url(#horizon)"/>
-  <rect width="1160" height="520" fill="url(#blue-bloom)"/>
-  <rect width="1160" height="520" fill="url(#copper-bloom)"/>
+  <rect width="1160" height="520" fill="url(#stage)"/>
+  <rect width="1160" height="520" fill="url(#core-haze)"/>
 
-  <g opacity="0.94" filter="url(#blue-glow)">
-    <path d="M394 0 L394 176 L580 260 L766 176 L766 0" stroke="url(#mixed-line)" stroke-width="1.6"/>
-    <path d="M430 0 L430 190 L580 260 L730 190 L730 0" stroke="url(#steel-line)" stroke-width="1.2"/>
-    <path d="M448 0 L448 186 L580 260 L712 186 L712 0" stroke="url(#blue-line)" stroke-width="1.1"/>
-    <path d="M468 0 L468 190 L580 260 L692 190 L692 0" stroke="url(#copper-line)" stroke-width="1.1"/>
-    <path d="M490 0 L490 194 L580 260 L670 194 L670 0" stroke="url(#deep-copper-line)" stroke-width="1.25"/>
-    <path d="M506 0 L506 196 L580 260 L654 196 L654 0" stroke="url(#steel-line)" stroke-width="1.45"/>
-    <path d="M548 0 L548 220 L580 260 L612 220 L612 0" stroke="url(#steel-line)" stroke-width="1.2"/>
-    <path d="M576 0 L576 232 L580 260 L584 232 L584 0" stroke="url(#mixed-line)" stroke-width="1.5"/>
-    <path d="M344 520 L580 260 L816 520" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="1.4"/>
-    <path d="M248 520 L580 260 L912 520" stroke="#6D8FD6" stroke-opacity="0.3" stroke-width="1.35"/>
-    <path d="M204 520 L580 260 L956 520" stroke="#334155" stroke-opacity="0.34" stroke-width="1.15"/>
-    <path d="M164 520 L580 260 L996 520" stroke="#CC8066" stroke-opacity="0.34" stroke-width="1.2"/>
-    <path d="M112 520 L580 260 L1048 520" stroke="#4A241D" stroke-opacity="0.2" stroke-width="1"/>
-    <path d="M32 520 L580 260 L1128 520" stroke="#3B5F9F" stroke-opacity="0.16" stroke-width="1"/>
+  <text x="580" y="74" text-anchor="middle" fill="#71717A" font-size="10" font-weight="500" letter-spacing="2.4">AI AGENTS</text>
+
+  <g id="agents" filter="url(#module-shadow)">
+    <rect x="52" y="92" width="192" height="54" rx="2" fill="url(#module-fill)" stroke="url(#glass-border)"/>
+    <text x="148" y="125" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">Claude Code</text>
+
+    <rect x="268" y="92" width="192" height="54" rx="2" fill="url(#module-fill)" stroke="url(#glass-border)"/>
+    <text x="364" y="125" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">Codex</text>
+
+    <rect x="484" y="92" width="192" height="54" rx="2" fill="url(#module-fill)" stroke="url(#glass-border)"/>
+    <text x="580" y="125" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">OpenClaw</text>
+
+    <rect x="700" y="92" width="192" height="54" rx="2" fill="url(#module-fill)" stroke="url(#glass-border)"/>
+    <text x="796" y="125" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">Hermes</text>
+
+    <rect x="916" y="92" width="192" height="54" rx="2" fill="url(#module-fill)" stroke="url(#glass-border)"/>
+    <text x="1012" y="125" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">Any Agent</text>
   </g>
 
-  <g opacity="0.46" filter="url(#tiny-blur)">
-    <path d="M90 468 C250 406 426 326 580 260 C742 330 902 402 1088 468" stroke="#FFFFFF" stroke-opacity="0.2" stroke-width="10"/>
-    <path d="M122 484 C300 392 442 312 580 260 C726 312 890 398 1062 486" stroke="url(#blue-reflection)" stroke-width="9"/>
-    <path d="M160 490 C326 410 456 326 580 260 C720 326 856 414 1030 492" stroke="#334155" stroke-opacity="0.48" stroke-width="7"/>
-    <path d="M214 502 C362 414 486 320 580 260 C692 324 810 420 956 506" stroke="#6D8FD6" stroke-opacity="0.3" stroke-width="6"/>
-    <path d="M258 512 C390 420 500 314 580 260 C676 320 786 424 914 512" stroke="#CC8066" stroke-opacity="0.36" stroke-width="5"/>
+  <g filter="url(#arrow-glow)" stroke-width="1.15" stroke-linecap="square">
+    <line x1="148" y1="146" x2="148" y2="180" stroke="url(#blue-arrow)"/>
+    <line x1="148" y1="146" x2="148" y2="163" stroke="url(#blue-arrow)" marker-end="url(#arrow-blue)"/>
+    <line x1="364" y1="146" x2="364" y2="180" stroke="url(#steel-arrow)"/>
+    <line x1="364" y1="146" x2="364" y2="163" stroke="url(#steel-arrow)" marker-end="url(#arrow-steel)"/>
+    <line x1="580" y1="146" x2="580" y2="180" stroke="url(#mixed-arrow)"/>
+    <line x1="580" y1="146" x2="580" y2="163" stroke="url(#mixed-arrow)" marker-end="url(#arrow-blue)"/>
+    <line x1="796" y1="146" x2="796" y2="180" stroke="url(#copper-arrow)"/>
+    <line x1="796" y1="146" x2="796" y2="163" stroke="url(#copper-arrow)" marker-end="url(#arrow-copper)"/>
+    <line x1="1012" y1="146" x2="1012" y2="180" stroke="url(#steel-arrow)"/>
+    <line x1="1012" y1="146" x2="1012" y2="163" stroke="url(#steel-arrow)" marker-end="url(#arrow-steel)"/>
   </g>
 
-  <rect width="760" height="520" fill="url(#left-overlay)"/>
-  <rect width="1160" height="520" fill="url(#bottom-overlay)"/>
+  <g id="authsome-zone" filter="url(#core-glow)">
+    <rect x="34" y="180" width="1092" height="162" rx="4" fill="#FFFFFF" fill-opacity="0.032" stroke="url(#auth-border)"/>
+    <text x="580" y="207" text-anchor="middle" fill="#CC8066" font-size="10" font-weight="500" letter-spacing="2.8">AUTHSOME</text>
 
-  <text x="48" y="60" fill="#FFFFFF" font-size="28" font-weight="500" letter-spacing="-1.1">How authsome works</text>
-  <text x="48" y="88" fill="#B4B5BD" font-size="14" font-weight="400">Local credential orchestration for AI agents, with request-time injection and encrypted storage.</text>
+    <g filter="url(#module-shadow)">
+      <rect x="72" y="232" width="300" height="66" rx="2" fill="#FFFFFF" fill-opacity="0.045" stroke="url(#glass-border)"/>
+      <text x="222" y="259" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="500">CLI</text>
+      <text x="222" y="280" text-anchor="middle" fill="#B4B5BD" font-size="11" font-weight="400">Login, export, and run commands</text>
 
-  <text x="580" y="126" text-anchor="middle" fill="#B4B5BD" font-size="10" font-weight="500" letter-spacing="2.4">AI AGENTS</text>
+      <rect x="422" y="220" width="316" height="90" rx="2" fill="url(#proxy-fill)" stroke="#6D8FD6" stroke-opacity="0.4"/>
+      <rect x="422" y="220" width="316" height="90" rx="2" fill="none" stroke="#CC8066" stroke-opacity="0.24"/>
+      <text x="580" y="257" text-anchor="middle" fill="#FFFFFF" font-size="16" font-weight="500">Local Auth Proxy</text>
+      <text x="580" y="279" text-anchor="middle" fill="#B4B5BD" font-size="11" font-weight="400">Injects fresh credentials at request time</text>
+      <text x="580" y="295" text-anchor="middle" fill="#71717A" font-size="9" font-weight="500" letter-spacing="1.2">CONTROLLED HANDOFF</text>
 
-  <g id="agents" filter="url(#glass-shadow)">
-    <g>
-      <rect x="52" y="142" width="192" height="54" rx="2" fill="url(#card-sheen)" stroke="url(#glass-border)"/>
-      <text x="148" y="175" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">Claude Code</text>
+      <rect x="788" y="232" width="300" height="66" rx="2" fill="#FFFFFF" fill-opacity="0.045" stroke="url(#glass-border)"/>
+      <text x="938" y="259" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="500">Encrypted Vault</text>
+      <text x="938" y="280" text-anchor="middle" fill="#B4B5BD" font-size="11" font-weight="400">Local storage and token refresh</text>
     </g>
-    <g>
-      <rect x="268" y="142" width="192" height="54" rx="2" fill="url(#card-sheen)" stroke="url(#glass-border)"/>
-      <text x="364" y="175" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">Codex</text>
-    </g>
-    <g>
-      <rect x="484" y="142" width="192" height="54" rx="2" fill="url(#card-sheen)" stroke="url(#glass-border)"/>
-      <text x="580" y="175" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">OpenClaw</text>
-    </g>
-    <g>
-      <rect x="700" y="142" width="192" height="54" rx="2" fill="url(#card-sheen)" stroke="url(#glass-border)"/>
-      <text x="796" y="175" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">Hermes</text>
-    </g>
-    <g>
-      <rect x="916" y="142" width="192" height="54" rx="2" fill="url(#card-sheen)" stroke="url(#glass-border)"/>
-      <text x="1012" y="175" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">Any Agent</text>
+
+    <g filter="url(#arrow-glow)" stroke-width="1.15" stroke-linecap="square">
+      <line x1="372" y1="265" x2="422" y2="265" stroke="url(#steel-arrow)"/>
+      <line x1="372" y1="265" x2="397" y2="265" stroke="url(#steel-arrow)" marker-end="url(#arrow-steel)"/>
+      <line x1="738" y1="265" x2="788" y2="265" stroke="url(#copper-arrow)"/>
+      <line x1="738" y1="265" x2="763" y2="265" stroke="url(#copper-arrow)" marker-end="url(#arrow-copper)"/>
     </g>
   </g>
 
-  <g stroke="url(#flow-line)" stroke-width="1.2" marker-end="url(#arrow)">
-    <line x1="148" y1="198" x2="148" y2="230"/>
-    <line x1="364" y1="198" x2="364" y2="230"/>
-    <line x1="580" y1="198" x2="580" y2="230"/>
-    <line x1="796" y1="198" x2="796" y2="230"/>
-    <line x1="1012" y1="198" x2="1012" y2="230"/>
+  <g filter="url(#arrow-glow)" stroke-width="1.15" stroke-linecap="square">
+    <line x1="148" y1="342" x2="148" y2="416" stroke="url(#steel-arrow)"/>
+    <line x1="148" y1="342" x2="148" y2="379" stroke="url(#steel-arrow)" marker-end="url(#arrow-steel)"/>
+    <line x1="364" y1="342" x2="364" y2="416" stroke="url(#blue-arrow)"/>
+    <line x1="364" y1="342" x2="364" y2="379" stroke="url(#blue-arrow)" marker-end="url(#arrow-blue)"/>
+    <line x1="580" y1="342" x2="580" y2="416" stroke="url(#mixed-arrow)"/>
+    <line x1="580" y1="342" x2="580" y2="379" stroke="url(#mixed-arrow)" marker-end="url(#arrow-copper)"/>
+    <line x1="796" y1="342" x2="796" y2="416" stroke="url(#copper-arrow)"/>
+    <line x1="796" y1="342" x2="796" y2="379" stroke="url(#copper-arrow)" marker-end="url(#arrow-copper)"/>
+    <line x1="1012" y1="342" x2="1012" y2="416" stroke="url(#steel-arrow)"/>
+    <line x1="1012" y1="342" x2="1012" y2="379" stroke="url(#steel-arrow)" marker-end="url(#arrow-steel)"/>
   </g>
 
-  <g id="authsome-zone">
-    <rect x="34" y="226" width="1092" height="142" rx="4" fill="#FFFFFF" fill-opacity="0.035" stroke="url(#auth-border)" filter="url(#glass-shadow)"/>
-    <text x="580" y="251" text-anchor="middle" fill="#CC8066" font-size="10" font-weight="500" letter-spacing="2.8">AUTHSOME</text>
+  <text x="580" y="397" text-anchor="middle" fill="#71717A" font-size="10" font-weight="500" letter-spacing="2.4">EXTERNAL SERVICES</text>
 
-    <g>
-      <rect x="72" y="272" width="310" height="64" rx="2" fill="#FFFFFF" fill-opacity="0.045" stroke="url(#glass-border)"/>
-      <path d="M106 294 H130 M106 304 H122 M106 314 H134" stroke="#B4B5BD" stroke-width="1.4" stroke-linecap="square"/>
-      <text x="226" y="299" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="500">CLI</text>
-      <text x="226" y="320" text-anchor="middle" fill="#B4B5BD" font-size="11" font-weight="400">Login, export, and run commands</text>
-    </g>
+  <g id="services" filter="url(#module-shadow)">
+    <rect x="52" y="416" width="192" height="54" rx="2" fill="url(#module-fill)" stroke="url(#glass-border)"/>
+    <text x="148" y="449" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">Stripe</text>
 
-    <g filter="url(#soft-glow)">
-      <rect x="422" y="264" width="316" height="80" rx="2" fill="#172A4A" fill-opacity="0.22" stroke="#6D8FD6" stroke-opacity="0.38"/>
-      <rect x="422" y="264" width="316" height="80" rx="2" fill="#4A241D" fill-opacity="0.08" stroke="#CC8066" stroke-opacity="0.26"/>
-      <path d="M456 304 C466 292 480 292 490 304 C500 316 514 316 524 304" stroke="#6D8FD6" stroke-opacity="0.95" stroke-width="1.4" fill="none"/>
-      <path d="M456 312 C468 302 478 302 490 312 C502 322 512 322 524 312" stroke="#CC8066" stroke-opacity="0.72" stroke-width="1" fill="none"/>
-      <circle cx="456" cy="304" r="2" fill="#FFFFFF" fill-opacity="0.92"/>
-      <circle cx="524" cy="304" r="2" fill="#6D8FD6" fill-opacity="0.95"/>
-      <text x="580" y="298" text-anchor="middle" fill="#FFFFFF" font-size="16" font-weight="500">Local Auth Proxy</text>
-      <text x="580" y="320" text-anchor="middle" fill="#B4B5BD" font-size="11" font-weight="400">Injects fresh credentials at request time</text>
-    </g>
+    <rect x="268" y="416" width="192" height="54" rx="2" fill="url(#module-fill)" stroke="url(#glass-border)"/>
+    <text x="364" y="449" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">GitHub</text>
 
-    <g>
-      <rect x="778" y="272" width="310" height="64" rx="2" fill="#FFFFFF" fill-opacity="0.045" stroke="url(#glass-border)"/>
-      <rect x="812" y="295" width="28" height="22" rx="1" stroke="#B4B5BD" stroke-width="1.3"/>
-      <path d="M818 295 V289 C818 283 834 283 834 289 V295" stroke="#B4B5BD" stroke-width="1.3" fill="none"/>
-      <text x="932" y="299" text-anchor="middle" fill="#FFFFFF" font-size="15" font-weight="500">Encrypted Vault</text>
-      <text x="932" y="320" text-anchor="middle" fill="#B4B5BD" font-size="11" font-weight="400">Local storage and token refresh</text>
-    </g>
+    <rect x="484" y="416" width="192" height="54" rx="2" fill="url(#module-fill)" stroke="url(#glass-border)"/>
+    <text x="580" y="449" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">OpenAI</text>
 
-    <line x1="382" y1="304" x2="422" y2="304" stroke="#FFFFFF" stroke-width="1" stroke-dasharray="4 5" stroke-opacity="0.22"/>
-    <line x1="738" y1="304" x2="778" y2="304" stroke="#FFFFFF" stroke-width="1" stroke-dasharray="4 5" stroke-opacity="0.22"/>
-  </g>
+    <rect x="700" y="416" width="192" height="54" rx="2" fill="url(#module-fill)" stroke="url(#glass-border)"/>
+    <text x="796" y="449" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">Gmail</text>
 
-  <g stroke="url(#flow-line)" stroke-width="1.2" marker-end="url(#arrow)">
-    <line x1="148" y1="368" x2="148" y2="400"/>
-    <line x1="364" y1="368" x2="364" y2="400"/>
-    <line x1="580" y1="368" x2="580" y2="400"/>
-    <line x1="796" y1="368" x2="796" y2="400"/>
-    <line x1="1012" y1="368" x2="1012" y2="400"/>
-  </g>
-
-  <text x="580" y="423" text-anchor="middle" fill="#B4B5BD" font-size="10" font-weight="500" letter-spacing="2.4">EXTERNAL SERVICES</text>
-
-  <g id="services" filter="url(#glass-shadow)">
-    <g>
-      <rect x="52" y="440" width="192" height="54" rx="2" fill="url(#card-sheen)" stroke="url(#glass-border)"/>
-      <text x="148" y="473" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">Stripe</text>
-    </g>
-    <g>
-      <rect x="268" y="440" width="192" height="54" rx="2" fill="url(#card-sheen)" stroke="url(#glass-border)"/>
-      <text x="364" y="473" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">GitHub</text>
-    </g>
-    <g>
-      <rect x="484" y="440" width="192" height="54" rx="2" fill="url(#card-sheen)" stroke="url(#glass-border)"/>
-      <text x="580" y="473" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">PostHog</text>
-    </g>
-    <g>
-      <rect x="700" y="440" width="192" height="54" rx="2" fill="url(#card-sheen)" stroke="url(#glass-border)"/>
-      <text x="796" y="473" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">Gmail</text>
-    </g>
-    <g>
-      <rect x="916" y="440" width="192" height="54" rx="2" fill="url(#card-sheen)" stroke="url(#glass-border)"/>
-      <text x="1012" y="473" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">Any App</text>
-    </g>
+    <rect x="916" y="416" width="192" height="54" rx="2" fill="url(#module-fill)" stroke="url(#glass-border)"/>
+    <text x="1012" y="449" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="500">Any App</text>
   </g>
 </svg>
