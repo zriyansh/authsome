@@ -1,16 +1,16 @@
 :root {
-    --bg-body: #0e1116;
-    --bg-sidebar: #0a0d12;
-    --bg-card: #11151b;
-    --bg-card-hover: #151a22;
-    --border: #21262d;
-    --border-subtle: #1a1f27;
-    --accent: #4f9eff;
-    --accent-soft: rgba(79, 158, 255, 0.12);
-    --accent-strong: rgba(79, 158, 255, 0.22);
-    --text: #e6edf3;
-    --text-secondary: #c9d1d9;
-    --text-muted: #7d8590;
+    --bg-body: #000000;
+    --bg-sidebar: #050505;
+    --bg-card: #0a0a0a;
+    --bg-card-hover: #141414;
+    --border: #27272a;
+    --border-subtle: #1f1f22;
+    --accent: #83ca16;
+    --accent-soft: rgba(131, 202, 22, 0.12);
+    --accent-strong: rgba(131, 202, 22, 0.22);
+    --text: #ededed;
+    --text-secondary: #d4d4d8;
+    --text-muted: #a1a1aa;
     --warn: #ffb34f;
     --warn-soft: rgba(255, 179, 79, 0.13);
     --danger: #ff7b72;
@@ -18,8 +18,8 @@
     --radius-sm: 6px;
     --radius-md: 8px;
     --radius-lg: 10px;
-    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    --font-mono: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -82,7 +82,7 @@ button { font-family: inherit; }
 }
 .nav-item:hover { background: rgba(255,255,255,0.02); color: var(--text); }
 .nav-item.active {
-    background: rgba(79, 158, 255, 0.06);
+    background: rgba(131, 202, 22, 0.06);
     border-color: var(--border);
     color: var(--accent);
 }
@@ -184,16 +184,19 @@ h2 {
 .btn[disabled] { opacity: 0.55; cursor: not-allowed; }
 .btn-sm { padding: 5px 10px; font-size: 12px; }
 .btn-primary {
-    background: var(--accent);
-    color: #06121f;
+    background: var(--accent-soft);
+    color: var(--accent);
     border-color: var(--accent);
     font-weight: 600;
 }
-.btn-primary:hover { background: #6cb0ff; border-color: #6cb0ff; }
+.btn-primary:hover {
+    background: var(--accent-strong);
+    border-color: var(--accent);
+}
 .btn-secondary { background: transparent; }
 .btn-light {
     background: #f1f4f9;
-    color: #06121f;
+    color: #000000;
     border-color: #f1f4f9;
     font-weight: 600;
 }
