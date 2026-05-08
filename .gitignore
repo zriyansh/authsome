@@ -240,3 +240,7 @@ __marimo__/
 .zencoder/
 
 .DS_Store
+
+# Git worktrees
+.worktrees/
+.claude/worktrees/
