@@ -5,7 +5,8 @@
   "branch": "chore/agent-readiness-improvements",
   "checkpoints_count": 0,
   "files_touched": [
-    "pyproject.toml"
+    "pyproject.toml",
+    "renovate.json"
   ],
   "sessions": [
     {
@@ -13,6 +14,12 @@
       "transcript": "/d0/701895e702/0/full.jsonl",
       "content_hash": "/d0/701895e702/0/content_hash.txt",
       "prompt": "/d0/701895e702/0/prompt.txt"
+    },
+    {
+      "metadata": "/d0/701895e702/1/metadata.json",
+      "transcript": "/d0/701895e702/1/full.jsonl",
+      "content_hash": "/d0/701895e702/1/content_hash.txt",
+      "prompt": ""
     }
   ],
   "token_usage": {
