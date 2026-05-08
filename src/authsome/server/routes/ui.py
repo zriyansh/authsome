@@ -7,26 +7,50 @@ and avoids a separate static server.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from importlib.resources import files
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from authsome import __version__
 from authsome.auth import AuthService
-from authsome.auth.models.enums import AuthType
+from authsome.auth.models.enums import AuthType, FlowType
 from authsome.auth.models.provider import ProviderDefinition
+from authsome.auth.sessions import AuthSession, AuthSessionStore
 from authsome.errors import ConnectionNotFoundError
-from authsome.server.routes._deps import get_auth_service
+from authsome.server.routes._deps import get_auth_service, get_auth_sessions
+from authsome.utils import utc_now
 
 router = APIRouter(prefix="/ui", tags=["ui"], include_in_schema=False)
+LOCAL_BASE_URL = "http://127.0.0.1:7998"
 
 # Templates ship inside the installed package alongside the code.
 _TEMPLATES_DIR = files("authsome.ui").joinpath("templates")
 templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
+
+
+def _redirect(request: Request, url: str) -> Response:
+    """Redirect normally, or via htmx full-page redirect for boosted forms."""
+    if request.headers.get("HX-Request") == "true":
+        return Response(status_code=204, headers={"HX-Redirect": url})
+    return RedirectResponse(url=url, status_code=303)
+
+
+def _update_device_code_expiry(sessions: AuthSessionStore, session: AuthSession) -> None:
+    if "expires_in" not in session.payload:
+        return
+    try:
+        session.expires_at = utc_now() + timedelta(seconds=int(session.payload["expires_in"]))
+    except ValueError:
+        pass
+
+
+def _field_payloads(session: AuthSession) -> list[dict[str, Any]]:
+    fields = session.payload.get("input_fields", [])
+    return [dict(field) for field in fields]
 
 
 def _format_relative(when: datetime | None) -> str | None:
@@ -174,12 +198,31 @@ def app_detail(
     except ConnectionNotFoundError:
         pass
 
-    # Disconnected detail pages are explicitly out of scope in the mockup.
-    if connection_record is None:
-        return RedirectResponse(url=f"/ui/connections#{provider_name}", status_code=303)
-
     client_record = auth.get_provider_client(provider_name)
     redirect_uri = "http://127.0.0.1:7998/auth/callback/oauth"
+    host_url = provider.host_url or (provider.oauth.base_url if provider.oauth else None) or provider.name
+
+    if connection_record is None:
+        return templates.TemplateResponse(
+            request,
+            "app_detail_disconnected.html",
+            {
+                "page": "connections",
+                "version": __version__,
+                "provider": provider,
+                "connection": None,
+                "logo_initial": _logo_initial(provider.display_name or provider.name),
+                "host_url": host_url,
+                "obtained_label": None,
+                "auth_type_label": "OAuth 2.0" if provider.auth_type == AuthType.OAUTH2 else "API Key",
+                "client_id": (client_record.client_id if client_record else None),
+                "has_client_secret": bool(client_record and client_record.client_secret),
+                "redirect_uri": redirect_uri,
+                "auth_url": provider.oauth.authorization_url if provider.oauth else None,
+                "token_url": provider.oauth.token_url if provider.oauth else None,
+                "base_url": (provider.oauth.base_url if provider.oauth else None) or provider.host_url,
+            },
+        )
 
     common = {
         "page": "connections",
@@ -187,7 +230,7 @@ def app_detail(
         "provider": provider,
         "connection": connection_record,
         "logo_initial": _logo_initial(provider.display_name or provider.name),
-        "host_url": provider.host_url or (provider.oauth.base_url if provider.oauth else None) or provider.name,
+        "host_url": host_url,
         "expires_label": _format_relative(connection_record.expires_at),
         "obtained_label": _format_relative(connection_record.obtained_at),
         "scopes": connection_record.scopes or [],
@@ -226,8 +269,61 @@ def app_detail(
 def disconnect_app(
     provider_name: str,
     connection_name: str,
+    request: Request,
     auth: AuthService = Depends(get_auth_service),
-) -> RedirectResponse:
+) -> Response:
     """Disconnect a provider connection from the dashboard."""
     auth.logout(provider_name, connection_name)
-    return RedirectResponse(url="/ui/connections", status_code=303)
+    return _redirect(request, "/ui/connections")
+
+
+@router.post("/apps/{provider_name}/connect")
+async def connect_app(
+    provider_name: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    auth: AuthService = Depends(get_auth_service),
+    sessions: AuthSessionStore = Depends(get_auth_sessions),
+) -> Response:
+    """Start a provider connection from the dashboard."""
+    form = await request.form()
+    connection_name = str(form.get("connection", "default") or "default")
+    force = str(form.get("force", "false")).lower() in {"1", "true", "on", "yes"}
+
+    definition = auth.get_provider(provider_name)
+    flow = definition.flow
+    session = sessions.create(
+        provider=provider_name,
+        profile=auth.identity,
+        connection_name=connection_name,
+        flow_type=flow.value,
+    )
+    session.payload["force"] = force
+    session.payload["return_url"] = f"{LOCAL_BASE_URL}/ui/apps/{provider_name}"
+
+    if not force:
+        try:
+            existing = auth.get_connection(provider_name, connection_name)
+            if auth._connection_is_valid(existing):
+                session.status_message = "Already connected"
+                return _redirect(request, f"/ui/apps/{provider_name}")
+        except Exception:
+            pass
+
+    fields = auth.get_required_inputs(session)
+    if fields:
+        session.payload["input_fields"] = [field.model_dump(mode="json", exclude_none=True) for field in fields]
+        return _redirect(request, f"{LOCAL_BASE_URL}/auth/sessions/{session.session_id}/input")
+
+    auth.begin_login_flow(session=session, force=force)
+    if flow == FlowType.DEVICE_CODE:
+        _update_device_code_expiry(sessions, session)
+        background_tasks.add_task(auth.background_resume, session)
+        if session.payload.get("user_code") and session.payload.get("verification_uri"):
+            return _redirect(request, f"{LOCAL_BASE_URL}/auth/sessions/{session.session_id}/device")
+
+    sessions.index_oauth_state(session)
+    auth_url = session.payload.get("auth_url")
+    if auth_url:
+        return _redirect(request, str(auth_url))
+    return _redirect(request, f"/ui/apps/{provider_name}")

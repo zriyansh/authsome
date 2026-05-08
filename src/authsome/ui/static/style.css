@@ -428,13 +428,26 @@ h2 {
     display: flex;
     align-items: center;
     gap: 12px;
+    position: relative;
     transition: border-color 80ms ease, background-color 80ms ease;
+}
+.app-card-hit {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    z-index: 1;
 }
 .app-card:hover { background: var(--bg-card-hover); border-color: var(--accent-strong); }
 .app-card.is-connected { border-color: var(--accent-strong); }
 .app-card-text { flex: 1; min-width: 0; }
 .app-card-name { font-weight: 500; font-size: 13.5px; }
 .app-card-sub { color: var(--text-muted); font-size: 12px; }
+.inline-action {
+    margin: 0;
+    position: relative;
+    z-index: 2;
+}
+.as-button { cursor: pointer; }
 
 .empty {
     background: var(--bg-card);

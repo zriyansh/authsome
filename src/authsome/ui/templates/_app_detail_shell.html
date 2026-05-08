@@ -12,7 +12,11 @@
     <div>
         <h1 class="detail-title">
             {{ provider.display_name }}
+            {% if connection %}
             <span class="pill pill-accent">● Connected</span>
+            {% else %}
+            <span class="pill">Available</span>
+            {% endif %}
         </h1>
         <div class="detail-meta">{% block detail_meta %}{% endblock %} · {{ host_url }}</div>
     </div>
@@ -43,7 +47,13 @@
         <div class="card">
             <div class="card-title">Connection</div>
             <dl class="kv">
-                <dt>Status</dt><dd><span class="pill pill-accent">● Connected</span></dd>
+                <dt>Status</dt><dd>
+                    {% if connection %}
+                    <span class="pill pill-accent">● Connected</span>
+                    {% else %}
+                    <span class="pill">Available</span>
+                    {% endif %}
+                </dd>
                 {% block side_rows %}{% endblock %}
                 {% if obtained_label %}
                 <dt>Connected</dt><dd>{{ obtained_label }}</dd>

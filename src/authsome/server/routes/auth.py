@@ -6,7 +6,7 @@ from datetime import timedelta
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from authsome.auth import AuthService
 from authsome.auth.input_provider import InputField
@@ -118,7 +118,7 @@ def oauth_callback(
     request: Request,
     auth: AuthService = Depends(get_auth_service),
     sessions: AuthSessionStore = Depends(get_auth_sessions),
-) -> HTMLResponse:
+) -> Response:
     state = request.query_params.get("state")
     if not state:
         return HTMLResponse(pages.message_page("Authentication failed", "Missing OAuth state."), status_code=400)
@@ -138,6 +138,8 @@ def oauth_callback(
         session.state = AuthSessionStatus.FAILED
         session.error_message = str(exc)
         return HTMLResponse(pages.message_page("Authentication failed", str(exc)), status_code=400)
+    if return_url := session.payload.get("return_url"):
+        return RedirectResponse(str(return_url), status_code=303)
     return HTMLResponse(pages.message_page("Authentication successful", "You can close this window."))
 
 
@@ -204,6 +206,8 @@ async def submit_input(
         auth.resume_login_flow(session, {})
         session.state = AuthSessionStatus.COMPLETED
         session.status_message = "Login successful"
+        if return_url := session.payload.get("return_url"):
+            return RedirectResponse(str(return_url), status_code=303)
         return HTMLResponse(pages.message_page("Authentication successful", "You can close this window."))
 
     auth.begin_login_flow(

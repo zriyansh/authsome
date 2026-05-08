@@ -25,11 +25,11 @@
 
 <div class="app-grid" id="appGrid">
     {% for p in providers %}
-    <a class="app-card {% if p.status != 'available' %}is-connected{% endif %}"
-       href="/ui/apps/{{ p.name }}"
-       data-status="{{ p.status }}"
-       data-name="{{ p.display_name|lower }} {{ p.name|lower }}"
-       id="{{ p.name }}">
+    <div class="app-card {% if p.status != 'available' %}is-connected{% endif %}"
+         data-status="{{ p.status }}"
+         data-name="{{ p.display_name|lower }} {{ p.name|lower }}"
+         id="{{ p.name }}">
+        <a class="app-card-hit" href="/ui/apps/{{ p.name }}" aria-label="Open {{ p.display_name }} details"></a>
         <span class="logo">{{ p.logo_initial }}</span>
         <div class="app-card-text">
             <div class="app-card-name">{{ p.display_name }}</div>
@@ -40,9 +40,16 @@
         {% elif p.status == 'connected' %}
         <span class="pill pill-accent">● Connected</span>
         {% else %}
-        <span class="btn btn-secondary btn-sm">Connect</span>
+        <form class="inline-action"
+              method="post"
+              action="/ui/apps/{{ p.name }}/connect"
+              hx-post="/ui/apps/{{ p.name }}/connect"
+              hx-swap="none">
+            <input type="hidden" name="connection" value="default">
+            <button class="btn btn-secondary btn-sm" type="submit">Connect</button>
+        </form>
         {% endif %}
-    </a>
+    </div>
     {% endfor %}
 </div>
 
