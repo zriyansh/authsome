@@ -74,6 +74,15 @@ class ProxyRunner:
 
     def _inject_dummy_credentials(self, env: dict[str, str]) -> None:
         connections_data = self._client.list_connections()
+        if isinstance(connections_data, list):
+            by_source = self._client.list_providers_by_source()
+            connections_data = {
+                "connections": connections_data,
+                "by_source": {
+                    source: [provider.model_dump(mode="json") for provider in providers]
+                    for source, providers in by_source.items()
+                },
+            }
         connected_names = {entry["name"] for entry in connections_data["connections"]}
         from authsome.auth.models.provider import ProviderDefinition
 

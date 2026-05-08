@@ -7,17 +7,35 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from authsome.auth import AuthLayer
-from authsome.auth.input_provider import MockInputProvider
-from authsome.context import AuthsomeContext
+from authsome.auth import AuthService as AuthLayer
+from authsome.auth.models.connection import ConnectionRecord
+from authsome.auth.models.enums import AuthType, ConnectionStatus
 from authsome.proxy.router import RouteMatch
 from authsome.proxy.server import AuthProxyAddon, ProxyRouter, _build_proxy_options, _route
+from authsome.server.dependencies import create_auth_service
 
 
 def _make_auth(tmp_path: Path) -> AuthLayer:
     home = tmp_path / ".authsome"
-    actx = AuthsomeContext.create(home=home)
-    return actx.auth
+    return create_auth_service(home)
+
+
+def _save_connection_record(
+    auth: AuthLayer,
+    provider_name: str,
+    api_key: str,
+    connection_name: str = "default",
+) -> None:
+    record = ConnectionRecord(
+        provider=provider_name,
+        profile=auth._identity,
+        connection_name=connection_name,
+        auth_type=AuthType.API_KEY,
+        status=ConnectionStatus.CONNECTED,
+        api_key=api_key,
+    )
+    auth._save_connection(record)
+    auth._update_provider_metadata(provider_name, connection_name)
 
 
 # ── Routing function tests ────────────────────────────────────────────────
@@ -28,7 +46,7 @@ class TestRouting:
 
     def test_matches_provider_host(self, tmp_path: Path) -> None:
         auth = _make_auth(tmp_path)
-        auth.login("openai", force=True, input_provider=MockInputProvider({"api_key": "sk-test-padded-for-regex-12"}))
+        _save_connection_record(auth, "openai", "sk-test-padded-for-regex-12")
 
         match = _route(auth, "https", "api.openai.com", 443, "/v1/responses")
 
@@ -36,18 +54,13 @@ class TestRouting:
 
     def test_rejects_plain_http_provider_host(self, tmp_path: Path) -> None:
         auth = _make_auth(tmp_path)
-        auth.login("openai", force=True, input_provider=MockInputProvider({"api_key": "sk-test-padded-for-regex-12"}))
+        _save_connection_record(auth, "openai", "sk-test-padded-for-regex-12")
 
         assert _route(auth, "http", "api.openai.com", 80, "/v1/responses") is None
 
     def test_ignores_named_connection_without_default(self, tmp_path: Path) -> None:
         auth = _make_auth(tmp_path)
-        auth.login(
-            "openai",
-            connection_name="work",
-            force=True,
-            input_provider=MockInputProvider({"api_key": "sk-work-padded-for-regex-12"}),
-        )
+        _save_connection_record(auth, "openai", "sk-work-padded-for-regex-12", "work")
 
         match = _route(auth, "https", "api.openai.com", 443, "/v1/responses")
 
@@ -55,17 +68,8 @@ class TestRouting:
 
     def test_routes_default_when_named_connection_also_exists(self, tmp_path: Path) -> None:
         auth = _make_auth(tmp_path)
-        auth.login(
-            "openai",
-            force=True,
-            input_provider=MockInputProvider({"api_key": "sk-default-padded-for-regex-12"}),
-        )
-        auth.login(
-            "openai",
-            connection_name="work",
-            force=True,
-            input_provider=MockInputProvider({"api_key": "sk-work-padded-for-regex-12"}),
-        )
+        _save_connection_record(auth, "openai", "sk-default-padded-for-regex-12")
+        _save_connection_record(auth, "openai", "sk-work-padded-for-regex-12", "work")
 
         match = _route(auth, "https", "api.openai.com", 443, "/v1/responses")
 
@@ -77,18 +81,20 @@ class TestRouting:
         provider.oauth = None
         provider.resolve_urls.return_value = provider
         auth.get_provider.return_value = provider
-        auth.list_connections.return_value = [
-            {
-                "name": "custom",
-                "connections": [
-                    {
-                        "connection_name": "default",
-                        "host_url": "https://api.example.com/v1",
-                        "base_url": None,
-                    }
-                ],
-            }
-        ]
+        auth.list_connections.return_value = {
+            "connections": [
+                {
+                    "name": "custom",
+                    "connections": [
+                        {
+                            "connection_name": "default",
+                            "host_url": "https://api.example.com/v1",
+                            "base_url": None,
+                        }
+                    ],
+                }
+            ]
+        }
 
         router = ProxyRouter(auth)
 
@@ -104,28 +110,30 @@ class TestRouting:
         provider.oauth = None
         provider.resolve_urls.return_value = provider
         auth.get_provider.return_value = provider
-        auth.list_connections.return_value = [
-            {
-                "name": "root",
-                "connections": [
-                    {
-                        "connection_name": "default",
-                        "host_url": "api.example.com",
-                        "base_url": None,
-                    }
-                ],
-            },
-            {
-                "name": "v1",
-                "connections": [
-                    {
-                        "connection_name": "default",
-                        "host_url": "https://api.example.com/v1",
-                        "base_url": None,
-                    }
-                ],
-            },
-        ]
+        auth.list_connections.return_value = {
+            "connections": [
+                {
+                    "name": "root",
+                    "connections": [
+                        {
+                            "connection_name": "default",
+                            "host_url": "api.example.com",
+                            "base_url": None,
+                        }
+                    ],
+                },
+                {
+                    "name": "v1",
+                    "connections": [
+                        {
+                            "connection_name": "default",
+                            "host_url": "https://api.example.com/v1",
+                            "base_url": None,
+                        }
+                    ],
+                },
+            ]
+        }
 
         router = ProxyRouter(auth)
 
@@ -144,28 +152,30 @@ class TestRouting:
         provider.oauth = None
         provider.resolve_urls.return_value = provider
         auth.get_provider.return_value = provider
-        auth.list_connections.return_value = [
-            {
-                "name": "v1",
-                "connections": [
-                    {
-                        "connection_name": "default",
-                        "host_url": "https://api.example.com/v1",
-                        "base_url": None,
-                    }
-                ],
-            },
-            {
-                "name": "beta",
-                "connections": [
-                    {
-                        "connection_name": "default",
-                        "host_url": "https://api.example.com/v1/beta",
-                        "base_url": None,
-                    }
-                ],
-            },
-        ]
+        auth.list_connections.return_value = {
+            "connections": [
+                {
+                    "name": "v1",
+                    "connections": [
+                        {
+                            "connection_name": "default",
+                            "host_url": "https://api.example.com/v1",
+                            "base_url": None,
+                        }
+                    ],
+                },
+                {
+                    "name": "beta",
+                    "connections": [
+                        {
+                            "connection_name": "default",
+                            "host_url": "https://api.example.com/v1/beta",
+                            "base_url": None,
+                        }
+                    ],
+                },
+            ]
+        }
 
         router = ProxyRouter(auth)
 
@@ -184,28 +194,30 @@ class TestRouting:
         provider.oauth = None
         provider.resolve_urls.return_value = provider
         auth.get_provider.return_value = provider
-        auth.list_connections.return_value = [
-            {
-                "name": "first",
-                "connections": [
-                    {
-                        "connection_name": "default",
-                        "host_url": "https://api.example.com/v1",
-                        "base_url": None,
-                    }
-                ],
-            },
-            {
-                "name": "second",
-                "connections": [
-                    {
-                        "connection_name": "default",
-                        "host_url": "https://api.example.com/v1",
-                        "base_url": None,
-                    }
-                ],
-            },
-        ]
+        auth.list_connections.return_value = {
+            "connections": [
+                {
+                    "name": "first",
+                    "connections": [
+                        {
+                            "connection_name": "default",
+                            "host_url": "https://api.example.com/v1",
+                            "base_url": None,
+                        }
+                    ],
+                },
+                {
+                    "name": "second",
+                    "connections": [
+                        {
+                            "connection_name": "default",
+                            "host_url": "https://api.example.com/v1",
+                            "base_url": None,
+                        }
+                    ],
+                },
+            ]
+        }
 
         router = ProxyRouter(auth)
 
@@ -217,18 +229,20 @@ class TestRouting:
         provider.oauth = None
         provider.resolve_urls.return_value = provider
         auth.get_provider.return_value = provider
-        auth.list_connections.return_value = [
-            {
-                "name": "github-shards",
-                "connections": [
-                    {
-                        "connection_name": "default",
-                        "host_url": r"regex:^api[0-9]+\.github\.com$",
-                        "base_url": None,
-                    }
-                ],
-            }
-        ]
+        auth.list_connections.return_value = {
+            "connections": [
+                {
+                    "name": "github-shards",
+                    "connections": [
+                        {
+                            "connection_name": "default",
+                            "host_url": r"regex:^api[0-9]+\.github\.com$",
+                            "base_url": None,
+                        }
+                    ],
+                }
+            ]
+        }
 
         router = ProxyRouter(auth)
 
@@ -248,28 +262,30 @@ class TestRouting:
         provider.oauth = None
         provider.resolve_urls.return_value = provider
         auth.get_provider.return_value = provider
-        auth.list_connections.return_value = [
-            {
-                "name": "regex",
-                "connections": [
-                    {
-                        "connection_name": "default",
-                        "host_url": r"regex:^api[0-9]+\.github\.com$",
-                        "base_url": None,
-                    }
-                ],
-            },
-            {
-                "name": "exact",
-                "connections": [
-                    {
-                        "connection_name": "default",
-                        "host_url": "api1.github.com",
-                        "base_url": None,
-                    }
-                ],
-            },
-        ]
+        auth.list_connections.return_value = {
+            "connections": [
+                {
+                    "name": "regex",
+                    "connections": [
+                        {
+                            "connection_name": "default",
+                            "host_url": r"regex:^api[0-9]+\.github\.com$",
+                            "base_url": None,
+                        }
+                    ],
+                },
+                {
+                    "name": "exact",
+                    "connections": [
+                        {
+                            "connection_name": "default",
+                            "host_url": "api1.github.com",
+                            "base_url": None,
+                        }
+                    ],
+                },
+            ]
+        }
 
         router = ProxyRouter(auth)
 
@@ -288,18 +304,20 @@ class TestRouting:
         provider.oauth = None
         provider.resolve_urls.return_value = provider
         auth.get_provider.return_value = provider
-        auth.list_connections.return_value = [
-            {
-                "name": "plain",
-                "connections": [
-                    {
-                        "connection_name": "default",
-                        "host_url": "api.github.com",
-                        "base_url": None,
-                    }
-                ],
-            }
-        ]
+        auth.list_connections.return_value = {
+            "connections": [
+                {
+                    "name": "plain",
+                    "connections": [
+                        {
+                            "connection_name": "default",
+                            "host_url": "api.github.com",
+                            "base_url": None,
+                        }
+                    ],
+                }
+            ]
+        }
 
         router = ProxyRouter(auth)
 
@@ -332,18 +350,20 @@ class TestRouting:
         provider.oauth = oauth
         provider.resolve_urls.return_value = provider
         auth.get_provider.return_value = provider
-        auth.list_connections.return_value = [
-            {
-                "name": "custom",
-                "connections": [
-                    {
-                        "connection_name": "default",
-                        "host_url": "api.example.com",
-                        "base_url": None,
-                    }
-                ],
-            }
-        ]
+        auth.list_connections.return_value = {
+            "connections": [
+                {
+                    "name": "custom",
+                    "connections": [
+                        {
+                            "connection_name": "default",
+                            "host_url": "api.example.com",
+                            "base_url": None,
+                        }
+                    ],
+                }
+            ]
+        }
 
         router = ProxyRouter(auth)
 
@@ -379,14 +399,13 @@ class TestAuthProxyAddon:
         router = Mock()
         router.route.return_value = match
         with patch("authsome.proxy.server.ProxyRouter", return_value=router):
-            addon = AuthProxyAddon(auth=auth)
+            addon = AuthProxyAddon(client=auth)
         return addon, router
 
     def test_addon_injects_headers_for_matched_request(self) -> None:
         auth = Mock()
         flow = self._make_flow()
-        auth.get_auth_headers.return_value = {"Authorization": "Bearer sk-test"}
-        auth.get_connection.return_value.expires_at = None
+        auth.resolve_credentials.return_value = {"headers": {"Authorization": "Bearer sk-test"}, "expires_at": None}
 
         addon, _router = self._make_addon(auth, RouteMatch(provider="openai", connection="default"))
         addon.request(flow)
@@ -396,8 +415,7 @@ class TestAuthProxyAddon:
     def test_addon_overwrites_existing_authorization_header(self) -> None:
         auth = Mock()
         flow = self._make_flow(headers={"Authorization": "Bearer existing"})
-        auth.get_auth_headers.return_value = {"Authorization": "Bearer sk-authsome"}
-        auth.get_connection.return_value.expires_at = None
+        auth.resolve_credentials.return_value = {"headers": {"Authorization": "Bearer sk-authsome"}, "expires_at": None}
 
         addon, _router = self._make_addon(auth, RouteMatch(provider="openai", connection="default"))
         addon.request(flow)
@@ -411,11 +429,11 @@ class TestAuthProxyAddon:
         addon, _router = self._make_addon(auth, None)
         addon.request(flow)
 
-        auth.get_auth_headers.assert_not_called()
+        auth.resolve_credentials.assert_not_called()
 
     def test_addon_continues_on_header_retrieval_failure(self) -> None:
         auth = Mock()
-        auth.get_auth_headers.side_effect = RuntimeError("token expired")
+        auth.resolve_credentials.side_effect = RuntimeError("token expired")
         flow = self._make_flow()
 
         addon, _router = self._make_addon(auth, RouteMatch(provider="openai", connection="default"))
@@ -425,14 +443,13 @@ class TestAuthProxyAddon:
 
     def test_addon_caches_headers_for_connection(self) -> None:
         auth = Mock()
-        auth.get_auth_headers.return_value = {"Authorization": "Bearer sk-test"}
-        auth.get_connection.return_value.expires_at = None
+        auth.resolve_credentials.return_value = {"headers": {"Authorization": "Bearer sk-test"}, "expires_at": None}
         addon, _router = self._make_addon(auth, RouteMatch(provider="openai", connection="default"))
 
         addon.request(self._make_flow())
         addon.request(self._make_flow())
 
-        auth.get_auth_headers.assert_called_once_with("openai", "default")
+        auth.resolve_credentials.assert_called_once_with(provider="openai", connection="default")
 
 
 # ── Runner tests ─────────────────────────────────────────────────────────
@@ -468,7 +485,7 @@ class TestProxyRunner:
         from authsome.proxy.runner import ProxyRunner
 
         auth = _make_auth(tmp_path)
-        auth.login("openai", force=True, input_provider=MockInputProvider({"api_key": "sk-real-padded-for-regex-12"}))
+        _save_connection_record(auth, "openai", "sk-real-padded-for-regex-12")
 
         runner = ProxyRunner(auth)
 
@@ -543,23 +560,27 @@ class TestProxyCLI:
     def test_run_requires_command(self) -> None:
         from click.testing import CliRunner
 
-        from authsome.cli import cli
+        from authsome.cli.main import cli
 
-        runner = CliRunner()
-        result = runner.invoke(cli, ["run"])
+        with patch("authsome.cli.main.resolve_runtime_client") as mock_resolve:
+            mock_resolve.return_value = Mock()
+            runner = CliRunner()
+            result = runner.invoke(cli, ["run"])
 
         assert result.exit_code != 0
 
     def test_run_invokes_runner(self, tmp_path: Path) -> None:
         from click.testing import CliRunner
 
-        from authsome.cli import cli
+        from authsome.cli.main import cli
 
-        with patch("authsome.proxy.runner.ProxyRunner.run") as run_mock:
-            run_mock.return_value = Mock(returncode=0)
-            with patch("authsome.proxy.runner.ProxyRunner.__init__", return_value=None):
-                runner = CliRunner()
-                _result = runner.invoke(cli, ["run", "--", "echo", "hello"])
+        with patch("authsome.cli.main.resolve_runtime_client") as mock_resolve:
+            mock_resolve.return_value = Mock()
+            with patch("authsome.proxy.runner.ProxyRunner.run") as run_mock:
+                run_mock.return_value = Mock(returncode=0)
+                with patch("authsome.proxy.runner.ProxyRunner.__init__", return_value=None):
+                    runner = CliRunner()
+                    _result = runner.invoke(cli, ["run", "--", "echo", "hello"])
 
         run_mock.assert_called_once()
 
