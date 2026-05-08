@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instance.io - Identity Protocol</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <style>
+        body {
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .tilt-wrapper {
+            perspective: 1000px;
+            transform-style: preserve-3d;
+        }
+
+        .tilt-element {
+            transition: transform 0.1s ease-out;
+            will-change: transform;
+        }
+
+        .vertical-text {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+        }
+
+        .reveal-mask {
+            overflow: hidden;
+            display: inline-flex;
+            padding-bottom: 2px;
+        }
+
+        .reveal-text {
+            transform: translateY(110%);
+            will-change: transform;
+        }
+
+        .fade-up {
+            opacity: 0;
+            transform: translateY(20px);
+            will-change: transform, opacity;
+        }
+    </style>
+</head>
+<body class="bg-[#181716] text-[#1A1918] min-h-screen p-3 md:p-6 lg:p-8 flex flex-col items-center font-sans selection:bg-[#E4573D]/20 selection:text-[#E4573D]">
+
+    <!-- Framed Master Container -->
+    <main class="relative w-full max-w-[1280px] flex-grow bg-[#F4F3EF] rounded-[32px] shadow-[0_20px_60px_rgba(0,0,0,0.4)] overflow-hidden border border-[#2D2B2A] flex flex-col items-center justify-center pt-[20vh] pb-24 px-4 tilt-wrapper ring-1 ring-white/5" id="badge-container">
+
+        <!-- Subtle Diagonal Paper Texture -->
+        <div class="absolute inset-0 opacity-[0.025] mix-blend-multiply pointer-events-none" style="background-image: repeating-linear-gradient(45deg, #000 0, #000 1px, transparent 1px, transparent 6px);"></div>
+
+        <!-- Measured Spatial Guides -->
+        <div class="absolute top-[25%] left-0 w-full h-[1px] bg-[#EAE8E1] pointer-events-none"></div>
+        <div class="absolute top-[75%] left-0 w-full h-[1px] bg-[#EAE8E1] pointer-events-none"></div>
+        <div class="absolute top-0 left-[25%] w-[1px] h-full bg-[#EAE8E1] pointer-events-none"></div>
+        <div class="absolute top-0 left-[75%] w-[1px] h-full bg-[#EAE8E1] pointer-events-none"></div>
+
+        <!-- Technical Inset Framing -->
+        <div class="absolute inset-4 border border-[#E2DED6] rounded-[20px] pointer-events-none z-0">
+            <!-- Corner Brackets -->
+            <div class="absolute -top-[1px] -left-[1px] w-5 h-5 border-t border-l border-[#A39F96] rounded-tl-[20px]"></div>
+            <div class="absolute -top-[1px] -right-[1px] w-5 h-5 border-t border-r border-[#A39F96] rounded-tr-[20px]"></div>
+            <div class="absolute -bottom-[1px] -left-[1px] w-5 h-5 border-b border-l border-[#A39F96] rounded-bl-[20px]"></div>
+            <div class="absolute -bottom-[1px] -right-[1px] w-5 h-5 border-b border-r border-[#A39F96] rounded-br-[20px]"></div>
+        </div>
+
+        <!-- Lanyard Assembly -->
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 flex flex-col items-center z-10 pointer-events-none">
+            <!-- Strap -->
+            <div class="w-[52px] h-[228px] bg-[#DBD9D1] border-l border-r border-[#D0CEC5]"></div>
+
+            <!-- Clip Hardware -->
+            <div class="relative flex flex-col items-center -mt-2">
+                <!-- Outer Loop -->
+                <div class="w-[72px] h-[20px] border-[3px] border-[#C2C0B8] rounded-full z-20 shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)] bg-[#F4F3EF] relative overflow-hidden">
+                    <div class="absolute inset-0 border border-white/50 rounded-full pointer-events-none"></div>
+                </div>
+                <!-- Vertical Connector -->
+                <div class="w-[28px] h-[24px] bg-[#42403E] z-10 -mt-[10px] rounded-[2px] border border-[#2B2A29] shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)] relative">
+                    <div class="absolute top-0 left-0 right-0 h-[1px] bg-white/20"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- The ID Badge -->
+        <div id="badge" class="tilt-element relative w-full max-w-[620px] aspect-[1.6/1] bg-[#ECEBE5] rounded-[6px] p-[10px] flex shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06),_0_22.3px_17.9px_rgba(0,_0,_0,_0.072),_0_41.8px_33.4px_rgba(0,_0,_0,_0.086),_0_100px_80px_rgba(0,_0,_0,_0.12)] border border-[#E0DED6] z-20">
+
+            <!-- Cutout hole at top center revealing paper container behind -->
+            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[44px] h-[10px] bg-[#F4F3EF] rounded-b-md shadow-[inset_0_3px_6px_rgba(0,0,0,0.04)] border-b border-l border-r border-[#E0DED6] z-30"></div>
+
+            <!-- Bottom Cutout for Physical Connection -->
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-[44px] h-[10px] bg-[#F4F3EF] rounded-t-md shadow-[inset_0_-3px_6px_rgba(0,0,0,0.04)] border-t border-l border-r border-[#E0DED6] z-30"></div>
+
+            <!-- Data Link Cable connected to bottom -->
+            <div class="absolute -bottom-[38px] left-1/2 -translate-x-1/2 flex flex-col items-center z-10 pointer-events-none">
+                <div class="w-[20px] h-[16px] bg-[#363431] rounded-b-[3px] border border-[#2B2A29] shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)] relative z-20 flex justify-center mt-[2px]">
+                     <div class="w-[8px] h-[2px] bg-[#34D399] mt-[8px] rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+                </div>
+                <div class="w-[6px] h-[30px] bg-gradient-to-b from-[#2D2C2A] to-transparent -mt-[1px] rounded-b-sm"></div>
+            </div>
+
+            <!-- Left Inner Screen -->
+            <div class="relative w-[78%] h-full rounded-[3px] bg-[#FCFBF9] border border-[#E6E4DD] overflow-hidden shadow-[inset_0_0_15px_rgba(0,0,0,0.02)] flex flex-col z-20">
+
+                <!-- Top UI Bar -->
+                <div class="absolute top-0 left-0 right-0 h-10 border-b border-[#F0EFEB] flex items-center px-4 justify-between z-20 bg-[#FCFBF9]/80 backdrop-blur-sm">
+                    <div class="flex gap-[6px] items-center">
+                        <div class="w-[5px] h-[5px] rounded-full bg-[#34D399] shadow-[0_0_6px_rgba(52,211,153,0.6)]"></div>
+                        <div class="w-[5px] h-[5px] rounded-full bg-[#D1CFC7]"></div>
+                        <div class="w-[5px] h-[5px] rounded-full bg-[#D1CFC7]"></div>
+                    </div>
+                    <div class="font-mono text-xs text-[#A8A59C] tracking-widest uppercase">Connected</div>
+                </div>
+
+                <!-- WebGL / Canvas Animation Area -->
+                <canvas id="digital-canvas" class="absolute inset-0 w-full h-full z-10 mix-blend-multiply opacity-85"></canvas>
+
+                <!-- Bottom Technical Rules -->
+                <div class="absolute bottom-4 left-4 right-4 flex justify-between items-end border-t border-[#F0EFEB] pt-2 z-20">
+                    <div class="font-mono text-xs text-[#8E8B82] uppercase tracking-wider">Node: Online</div>
+                    <div class="font-mono text-xs text-[#8E8B82]">Ver: 1.0.5</div>
+                </div>
+
+                <!-- Inner Brackets -->
+                <div class="absolute top-2 left-2 w-1.5 h-1.5 border-t border-l border-[#D1CFC7] z-20"></div>
+                <div class="absolute top-2 right-2 w-1.5 h-1.5 border-t border-r border-[#D1CFC7] z-20"></div>
+                <div class="absolute bottom-2 left-2 w-1.5 h-1.5 border-b border-l border-[#D1CFC7] z-20"></div>
+                <div class="absolute bottom-2 right-2 w-1.5 h-1.5 border-b border-r border-[#D1CFC7] z-20"></div>
+            </div>
+
+            <!-- Right Text Area -->
+            <div class="flex-1 h-full flex flex-col items-center justify-between py-6 px-2 z-20">
+                <!-- Technical Icon -->
+                <iconify-icon icon="solar:cpu-linear" width="26" height="26" class="text-[#363431]"></iconify-icon>
+
+                <!-- Rotated Brand Text -->
+                <div class="text-[#2D2C2A] font-normal text-4xl tracking-tight vertical-text leading-none select-none">
+                    INSTANCE.IO
+                </div>
+
+                <!-- Tiny Technical Mark -->
+                <div class="flex flex-col items-center gap-1.5">
+                    <div class="w-[3px] h-[3px] bg-[#E4573D]"></div>
+                    <div class="w-[12px] h-[1px] bg-[#C2C0B8]"></div>
+                </div>
+            </div>
+
+            <!-- Edge highlights for tactility -->
+            <div class="absolute inset-0 border border-white/80 rounded-[6px] pointer-events-none mix-blend-overlay z-40"></div>
+            <div class="absolute top-0 left-0 right-0 h-[1px] bg-white rounded-t-[6px] pointer-events-none z-40"></div>
+        </div>
+
+        <!-- Landing Page Supplementary Content -->
+        <div class="mt-24 flex flex-col items-center text-center gap-3 relative z-20 pb-4">
+            <h1 class="text-xs tracking-[0.2em] text-[#E4573D] font-mono uppercase font-normal flex items-center gap-2">
+                <span class="w-[14px] h-[14px] rounded-sm bg-[#E4573D]/10 border border-[#E4573D]/30 flex items-center justify-center">
+                   <span class="w-1 h-1 bg-[#E4573D] rounded-[1px]"></span>
+                </span>
+                <span class="reveal-mask"><span class="reveal-text block">Identity Protocol</span></span>
+            </h1>
+
+            <h2 class="text-4xl md:text-5xl tracking-tight text-[#1A1918] font-normal flex gap-2">
+                <span class="reveal-mask"><span class="reveal-text block">Deploy</span></span>
+                <span class="reveal-mask"><span class="reveal-text block">your</span></span>
+                <span class="reveal-mask"><span class="reveal-text block text-[#949188]">credential.</span></span>
+            </h2>
+
+            <!-- Social Proof -->
+            <div class="mt-8 flex flex-col items-center gap-3 fade-up">
+                <div class="flex items-center gap-3">
+                    <div class="flex -space-x-2">
+                        <img src="https://i.pravatar.cc/100?img=33" alt="Operator" class="w-8 h-8 rounded-full border-2 border-[#F4F3EF] shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)]">
+                        <img src="https://i.pravatar.cc/100?img=47" alt="Operator" class="w-8 h-8 rounded-full border-2 border-[#F4F3EF] shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)]">
+                        <img src="https://i.pravatar.cc/100?img=12" alt="Operator" class="w-8 h-8 rounded-full border-2 border-[#F4F3EF] shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)]">
+                        <div class="w-8 h-8 rounded-full border-2 border-[#F4F3EF] bg-[#EAE8E1] flex items-center justify-center text-xs font-medium text-[#8E8B82] shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)]">
+                            <iconify-icon icon="solar:user-linear" width="14" height="14"></iconify-icon>
+                        </div>
+                    </div>
+                    <div class="text-sm text-[#8E8B82]">
+                        Validated by <span class="font-medium text-[#1A1918]">10,000+</span> operators
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom CTA -->
+            <div class="mt-6 fade-up">
+                <button class="group relative inline-flex items-center justify-center rounded-full p-[1px] shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)] bg-gradient-to-b from-[#5c5a58] to-[#1A1918] focus:outline-none focus:ring-2 focus:ring-[#E4573D]/50 focus:ring-offset-2 focus:ring-offset-[#F4F3EF]">
+                    <span class="relative inline-flex items-center gap-2 bg-[#1A1918] px-6 py-2.5 rounded-full text-sm font-medium text-white transition-all group-hover:bg-[#252422]">
+                        Initialize Sequence
+                        <iconify-icon icon="solar:arrow-right-linear" width="16" height="16" class="text-[#A39F96] group-hover:text-white transition-all group-hover:translate-x-0.5"></iconify-icon>
+                    </span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- 1. Canvas Animation ---
+        const canvas = document.getElementById('digital-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let particles = [];
+        const particleCount = 150;
+
+        function resize() {
+            const rect = canvas.getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
+            canvas.width = width * window.devicePixelRatio;
+            canvas.height = height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            initParticles();
+        }
+
+        class Particle {
+            constructor() {
+                this.x = (Math.random() * 0.6 + 0.3) * width;
+                this.y = (Math.random() * 0.8 + 0.1) * height;
+                this.baseX = this.x;
+                this.baseY = this.y;
+
+                this.size = Math.random() > 0.9 ? Math.random() * 3 + 2 : Math.random() * 1.5 + 0.5;
+                this.speedX = Math.random() * 0.4 - 0.2;
+                this.speedY = Math.random() * 0.4 - 0.2;
+
+                const isAccent = Math.random() > 0.95;
+                if (isAccent) {
+                    this.color = `rgba(228, 87, 61, ${Math.random() * 0.7 + 0.3})`;
+                } else {
+                    const shade = Math.floor(Math.random() * 60 + 30);
+                    this.color = `rgba(${shade}, ${shade}, ${shade}, ${Math.random() * 0.5 + 0.2})`;
+                }
+
+                this.targetX = this.x;
+                this.targetY = this.y;
+            }
+
+            update(mouseX, mouseY) {
+                this.baseX += this.speedX;
+                this.baseY += this.speedY;
+
+                if(this.baseX < 0 || this.baseX > width) this.speedX *= -1;
+                if(this.baseY < 0 || this.baseY > height) this.speedY *= -1;
+
+                let dx = mouseX - this.baseX;
+                let dy = mouseY - this.baseY;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 80) {
+                    let forceDirectionX = dx / distance;
+                    let forceDirectionY = dy / distance;
+                    let force = (80 - distance) / 80;
+                    this.targetX = this.baseX - forceDirectionX * force * 20;
+                    this.targetY = this.baseY - forceDirectionY * force * 20;
+                } else {
+                    this.targetX = this.baseX;
+                    this.targetY = this.baseY;
+                }
+
+                this.x += (this.targetX - this.x) * 0.1;
+                this.y += (this.targetY - this.y) * 0.1;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < particleCount; i++) {
+                particles.push(new Particle());
+            }
+            for(let i=0; i<5; i++) {
+                let p = new Particle();
+                p.x = p.baseX = Math.random() * width;
+                p.y = p.baseY = Math.random() * height;
+                p.size = Math.random() * 4 + 3;
+                p.color = `rgba(160, 156, 145, ${Math.random() * 0.4 + 0.2})`;
+                particles.push(p);
+            }
+        }
+
+        let mouseX = -1000;
+        let mouseY = -1000;
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            mouseX = -1000;
+            mouseY = -1000;
+        });
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+
+            const gradient = ctx.createRadialGradient(width*0.6, height*0.5, 0, width*0.6, height*0.5, height*0.6);
+            gradient.addColorStop(0, 'rgba(0,0,0,0.015)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0,0,width,height);
+
+            particles.forEach(p => {
+                p.update(mouseX, mouseY);
+                p.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        animate();
+
+
+        // --- 2. 3D Tilt Effect on Badge ---
+        const container = document.getElementById('badge-container');
+        const badge = document.getElementById('badge');
+
+        container.addEventListener('mousemove', (e) => {
+            const rect = container.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+
+            const rotateX = ((y - centerY) / centerY) * -5;
+            const rotateY = ((x - centerX) / centerX) * 5;
+
+            badge.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+        });
+
+        container.addEventListener('mouseleave', () => {
+            badge.style.transform = `rotateX(0deg) rotateY(0deg) translateZ(0px)`;
+            badge.style.transition = "transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)";
+            setTimeout(() => { badge.style.transition = "transform 0.1s ease-out"; }, 500);
+        });
+
+
+        // --- 3. GSAP Animations ---
+        gsap.registerPlugin(ScrollTrigger);
+
+        const tl = gsap.timeline({
+            defaults: { ease: "power4.out" },
+            scrollTrigger: {
+                trigger: "#badge-container",
+                start: "top 80%"
+            }
+        });
+
+        tl.fromTo(badge,
+            { y: 50, opacity: 0, scale: 0.95 },
+            { y: 0, opacity: 1, scale: 1, duration: 1.5, ease: "power3.out" }
+        )
+        .to(".reveal-text", {
+            y: "0%",
+            duration: 1,
+            stagger: 0.1,
+        }, "-=1")
+        .to(".fade-up", {
+            y: 0,
+            opacity: 1,
+            duration: 1,
+            stagger: 0.15,
+            ease: "power3.out"
+        }, "-=0.8");
+
+    </script>
+</body>
+</html>
