@@ -21,11 +21,11 @@ from authsome.auth.models.enums import AuthType, FlowType
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.auth.sessions import AuthSession, AuthSessionStore
 from authsome.errors import ConnectionNotFoundError
-from authsome.server.routes._deps import get_auth_service, get_auth_sessions
+from authsome.server.routes._deps import get_auth_service, get_auth_sessions, get_server_base_url
+from authsome.server.urls import build_auth_input_url, build_callback_url, build_device_url
 from authsome.utils import utc_now
 
 router = APIRouter(prefix="/ui", tags=["ui"], include_in_schema=False)
-LOCAL_BASE_URL = "http://127.0.0.1:7998"
 
 # Templates ship inside the installed package alongside the code.
 _TEMPLATES_DIR = files("authsome.ui").joinpath("templates")
@@ -189,6 +189,7 @@ def app_detail(
     provider_name: str,
     request: Request,
     auth: AuthService = Depends(get_auth_service),
+    server_base_url: str = Depends(get_server_base_url),
 ) -> Response:
     provider = auth.get_provider(provider_name)
 
@@ -199,7 +200,7 @@ def app_detail(
         pass
 
     client_record = auth.get_provider_client(provider_name)
-    redirect_uri = "http://127.0.0.1:7998/auth/callback/oauth"
+    redirect_uri = build_callback_url(server_base_url)
     host_url = provider.host_url or (provider.oauth.base_url if provider.oauth else None) or provider.name
 
     if connection_record is None:
@@ -284,6 +285,7 @@ async def connect_app(
     background_tasks: BackgroundTasks,
     auth: AuthService = Depends(get_auth_service),
     sessions: AuthSessionStore = Depends(get_auth_sessions),
+    server_base_url: str = Depends(get_server_base_url),
 ) -> Response:
     """Start a provider connection from the dashboard."""
     form = await request.form()
@@ -299,7 +301,8 @@ async def connect_app(
         flow_type=flow.value,
     )
     session.payload["force"] = force
-    session.payload["return_url"] = f"{LOCAL_BASE_URL}/ui/apps/{provider_name}"
+    session.payload["callback_url_override"] = build_callback_url(server_base_url)
+    session.payload["return_url"] = f"{server_base_url.rstrip('/')}/ui/apps/{provider_name}"
 
     if not force:
         try:
@@ -313,14 +316,14 @@ async def connect_app(
     fields = auth.get_required_inputs(session)
     if fields:
         session.payload["input_fields"] = [field.model_dump(mode="json", exclude_none=True) for field in fields]
-        return _redirect(request, f"{LOCAL_BASE_URL}/auth/sessions/{session.session_id}/input")
+        return _redirect(request, build_auth_input_url(server_base_url, session.session_id))
 
     auth.begin_login_flow(session=session, force=force)
     if flow == FlowType.DEVICE_CODE:
         _update_device_code_expiry(sessions, session)
         background_tasks.add_task(auth.background_resume, session)
         if session.payload.get("user_code") and session.payload.get("verification_uri"):
-            return _redirect(request, f"{LOCAL_BASE_URL}/auth/sessions/{session.session_id}/device")
+            return _redirect(request, build_device_url(server_base_url, session.session_id))
 
     sessions.index_oauth_state(session)
     auth_url = session.payload.get("auth_url")

@@ -22,7 +22,7 @@ from authsome.cli.client import AuthsomeApiClient
 from authsome.cli.daemon_control import (
     DaemonUnavailableError,
     daemon_status,
-    ensure_daemon,
+    resolve_runtime_client,
     start_daemon,
     stop_daemon,
 )
@@ -56,7 +56,7 @@ class ContextObj:
 
     def initialize(self) -> CliRuntime:
         if self._ctx is None:
-            self._ctx = CliRuntime(ensure_daemon())
+            self._ctx = CliRuntime(resolve_runtime_client())
             audit.setup(self._ctx.home / "audit.log")
         return self._ctx
 
@@ -910,11 +910,9 @@ def doctor(ctx_obj: ContextObj) -> None:
 @pass_ctx
 @handle_errors
 def ui(ctx_obj: ContextObj, no_browser: bool) -> None:
-    """Open the local read-only dashboard in the browser."""
-    ctx_obj.initialize()
-    from authsome.cli.client import DEFAULT_DAEMON_URL
-
-    url = f"{DEFAULT_DAEMON_URL}/ui/"
+    """Open the daemon dashboard in the browser."""
+    actx = ctx_obj.initialize()
+    url = f"{actx.runtime_client.base_url}/ui/"
     if no_browser:
         ctx_obj.echo(url)
         return

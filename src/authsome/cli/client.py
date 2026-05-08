@@ -2,11 +2,39 @@
 
 from __future__ import annotations
 
+import os
+from collections.abc import Mapping
 from typing import Any
+from urllib.parse import urlparse
 
 import requests
 
-DEFAULT_DAEMON_URL = "http://127.0.0.1:7998"
+from authsome.server.urls import DEFAULT_SERVER_BASE_URL
+
+DEFAULT_DAEMON_URL = DEFAULT_SERVER_BASE_URL
+
+
+def resolve_daemon_url(env: Mapping[str, str] | None = None) -> str:
+    """Return the configured daemon URL for CLI and proxy clients."""
+    values = env if env is not None else os.environ
+    raw = values.get("AUTHSOME_DAEMON_URL", DEFAULT_DAEMON_URL).strip()
+    return raw.rstrip("/") or DEFAULT_DAEMON_URL
+
+
+def is_local_daemon_url(url: str) -> bool:
+    """Return whether the configured daemon URL targets a local loopback daemon."""
+    hostname = urlparse(url).hostname
+    return hostname in {"127.0.0.1", "localhost", "::1"}
+
+
+def is_managed_local_daemon_url(url: str) -> bool:
+    """Return whether the URL matches the default local daemon managed by the CLI."""
+    parsed = urlparse(url)
+    if parsed.scheme != "http":
+        return False
+    if parsed.path not in {"", "/"}:
+        return False
+    return parsed.hostname in {"127.0.0.1", "localhost", "::1"} and (parsed.port in {None, 7998})
 
 
 def raise_for_error(response: requests.Response) -> None:
@@ -37,10 +65,14 @@ def raise_for_error(response: requests.Response) -> None:
 
 
 class AuthsomeApiClient:
-    """Small typed wrapper around the local daemon API."""
+    """Small typed wrapper around the daemon API."""
 
-    def __init__(self, base_url: str = DEFAULT_DAEMON_URL) -> None:
-        self._base_url = base_url.rstrip("/")
+    def __init__(self, base_url: str | None = None) -> None:
+        self._base_url = (base_url or resolve_daemon_url()).rstrip("/")
+
+    @property
+    def base_url(self) -> str:
+        return self._base_url
 
     def _get(self, path: str) -> dict[str, Any]:
         response = requests.get(f"{self._base_url}{path}", timeout=10)

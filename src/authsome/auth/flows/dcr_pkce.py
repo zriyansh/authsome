@@ -17,13 +17,14 @@ from authsome.auth.models.connection import AccountInfo, ConnectionRecord, Provi
 from authsome.auth.models.enums import AuthType, ConnectionStatus
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.errors import AuthenticationFailedError, DiscoveryError
+from authsome.server.urls import DEFAULT_SERVER_BASE_URL, build_callback_url
 from authsome.utils import utc_now
 
 if TYPE_CHECKING:
     from authsome.auth.sessions import AuthSession
 
 _CALLBACK_TIMEOUT_SECONDS = 300
-_DEFAULT_CALLBACK_URL = "http://127.0.0.1:7998/auth/callback/oauth"
+_DEFAULT_CALLBACK_URL = build_callback_url(DEFAULT_SERVER_BASE_URL)
 
 
 def _generate_pkce() -> tuple[str, str]:
