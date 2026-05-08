@@ -17,12 +17,14 @@ from authsome.auth.models.connection import AccountInfo, ConnectionRecord, Provi
 from authsome.auth.models.enums import AuthType, ConnectionStatus
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.errors import AuthenticationFailedError, DiscoveryError
+from authsome.server.urls import DEFAULT_SERVER_BASE_URL, build_callback_url
 from authsome.utils import utc_now
 
 if TYPE_CHECKING:
     from authsome.auth.sessions import AuthSession
 
 _CALLBACK_TIMEOUT_SECONDS = 300
+_DEFAULT_CALLBACK_URL = build_callback_url(DEFAULT_SERVER_BASE_URL)
 
 
 def _generate_pkce() -> tuple[str, str]:
@@ -30,6 +32,14 @@ def _generate_pkce() -> tuple[str, str]:
     digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
     code_challenge = urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
     return code_verifier, code_challenge
+
+
+def _resolve_callback_url(runtime_session: AuthSession) -> str:
+    callback_override = runtime_session.payload.get("callback_url_override")
+    if callback_override:
+        return str(callback_override)
+
+    return _DEFAULT_CALLBACK_URL
 
 
 class DcrPkceFlow(AuthFlow):
@@ -53,16 +63,15 @@ class DcrPkceFlow(AuthFlow):
 
         effective_scopes = scopes or provider.oauth.scopes or []
 
+        redirect_uri = _resolve_callback_url(runtime_session)
+
         registered_new_client = not client_id
         if registered_new_client:
-            client_id, client_secret = self._register_client(provider, effective_scopes)
+            client_id, client_secret = self._register_client(provider, effective_scopes, redirect_uri)
 
         assert client_id is not None  # guaranteed: either passed in or registered above
 
         code_verifier, code_challenge = _generate_pkce()
-        redirect_uri = str(
-            runtime_session.payload.get("callback_url_override", "http://127.0.0.1:7998/auth/callback/oauth")
-        )
 
         state = secrets.token_urlsafe(32)
         auth_params: dict[str, str] = {
@@ -198,13 +207,15 @@ class DcrPkceFlow(AuthFlow):
             provider=provider.name,
         )
 
-    def _register_client(self, provider: ProviderDefinition, scopes: list[str]) -> tuple[str, str | None]:
+    def _register_client(
+        self, provider: ProviderDefinition, scopes: list[str], redirect_uri: str
+    ) -> tuple[str, str | None]:
         if provider.oauth is None:
             raise AuthenticationFailedError("No OAuth config", provider=provider.name)
         reg_endpoint = provider.oauth.registration_endpoint or self._discover_registration_endpoint(provider)
         dcr_payload: dict[str, Any] = {
             "client_name": f"authsome-{provider.name}",
-            "redirect_uris": ["http://127.0.0.1:7998/auth/callback/oauth"],
+            "redirect_uris": [redirect_uri],
             "grant_types": ["authorization_code", "refresh_token"],
             "response_types": ["code"],
             "token_endpoint_auth_method": "client_secret_post",

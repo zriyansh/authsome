@@ -14,3 +14,7 @@ def get_auth_service(request: Request) -> AuthService:
 
 def get_auth_sessions(request: Request) -> AuthSessionStore:
     return request.app.state.auth_sessions
+
+
+def get_server_base_url(request: Request) -> str:
+    return request.app.state.server_base_url

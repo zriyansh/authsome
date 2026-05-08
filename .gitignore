@@ -244,3 +244,5 @@ __marimo__/
 # Git worktrees
 .worktrees/
 .claude/worktrees/
+# Local authsome home directory
+.authsome/

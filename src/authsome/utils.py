@@ -152,8 +152,8 @@ def require_os_auth(action_name: str) -> bool:
             if not password:
                 return False
 
-            LOGON32_LOGON_INTERACTIVE = 2
-            LOGON32_PROVIDER_DEFAULT = 0
+            logon32_logon_interactive = 2
+            logon32_provider_default = 0
 
             token = wintypes.HANDLE()
             username = os.environ.get("USERNAME", "")
@@ -162,8 +162,8 @@ def require_os_auth(action_name: str) -> bool:
                 username,
                 None,
                 password,
-                LOGON32_LOGON_INTERACTIVE,
-                LOGON32_PROVIDER_DEFAULT,
+                logon32_logon_interactive,
+                logon32_provider_default,
                 ctypes.byref(token),
             )
             if result:

@@ -23,6 +23,7 @@
           "guides/login-with-oauth",
           "guides/use-api-keys",
           "guides/run-agents-with-proxy",
+          "guides/deploy-on-gce",
           "guides/custom-providers",
           "guides/profiles",
           "guides/headless-device-code"

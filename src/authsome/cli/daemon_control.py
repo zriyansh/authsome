@@ -11,7 +11,12 @@ import time
 from pathlib import Path
 from typing import Any
 
-from authsome.cli.client import DEFAULT_DAEMON_URL, AuthsomeApiClient
+from authsome.cli.client import (
+    DEFAULT_DAEMON_URL,
+    AuthsomeApiClient,
+    is_managed_local_daemon_url,
+    resolve_daemon_url,
+)
 from authsome.server.daemon import DEFAULT_HOST, DEFAULT_PORT
 
 AUTHSOME_HOME = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
@@ -39,6 +44,14 @@ def ensure_daemon() -> AuthsomeApiClient:
             return client
         time.sleep(0.2)
     raise DaemonUnavailableError(_startup_error())
+
+
+def resolve_runtime_client() -> AuthsomeApiClient:
+    """Return the configured runtime client, auto-starting only for local mode."""
+    client = AuthsomeApiClient(resolve_daemon_url())
+    if is_managed_local_daemon_url(client.base_url):
+        return ensure_daemon()
+    return client
 
 
 def start_daemon() -> None:

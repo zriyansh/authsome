@@ -121,7 +121,7 @@ For the full schema with every supported field, see the [Provider schema referen
 uvx authsome register ./acmecrm.json
 ```
 
-Authsome validates required fields, checks `auth_type`/`flow` compatibility, and copies the file into `~/.authsome/providers/`. Pass `--force` to overwrite an existing provider with the same name.
+Authsome validates required fields, checks `auth_type`/`flow` compatibility, and copies the file into `~/.authsome/providers/`. Pass `--yes` to skip the confirmation prompt in scripts, and `--force` to overwrite an existing provider with the same name.
 
 ```bash
 uvx authsome register ./acmecrm.json --force
