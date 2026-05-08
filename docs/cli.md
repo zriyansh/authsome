@@ -14,7 +14,7 @@ All commands support `--json` for machine-readable output.
 | `inspect <provider>` | Show the full provider definition schema. |
 | `login <provider>` | Authenticate with a provider using its configured flow. |
 | `get <provider>` | Get connection metadata (secrets redacted by default). |
-| `export <provider>` | Export credentials in `env` or `json` format. |
+| `export <provider>` | Export credentials in `env`, `shell`, or `json` format. |
 | `run -- <cmd>` | Run a subprocess behind the local auth injection proxy. |
 | `logout <provider>` | Log out of a connection and remove local state. |
 | `revoke <provider>` | Complete reset of the provider, removing all connections and client secrets. |
@@ -97,10 +97,17 @@ authsome export <provider> [OPTIONS]
 | Option | Description |
 |--------|-------------|
 | `--connection <name>` | Connection name (default: `default`). |
-| `--format <fmt>` | Output format: `env` (default) or `json`. |
+| `--format <fmt>` | Output format: `env` (default), `shell`, or `json`. |
 
 ```bash
-authsome export github --format env    # inject GITHUB_TOKEN into environment
+# Output KEY=VALUE pairs (useful for chaining)
+authsome export github --format env
+
+# Chaining example
+export $(authsome export github)
+
+# Save to a .env file
+authsome export github > .env
 ```
 
 ### `run`
@@ -130,10 +137,10 @@ authsome run -- curl https://api.openai.com/v1/models
 ### `register`
 
 ```bash
-authsome register <path/to/provider.json> [--force]
+authsome register <path/to/provider.json> [--yes] [--force]
 ```
 
-Registers a custom provider. Use `--force` to overwrite an existing provider with the same name. See the [provider registration guide](./register-provider.md) for JSON templates and field reference.
+Registers a custom provider. Use `--yes` to skip the confirmation prompt in scripts, and `--force` to overwrite an existing provider with the same name. See the [provider registration guide](./register-provider.md) for JSON templates and field reference.
 
 ### `logout` / `revoke` / `remove`
 

@@ -20,5 +20,6 @@
     "env": {
       "access_token": "POSTIZ_ACCESS_TOKEN"
     }
-  }
+  },
+  "docs": "https://docs.postiz.com/public-api/oauth"
 }

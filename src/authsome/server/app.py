@@ -1,0 +1,62 @@
+"""FastAPI app factory for the Authsome daemon."""
+
+from __future__ import annotations
+
+from importlib.resources import files
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+
+from authsome.auth.sessions import AuthSessionStore
+from authsome.errors import AuthsomeError
+from authsome.server.dependencies import create_auth_service, get_server_base_url
+from authsome.server.routes.auth import router as auth_router
+from authsome.server.routes.connections import router as connections_router
+from authsome.server.routes.health import router as health_router
+from authsome.server.routes.providers import router as providers_router
+from authsome.server.routes.proxy import router as proxy_router
+from authsome.server.routes.ui import router as ui_router
+
+
+def create_app(auth_service=None, server_base_url: str | None = None) -> FastAPI:
+    """Create the local daemon FastAPI app."""
+    app = FastAPI(title="Authsome Daemon", version="0.1")
+    app.state.auth_service = auth_service or create_auth_service()
+    app.state.auth_sessions = AuthSessionStore()
+    app.state.server_base_url = server_base_url or get_server_base_url()
+
+    @app.exception_handler(AuthsomeError)
+    def authsome_error_handler(request: Request, exc: AuthsomeError) -> JSONResponse:
+        status_code = 400
+        exc_name = exc.__class__.__name__
+        if exc_name in ("ConnectionNotFoundError", "ProviderNotFoundError", "ProfileNotFoundError"):
+            status_code = 404
+        elif exc_name == "CredentialMissingError":
+            status_code = 401
+
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "error": exc_name,
+                "message": str(exc),
+                "provider": exc.provider,
+                "operation": exc.operation,
+            },
+        )
+
+    app.include_router(health_router)
+    app.include_router(auth_router)
+    app.include_router(connections_router)
+    app.include_router(providers_router)
+    app.include_router(proxy_router)
+    app.include_router(ui_router)
+
+    static_dir = files("authsome.ui").joinpath("static")
+    app.mount("/ui/static", StaticFiles(directory=str(static_dir)), name="ui-static")
+
+    @app.get("/ui", include_in_schema=False)
+    def _ui_redirect() -> RedirectResponse:
+        return RedirectResponse(url="/ui/")
+
+    return app

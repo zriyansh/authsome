@@ -40,6 +40,7 @@
 | **ProviderMetadataRecord** | Non-secret per-profile record tracking which Connections exist for a Provider and which is the default | Provider metadata |
 | **ProviderStateRecord** | Transient per-profile record tracking the last refresh attempt and any errors for a Provider | Provider state |
 | **AccountInfo** | The identity fields (id, label) returned by a Provider and stored on a ConnectionRecord | User info, identity |
+| **ClientCredentials** | The OAuth2 `client_id` and `client_secret` for a Provider, stored in a `ProviderClientRecord` at server scope (key: `server:<provider>:client`). Shared across all Profiles and users on a server instance — they represent the OAuth application registration, not the user. | User credentials, per-profile client |
 | ~~**EncryptedField**~~ | *Removed.* No longer part of the public model layer. Encryption is now handled entirely within the Vault. Tokens are stored as plaintext `str` on `ConnectionRecord` and marked with the `Sensitive` annotation for display safety. | — |
 | ~~**CredentialStore**~~ | *Deprecated.* Internal implementation detail of the Vault. Do not use in documentation or code outside `vault/`. | — |
 | ~~**CryptoBackend**~~ | *Deprecated.* Internal implementation detail of the Vault. Do not use in documentation or code outside `vault/`. | — |
@@ -70,6 +71,7 @@
 - The **Vault** encrypts full **ConnectionRecord** blobs using the master key it manages (file-based or OS keyring). The **AuthLayer** reads and writes records through the Vault without knowing the encryption details.
 - An **AuthProxy** draws credentials from **Connections** in the active **Profile** via the **AuthLayer** and injects them as request headers.
 - **AuthsomeContext** wires **Vault**, **AuthLayer**, and **ProxyRunner** together; the CLI creates one context per invocation.
+- **ClientCredentials** are server-scoped, not profile-scoped. A single `ProviderClientRecord` per Provider is shared by all Profiles on a server instance. `ConnectionRecord` tokens are always profile-scoped.
 
 ## Example dialogue
 
