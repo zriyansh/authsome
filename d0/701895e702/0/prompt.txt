@@ -1,0 +1,2 @@
+Remove renovate, use uv [tool.uv]
+exclude-newer = "1 week" ..
