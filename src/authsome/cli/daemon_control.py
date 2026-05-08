@@ -117,6 +117,17 @@ def _is_ready(client: AuthsomeApiClient) -> bool:
         from authsome import __version__
         if health.get("version") != __version__:
             return False
+
+        # If we are in local development, auto-restart the daemon if any code file changes.
+        if STATE_FILE.exists():
+            daemon_start_time = STATE_FILE.stat().st_mtime
+            src_dir = Path(__file__).parent.parent
+            for path in src_dir.glob("**/*"):
+                if path.is_file() and not any(part.startswith("__") or part == ".pytest_cache" for part in path.parts):
+                    if path.suffix in (".py", ".json", ".html", ".css", ".js"):
+                        if path.stat().st_mtime > daemon_start_time:
+                            return False
+
         return health.get("status") == "ok" and client.ready().get("status") == "ready"
     except Exception:
         return False
