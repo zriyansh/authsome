@@ -104,7 +104,10 @@ def daemon_status() -> dict[str, Any]:
 
 def _is_ready(client: AuthsomeApiClient) -> bool:
     try:
-        return client.health().get("status") == "ok" and client.ready().get("status") == "ready"
+        if client.health().get("status") != "ok":
+            return False
+        client.ready()
+        return True
     except Exception:
         return False
 
