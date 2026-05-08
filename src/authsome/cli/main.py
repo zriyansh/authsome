@@ -640,6 +640,8 @@ def remove(ctx_obj: ContextObj, provider: str) -> None:
 def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, show_secret: bool) -> None:
     """Return provider connection metadata by default."""
     actx = ctx_obj.initialize()
+    # Verify provider exists first to raise ProviderNotFoundError if unknown
+    actx.runtime_client.get_provider(provider)
     record_dict = actx.runtime_client.get_connection(provider, connection)
     from authsome.auth.models.connection import ConnectionRecord
 
