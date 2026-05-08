@@ -45,14 +45,7 @@ Authsome is the local credential layer agents call at runtime.
 
 The CLI is the agent's interface: setup once, then inject fresh credentials whenever a tool runs.
 
-```text
-┌──────────┐        authsome         ┌──────────────┐
-│  Agent   │ ──────────────────────▶ │ Local Vault  │
-└──────────┘                         └──────┬───────┘
-     ▲                                      │
-     │       fresh token / API key          │ encrypted
-     └──────────────────────────────────────┘
-```
+![How Authsome works](assets/authsome-how-it-works-dark.svg)
 
 Authenticate once:
 

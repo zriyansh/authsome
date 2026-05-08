@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 480" fill="none">
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  </style>
+  <defs>
+    <marker id="arrowhead" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="7" orient="auto-start-reverse">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#19BA5D" fill-opacity="0.7"/>
+    </marker>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect width="1160" height="480" rx="16" fill="#0d1117"/>
+
+  <text x="580" y="28" text-anchor="middle" fill="#8b949e" font-size="11" font-weight="600" letter-spacing="0.6">AI AGENTS</text>
+
+  <rect x="52" y="42" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
+  <text x="148" y="73" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Claude Code</text>
+
+  <rect x="268" y="42" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
+  <text x="364" y="73" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Codex</text>
+
+  <rect x="484" y="42" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
+  <text x="580" y="73" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">OpenClaw</text>
+
+  <rect x="700" y="42" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
+  <text x="796" y="73" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Hermes</text>
+
+  <rect x="916" y="42" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
+  <text x="1012" y="73" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Any Agent</text>
+
+  <line x1="148" y1="94" x2="148" y2="154" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
+  <line x1="364" y1="94" x2="364" y2="154" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
+  <line x1="580" y1="94" x2="580" y2="154" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
+  <line x1="796" y1="94" x2="796" y2="154" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
+  <line x1="1012" y1="94" x2="1012" y2="154" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
+
+  <rect x="36" y="158" width="1088" height="156" rx="16" fill="none" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.18"/>
+  <text x="580" y="184" text-anchor="middle" fill="#19BA5D" font-size="11" font-weight="700" letter-spacing="1.8">AUTHSOME</text>
+
+  <rect x="74" y="194" width="312" height="88" rx="12" fill="#161b22" stroke="#30363d" filter="url(#shadow)"/>
+  <text x="230" y="228" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="600">CLI</text>
+  <text x="230" y="248" text-anchor="middle" fill="#8b949e" font-size="11">Login, export, and run commands</text>
+
+  <rect x="424" y="194" width="312" height="88" rx="12" fill="#161b22" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" filter="url(#shadow)"/>
+  <text x="580" y="228" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="600">Local Auth Proxy</text>
+  <text x="580" y="248" text-anchor="middle" fill="#8b949e" font-size="11">Injects fresh credentials at request time</text>
+
+  <rect x="774" y="194" width="312" height="88" rx="12" fill="#161b22" stroke="#30363d" filter="url(#shadow)"/>
+  <text x="930" y="228" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="600">Encrypted Vault</text>
+  <text x="930" y="248" text-anchor="middle" fill="#8b949e" font-size="11">Local storage and token refresh</text>
+
+  <line x1="386" y1="238" x2="424" y2="238" stroke="#8b949e" stroke-width="1" stroke-dasharray="4 3" stroke-opacity="0.45"/>
+  <line x1="736" y1="238" x2="774" y2="238" stroke="#8b949e" stroke-width="1" stroke-dasharray="4 3" stroke-opacity="0.45"/>
+
+  <line x1="148" y1="314" x2="148" y2="374" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
+  <line x1="364" y1="314" x2="364" y2="374" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
+  <line x1="580" y1="314" x2="580" y2="374" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
+  <line x1="796" y1="314" x2="796" y2="374" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
+  <line x1="1012" y1="314" x2="1012" y2="374" stroke="#19BA5D" stroke-width="1.5" stroke-opacity="0.45" marker-end="url(#arrowhead)"/>
+
+  <text x="580" y="394" text-anchor="middle" fill="#8b949e" font-size="11" font-weight="600" letter-spacing="0.6">EXTERNAL SERVICES</text>
+
+  <rect x="52" y="408" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
+  <text x="148" y="439" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Stripe</text>
+
+  <rect x="268" y="408" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
+  <text x="364" y="439" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Github</text>
+
+  <rect x="484" y="408" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
+  <text x="580" y="439" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Posthog</text>
+
+  <rect x="700" y="408" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
+  <text x="796" y="439" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Gmail</text>
+
+  <rect x="916" y="408" width="192" height="52" rx="12" fill="#161b22" stroke="#30363d"/>
+  <text x="1012" y="439" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600">Any App</text>
+</svg>
