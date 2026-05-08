@@ -75,7 +75,7 @@ class ProxyRunner:
     def _inject_dummy_credentials(self, env: dict[str, str]) -> None:
         connections_data = self._client.list_connections()
         if isinstance(connections_data, list):
-            by_source = self._client.list_providers_by_source()
+            by_source = getattr(self._client, "list_providers_by_source")()
             connections_data = {
                 "connections": connections_data,
                 "by_source": {
