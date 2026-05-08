@@ -1,0 +1,49 @@
+/grill-with-docs
+
+---
+
+The goal It's to build a hosted version for Authsum so that people could just point the proxy to this and everything works. We need multiple functionalities, the first one being support for different types of users. The current identity only binds to `identity.current`, which is the default account. We want to have support for DIDs for identity. I'll go into it in detail later on but that will include a conceptual profile which we can add on later . The second is we want to have a hosted proxy as well. The current proxy version runs locally and it syncs the credentials from the remote one . Is there anything else that would be required for us to work on the hosted version.
+
+---
+
+a self hostable server. We will also host a managed version where we will provide our own client ID, client secret, and so on But the current version already has a daemon that exists and already can be run . Docker file is basically just a simple python file with authsome daemon start.
+
+---
+
+I refer to hybrid. But that is taken care of. except identity what else is required?
+
+---
+
+yes. Agreed. Once identity is in auth will use that identity to identify the profile
+
+---
+
+We will add PostgresBackend for later.
+
+---
+
+Lets not do env here.. remove that support. Its always by input. But providerclient record moves out of profile. So each profile can share those
+
+---
+
+B is already there, We will create A as ticket for later
+
+---
+
+No need to add roles right now. Anyone should be able to do it
+
+---
+
+the default behaviour for adding is good. Just the storage should be at server level and not at profile level
+
+---
+
+Create github issues, sub issues for these
+
+---
+
+Now review suggestions.md as well, And see what is pending and what needs to be done and get it done . Create issues for each rather than code changes
+
+---
+
+Some issues are duplicated, close the ones that are duplicates.
