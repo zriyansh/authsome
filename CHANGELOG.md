@@ -1,5 +1,61 @@
 # Changelog
 
+## [0.2.4](https://github.com/manojbajaj95/authsome/compare/authsome-v0.2.3...authsome-v0.2.4) (2026-05-08)
+
+
+### Features
+
+* add dashboard UI ([9296d68](https://github.com/manojbajaj95/authsome/commit/9296d68691777652b27ad982f513d520fa597c94))
+* add python-multipart dependency, update CLI table styling, and refine provider error messaging ([5d6f393](https://github.com/manojbajaj95/authsome/commit/5d6f39317e41f0d2f12cf02ba795f1c6be065c12))
+* add python-multipart dependency, update CLI table styling, and refine provider error messaging. ([e2a9d3d](https://github.com/manojbajaj95/authsome/commit/e2a9d3d7e4392196c80eb72ad1762edc25d22971))
+* add support for custom server base URLs ([2fde0fd](https://github.com/manojbajaj95/authsome/commit/2fde0fd0cc93f91c3494f2fd11ee9cc6041cf078))
+* add support for customizable home directory and exit after printing JSON output ([cc2d830](https://github.com/manojbajaj95/authsome/commit/cc2d830f2021bdc36ebb96abcc82f720abf61456))
+* add support for customizable home directory and exit after printing JSON output ([705a358](https://github.com/manojbajaj95/authsome/commit/705a3584f6a62e677eb6960aab2bf159fcf4ed4c))
+* add support for hosted daemon deployments via AUTHSOME_SERVER_BASE_URL and AUTHSOME_DAEMON_URL configuration. ([0af4b01](https://github.com/manojbajaj95/authsome/commit/0af4b01c7b8cca2d07cb0e659493bccc33cac14e))
+* added an interractive dashboard ([3867a96](https://github.com/manojbajaj95/authsome/commit/3867a96bb01b9cd2b3e0d9728d2004ecc2f12e6c))
+* added support for notion dcr ([cd960f3](https://github.com/manojbajaj95/authsome/commit/cd960f37b57ea6738a65a3c5f7e504edef08f4c9))
+* added support for notion dcr ([11ea590](https://github.com/manojbajaj95/authsome/commit/11ea590faf79d72eb5b8c6ade2bfc2265daa563d))
+* allow header_prefix to be null in API key provider ([bbfc8f8](https://github.com/manojbajaj95/authsome/commit/bbfc8f8c1dc395867681cc06b4b08af72e289ef0))
+* allow header_prefix to be null in API key provider ([74771c4](https://github.com/manojbajaj95/authsome/commit/74771c44ffd19221b7049eccd5f4213ee09f036f))
+* client server architecture (WIP - do not merge) ([bf548e1](https://github.com/manojbajaj95/authsome/commit/bf548e146524409c921a0f54c3fdb51b11745a3e))
+* green themed UI ([a826498](https://github.com/manojbajaj95/authsome/commit/a826498a1bb933afd206894bd99ffd5eb3860e87))
+* implement custom error handling and propagation between daemon server and CLI client ([f536edb](https://github.com/manojbajaj95/authsome/commit/f536edbdcd48ab5a2400f1750819557a508485f1))
+* introduce working implementation of client server architecture with session management. Refactor profile/provider store to reside behind app store interface and implement local version of store. ([a285172](https://github.com/manojbajaj95/authsome/commit/a285172e0404fd382726bc704a66e87b940d5cef))
+* restructure client-server daemon architecture ([4bd09e0](https://github.com/manojbajaj95/authsome/commit/4bd09e018552d2b9235419373c57a317e9530337))
+* **ui:** add interactive dashboard actions ([097f62a](https://github.com/manojbajaj95/authsome/commit/097f62a1946228455853844ef1993b783f2c67dc))
+
+
+### Bug Fixes
+
+* add non-interactive register confirmation flag ([57745be](https://github.com/manojbajaj95/authsome/commit/57745be9fb223cf77f9e05b1b7f46aaa6d3bbd57))
+* add non-interactive register confirmation flag ([45c3a4b](https://github.com/manojbajaj95/authsome/commit/45c3a4bf910ec3d14c893dae99d93822282c9dee))
+* added support for linear oauth ([680c0d9](https://github.com/manojbajaj95/authsome/commit/680c0d9950abb72cc3fde68138ebd0db7b671dea))
+* added support for linear oauth ([10213c8](https://github.com/manojbajaj95/authsome/commit/10213c841a99ea1adf9983a771795f2171b7b44a))
+* clear existing log handlers and log verbose status in setup_logging ([b84747e](https://github.com/manojbajaj95/authsome/commit/b84747eb7e4de92ee4e47b0aed96a43b0f264e0f))
+* clear existing log handlers and log verbose status in setup_logging ([75e7c0d](https://github.com/manojbajaj95/authsome/commit/75e7c0da6ff0752eaf4045491934b37c7cfc98ac))
+* **cli:** distinct exit code for cancelled credential entry ([f21047d](https://github.com/manojbajaj95/authsome/commit/f21047da250354888ec5c7b196a909b1dcb4b6cf))
+* **cli:** distinct exit code for cancelled credential entry ([09fd6bc](https://github.com/manojbajaj95/authsome/commit/09fd6bc687b7aa72c702e37b60e1146c68520a8f))
+* merged with develop ([a5711a7](https://github.com/manojbajaj95/authsome/commit/a5711a79a4421c05993e02c3802987dc27e32d5e))
+* resolve circular import in server dependencies ([006ce3f](https://github.com/manojbajaj95/authsome/commit/006ce3f19a0b8a3eefd409aaed5049b404380441))
+* ruff check fixed ([65e6b6a](https://github.com/manojbajaj95/authsome/commit/65e6b6aaaa97c63f98cbd9fdc58afd033bf8efc4))
+* tests fix ([f7bec29](https://github.com/manojbajaj95/authsome/commit/f7bec299eb2360d179d684bc33e7e1d5708655e0))
+* update import path for DARK_THEME_CSS to reflect module reorganization ([d97d7bf](https://github.com/manojbajaj95/authsome/commit/d97d7bf5c0415df5a23b33d1f17b4531a25778ef))
+* updated overview tab ([36c2741](https://github.com/manojbajaj95/authsome/commit/36c27410ce7c265587358ce65eeb0cc414b9bce3))
+* validate provider existence before retrieving connection metadata ([17580d4](https://github.com/manojbajaj95/authsome/commit/17580d431dad56d584121092291b12b38f690ee4))
+* validate provider existence before retrieving connection metadata ([285f379](https://github.com/manojbajaj95/authsome/commit/285f37970d80cbf97983babce7fcb0e8ae553af5))
+
+
+### Documentation
+
+* Add design decisions for hosted version ([1551eff](https://github.com/manojbajaj95/authsome/commit/1551eff9de8d0795f67866b1350df4894002606d))
+* add engineering principles and AI agent guidelines ([efaeced](https://github.com/manojbajaj95/authsome/commit/efaeced04f7ad767e7eb1fb2210863f52ad4fc66))
+* expand manual testing guide to cover full CLI surface ([bbe42f2](https://github.com/manojbajaj95/authsome/commit/bbe42f246977159e79893ca8d2f2912e90fba92f))
+* update CLI commands in documentation to use uvx for execution ([ab8268f](https://github.com/manojbajaj95/authsome/commit/ab8268f6420311beab7764f2518b8d9a6a9487dc))
+* update CLI commands in documentation to use uvx for execution ([cc1030f](https://github.com/manojbajaj95/authsome/commit/cc1030ffda23add58009ddd8ffb690ffb644a164))
+* update issue reporting guidelines to require automated GitHub CLI submission ([e388891](https://github.com/manojbajaj95/authsome/commit/e38889141d63687e73fec82b8cbcf8660abdd248))
+* update issue reporting guidelines to require automated GitHub CLI submission ([1f3374d](https://github.com/manojbajaj95/authsome/commit/1f3374db102dd131eb9a5d2d9a78ea5780ec2e3d))
+* use GitHub user-attachments URL for demo video ([a74f16f](https://github.com/manojbajaj95/authsome/commit/a74f16f1ef4c6e9b2abb62e68aa1cd4bcb0b08d7))
+
 ## [0.2.3](https://github.com/manojbajaj95/authsome/compare/authsome-v0.2.2...authsome-v0.2.3) (2026-05-01)
 
 
