@@ -32,7 +32,7 @@ class ApiKeyConfig(BaseModel):
     """API key provider configuration."""
 
     header_name: str = "Authorization"
-    header_prefix: str = "Bearer"
+    header_prefix: str | None = "Bearer"
     #: Optional regex (``re.fullmatch``) that valid keys must satisfy. When unset, no validation runs.
     key_pattern: str | None = None
     #: Optional human-readable hint shown when ``key_pattern`` does not match (e.g. "Keys start with 'sk-'.").
