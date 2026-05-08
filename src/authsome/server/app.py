@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from importlib.resources import files
+
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from authsome.auth.sessions import AuthSessionStore
 from authsome.errors import AuthsomeError
@@ -13,6 +16,7 @@ from authsome.server.routes.connections import router as connections_router
 from authsome.server.routes.health import router as health_router
 from authsome.server.routes.providers import router as providers_router
 from authsome.server.routes.proxy import router as proxy_router
+from authsome.server.routes.ui import router as ui_router
 
 
 def create_app(auth_service=None) -> FastAPI:
@@ -45,4 +49,13 @@ def create_app(auth_service=None) -> FastAPI:
     app.include_router(connections_router)
     app.include_router(providers_router)
     app.include_router(proxy_router)
+    app.include_router(ui_router)
+
+    static_dir = files("authsome.ui").joinpath("static")
+    app.mount("/ui/static", StaticFiles(directory=str(static_dir)), name="ui-static")
+
+    @app.get("/ui", include_in_schema=False)
+    def _ui_redirect() -> RedirectResponse:
+        return RedirectResponse(url="/ui/")
+
     return app

@@ -904,6 +904,27 @@ def doctor(ctx_obj: ContextObj) -> None:
             sys.exit(1)
 
 
+@cli.command()
+@click.option("--no-browser", is_flag=True, help="Print the URL instead of opening a browser.")
+@common_options
+@pass_ctx
+@handle_errors
+def ui(ctx_obj: ContextObj, no_browser: bool) -> None:
+    """Open the local read-only dashboard in the browser."""
+    ctx_obj.initialize()
+    from authsome.cli.client import DEFAULT_DAEMON_URL
+
+    url = f"{DEFAULT_DAEMON_URL}/ui/"
+    if no_browser:
+        ctx_obj.echo(url)
+        return
+
+    import webbrowser
+
+    ctx_obj.echo(f"Opening Authsome UI at {url}")
+    webbrowser.open(url)
+
+
 @cli.group()
 def daemon() -> None:
     """Manage the local Authsome daemon."""
