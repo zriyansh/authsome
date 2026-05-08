@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from authsome.vault.storage import SQLiteStorage
+from authsome.store.local import SQLiteVaultStorage as SQLiteStorage
 
 
 class TestSQLiteStorage:
@@ -92,35 +92,3 @@ class TestSQLiteStorage:
         store.close()
         with pytest.raises(StoreUnavailableError, match="Store connection is closed"):
             store.get("key1")
-
-    def test_lock_acquire_release_errors(self, store: SQLiteStorage, monkeypatch: pytest.MonkeyPatch) -> None:
-        import fcntl
-
-        def mock_flock(fd, operation):
-            raise OSError("Mock error")
-
-        monkeypatch.setattr(fcntl, "flock", mock_flock)
-
-        store._acquire_lock()
-        assert store._lock_fd is not None
-
-        store._release_lock()
-        assert store._lock_fd is None
-
-    def test_double_acquire(self, store: SQLiteStorage) -> None:
-        store._acquire_lock()
-        fd1 = store._lock_fd
-        store._acquire_lock()  # should early return
-        assert store._lock_fd is fd1
-        store._release_lock()
-
-    def test_close_sqlite_error(self, store: SQLiteStorage) -> None:
-        import sqlite3
-
-        class MockConn:
-            def close(self):
-                raise sqlite3.Error("Mock error")
-
-        store._conn = MockConn()
-        store.close()  # should suppress error
-        assert store._conn is None

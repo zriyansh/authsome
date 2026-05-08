@@ -21,11 +21,11 @@ from authsome.errors import (
 def test_authsome_error_formatting():
     # Test operation present
     err = AuthsomeError("message", operation="test_op")
-    assert str(err) == "(test_op) message"
+    assert str(err) == "AuthsomeError: (test_op) message"
 
     # Test provider present
     err2 = AuthsomeError("message", provider="github")
-    assert str(err2) == "[github] message"
+    assert str(err2) == "AuthsomeError: [github] message"
 
 
 def test_unsupported_auth_type_error():
