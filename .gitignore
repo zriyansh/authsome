@@ -240,3 +240,6 @@ __marimo__/
 .zencoder/
 
 .DS_Store
+
+# Local authsome home directory
+.authsome/

@@ -68,5 +68,11 @@ line-length = 120
 target-version = "py313"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP"]
+select = ["E", "F", "I", "UP", "N", "C90"]
 ignore = []
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.uv]
+exclude-newer = "10 days"

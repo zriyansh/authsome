@@ -136,10 +136,13 @@ def handle_errors(func):
 
 def setup_logging(verbose: bool, log_file: Path | None) -> None:
     """Enable authsome library logs and wire up sinks. CLI-only — never called from library code."""
+    logger.remove()
     logger.enable("authsome")
 
     level = "DEBUG" if verbose else "WARNING"
     logger.add(sys.stderr, level=level, colorize=True, diagnose=False)
+    if verbose:
+        logger.debug("Verbose logging enabled.")
 
     if log_file is not None:
         log_file.parent.mkdir(parents=True, exist_ok=True)
@@ -250,7 +253,7 @@ def _validate_provider_endpoints(definition: Any, ctx_obj: ContextObj) -> list[t
 @click.option(
     "--log-file",
     "log_file",
-    default=str(Path.home() / ".authsome" / "logs" / "authsome.log"),
+    default=str(Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome"))) / "logs" / "authsome.log"),
     show_default=True,
     help="Path for the rotating log file. Pass empty string to disable.",
 )
@@ -640,6 +643,8 @@ def remove(ctx_obj: ContextObj, provider: str) -> None:
 def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, show_secret: bool) -> None:
     """Return provider connection metadata by default."""
     actx = ctx_obj.initialize()
+    # Verify provider exists first to raise ProviderNotFoundError if unknown
+    actx.runtime_client.get_provider(provider)
     record_dict = actx.runtime_client.get_connection(provider, connection)
     from authsome.auth.models.connection import ConnectionRecord
 
@@ -665,6 +670,7 @@ def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, 
                 )
             if ctx_obj.json_output:
                 ctx_obj.print_json({field: data[field]})
+                sys.exit(0)
             else:
                 ctx_obj.echo(str(data[field]))
         else:
@@ -681,6 +687,7 @@ def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, 
 
     if ctx_obj.json_output:
         ctx_obj.print_json(data)
+        sys.exit(0)
     else:
         for k, v in data.items():
             ctx_obj.echo(f"{k}: {v}")
@@ -746,10 +753,11 @@ def run(ctx_obj: ContextObj, command: tuple[str]) -> None:
 @cli.command()
 @click.argument("path")
 @click.option("--force", is_flag=True, help="Force overwrite if provider exists.")
+@click.option("--yes", is_flag=True, help="Skip the registration confirmation prompt.")
 @common_options
 @pass_ctx
 @handle_errors
-def register(ctx_obj: ContextObj, path: str, force: bool) -> None:
+def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> None:
     """Register a provider definition from a local JSON file path."""
 
     actx = ctx_obj.initialize()
@@ -768,7 +776,7 @@ def register(ctx_obj: ContextObj, path: str, force: bool) -> None:
         endpoints_to_check = _validate_provider_endpoints(definition, ctx_obj)
 
         # 3. Confirmation prompt
-        if not ctx_obj.json_output and not ctx_obj.quiet and not force:
+        if not ctx_obj.json_output and not ctx_obj.quiet and not yes:
             ctx_obj.echo(f"Registering '{definition.name}' provider:")
             for name, val, _ in endpoints_to_check:
                 ctx_obj.echo(f"  - {name}: {val}")

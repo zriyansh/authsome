@@ -137,10 +137,10 @@ authsome run -- curl https://api.openai.com/v1/models
 ### `register`
 
 ```bash
-authsome register <path/to/provider.json> [--force]
+authsome register <path/to/provider.json> [--yes] [--force]
 ```
 
-Registers a custom provider. Use `--force` to overwrite an existing provider with the same name. See the [provider registration guide](./register-provider.md) for JSON templates and field reference.
+Registers a custom provider. Use `--yes` to skip the confirmation prompt in scripts, and `--force` to overwrite an existing provider with the same name. See the [provider registration guide](./register-provider.md) for JSON templates and field reference.
 
 ### `logout` / `revoke` / `remove`
 
