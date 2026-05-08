@@ -136,10 +136,13 @@ def handle_errors(func):
 
 def setup_logging(verbose: bool, log_file: Path | None) -> None:
     """Enable authsome library logs and wire up sinks. CLI-only — never called from library code."""
+    logger.remove()
     logger.enable("authsome")
 
     level = "DEBUG" if verbose else "WARNING"
     logger.add(sys.stderr, level=level, colorize=True, diagnose=False)
+    if verbose:
+        logger.debug("Verbose logging enabled.")
 
     if log_file is not None:
         log_file.parent.mkdir(parents=True, exist_ok=True)
