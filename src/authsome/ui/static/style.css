@@ -248,24 +248,6 @@ h2 {
     margin-top: auto;
 }
 .stat-foot.accent { color: var(--accent); }
-.stat-row {
-    display: flex;
-    align-items: center;
-}
-.logo-stack {
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    background: var(--bg-card-hover);
-    border: 1px solid var(--border);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-right: -8px;
-}
 
 /* ───────── Sections ───────── */
 .section { margin-bottom: 26px; }

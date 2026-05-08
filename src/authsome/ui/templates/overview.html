@@ -24,11 +24,6 @@
     <div class="stat-card">
         <div class="stat-label">Connected Apps</div>
         <div class="stat-value">{{ stats.connected }}</div>
-        <div class="stat-row">
-            {% for p in connected_providers[:5] %}
-            <span class="logo-stack" style="z-index: {{ 10 - loop.index }};">{{ p.logo_initial }}</span>
-            {% endfor %}
-        </div>
         <div class="stat-foot">{{ stats.available }} more available</div>
     </div>
 
