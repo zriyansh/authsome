@@ -144,19 +144,26 @@ class ProxyRouter:
                 logger.warning("Could not load daemon proxy routes, falling back to local route build: {}", exc)
 
         connections_data = client.list_connections()
+        if isinstance(connections_data, list):
+            connections_data = {"connections": connections_data}
         for provider_group in connections_data["connections"]:
             provider_name = provider_group["name"]
             selected_connections = provider_group["connections"]
 
             try:
                 definition_dict = client.get_provider(provider_name)
-                definition = ProviderDefinition.model_validate(definition_dict)
+                if isinstance(definition_dict, dict):
+                    definition = ProviderDefinition.model_validate(definition_dict)
+                else:
+                    definition = definition_dict
             except Exception as exc:
                 logger.warning("Skipping proxy routes for provider {}: {}", provider_name, exc)
                 continue
 
             for conn in selected_connections:
-                target_host_url = conn.get("host_url")
+                if conn.get("is_default") is False:
+                    continue
+                target_host_url = conn.get("host_url") or getattr(definition, "host_url", None)
                 if not target_host_url:
                     continue
 

@@ -108,7 +108,7 @@ def format_error_code(exc: Exception) -> int:
         return 3
     if exc_name == "AuthenticationFailedError":
         return 4
-    if exc_name == "CredentialMissingError":
+    if exc_name in ("CredentialMissingError", "ConnectionNotFoundError"):
         return 5
     if exc_name == "InputCancelledError":
         return 8
@@ -167,7 +167,7 @@ def format_expires_at(expires_at: str | None) -> str | None:
     if expiry.tzinfo is None:
         expiry = expiry.replace(tzinfo=UTC)
 
-    total_seconds = int((expiry - datetime.now(UTC)).total_seconds())
+    total_seconds = round((expiry - datetime.now(UTC)).total_seconds())
     if total_seconds < 0:
         label = _format_duration(-total_seconds)
         return f"expired {label} ago"
@@ -199,7 +199,7 @@ def _format_duration(total_seconds: int) -> str:
     if minutes < 60:
         return f"{minutes}m"
     hours = minutes // 60
-    if hours < 48:
+    if hours < 24:
         return f"{hours}h"
     days = hours // 24
     return f"{days}d"
@@ -512,7 +512,7 @@ def login(
 
             if action_type == "open_url":
                 auth_url = next_action["url"]
-                if not ctx_obj.quiet:
+                if not ctx_obj.json_output and not ctx_obj.quiet:
                     ctx_obj.echo("Opening browser to continue login...", color="cyan")
                     ctx_obj.echo(f"Visit: {auth_url}", color="cyan")
                 import webbrowser
@@ -522,7 +522,7 @@ def login(
                 except Exception:
                     pass
 
-            if not ctx_obj.quiet:
+            if not ctx_obj.json_output and not ctx_obj.quiet:
                 ctx_obj.echo(
                     "\nLogin process started. The connection will be updated automatically once complete.",
                     color="yellow",
