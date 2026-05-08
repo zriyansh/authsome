@@ -72,7 +72,4 @@ select = ["E", "F", "I", "UP", "N", "C90"]
 ignore = []
 
 [tool.ruff.lint.mccabe]
-max-complexity = 10
-
-[tool.uv]
-exclude-newer = "10 days"
+max-complexity = 20

@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from authsome.auth import AuthService
+if TYPE_CHECKING:
+    from authsome.auth import AuthService
+
 from authsome.auth.providers.registry import ProviderRegistry
 from authsome.identity import current
 from authsome.server.urls import build_server_base_url
@@ -25,6 +28,8 @@ def get_server_base_url() -> str:
 
 def create_auth_service(home: Path | None = None) -> AuthService:
     """Create the singleton auth service for the local daemon."""
+    from authsome.auth import AuthService
+
     resolved_home = home or get_authsome_home()
     app_store = LocalAppStore(resolved_home)
     app_store.ensure_initialized()
