@@ -115,6 +115,7 @@ def _is_ready(client: AuthsomeApiClient) -> bool:
     try:
         health = client.health()
         from authsome import __version__
+
         if health.get("version") != __version__:
             return False
 
