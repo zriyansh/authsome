@@ -63,6 +63,10 @@ button { font-family: inherit; }
     padding: 6px 10px 14px;
     letter-spacing: -0.01em;
 }
+.brand::after {
+    content: ".";
+    color: var(--accent);
+}
 .nav-primary, .nav-secondary {
     display: flex;
     flex-direction: column;
@@ -181,6 +185,7 @@ h2 {
     transition: background-color 80ms ease, border-color 80ms ease, color 80ms ease;
 }
 .btn:hover { background: var(--bg-card-hover); }
+.btn svg { width: 14px; height: 14px; flex-shrink: 0; }
 .btn[disabled] { opacity: 0.55; cursor: not-allowed; }
 .btn-sm { padding: 5px 10px; font-size: 12px; }
 .btn-primary {
