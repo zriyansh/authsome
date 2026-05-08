@@ -35,8 +35,7 @@ def ensure_daemon() -> AuthsomeApiClient:
     client = AuthsomeApiClient(DEFAULT_DAEMON_URL)
     if _is_ready(client):
         return client
-    if _pid_file_process_alive():
-        stop_daemon()
+    stop_daemon()
     start_daemon()
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
@@ -71,7 +70,17 @@ def start_daemon() -> None:
 
 
 def stop_daemon() -> None:
-    pid = _read_pid()
+    pid = None
+    client = AuthsomeApiClient(DEFAULT_DAEMON_URL)
+    try:
+        health_data = client.health()
+        pid = health_data.get("pid")
+    except Exception:
+        pass
+
+    if pid is None:
+        pid = _read_pid()
+
     if pid is None:
         return
     try:
@@ -104,7 +113,11 @@ def daemon_status() -> dict[str, Any]:
 
 def _is_ready(client: AuthsomeApiClient) -> bool:
     try:
-        return client.health().get("status") == "ok" and client.ready().get("status") == "ready"
+        health = client.health()
+        from authsome import __version__
+        if health.get("version") != __version__:
+            return False
+        return health.get("status") == "ok" and client.ready().get("status") == "ready"
     except Exception:
         return False
 
