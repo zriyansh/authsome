@@ -905,17 +905,26 @@ def doctor(ctx_obj: ContextObj) -> None:
 
 
 @cli.command()
-@click.option("--port", default=8000, help="Port to run the UI server on.")
+@click.option("--no-browser", is_flag=True, help="Print the URL instead of opening a browser.")
 @common_options
 @pass_ctx
 @handle_errors
-def ui(ctx_obj: ContextObj, port: int) -> None:
+def ui(ctx_obj: ContextObj, no_browser: bool) -> None:
     """Open the local read-only dashboard in the browser."""
-    # Ensure context is initialized so doctor runs and vault gets set up if needed
     ctx_obj.initialize()
-    from authsome.ui.server import serve_dashboard
+    from authsome.cli.client import DEFAULT_DAEMON_URL
 
-    serve_dashboard(port=port)
+    url = f"{DEFAULT_DAEMON_URL}/ui/"
+    if no_browser:
+        ctx_obj.echo(url)
+        return
+
+    import webbrowser
+
+    ctx_obj.echo(f"Opening Authsome UI at {url}")
+    webbrowser.open(url)
+
+
 @cli.group()
 def daemon() -> None:
     """Manage the local Authsome daemon."""

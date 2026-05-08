@@ -1,0 +1,100 @@
+{% extends "_layout.html" %}
+{% block title %}Overview{% endblock %}
+{% block content %}
+<header class="page-header">
+    <div>
+        <div class="eyebrow">Overview</div>
+        <h1>System Status</h1>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-secondary" type="button">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 5h18M6 12h12M10 19h4"/>
+            </svg>
+            Filter
+        </button>
+        <a class="btn btn-primary" href="/ui/connections">
+            <span aria-hidden="true">+</span>
+            Add connection
+        </a>
+    </div>
+</header>
+
+<section class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-label">Connected Apps</div>
+        <div class="stat-value">{{ stats.connected }}</div>
+        <div class="stat-row">
+            {% for p in connected_providers[:5] %}
+            <span class="logo-stack" style="z-index: {{ 10 - loop.index }};">{{ p.logo_initial }}</span>
+            {% endfor %}
+        </div>
+        <div class="stat-foot">{{ stats.available }} more available</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label">Last Activity</div>
+        <div class="stat-value stat-value-sm">{{ last_activity }}</div>
+        <div class="stat-foot accent">● Operational</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label">Auth Types</div>
+        <div class="stat-value">{{ stats.oauth }} <span class="muted">/</span> {{ stats.api_key }}</div>
+        <div class="stat-foot">OAuth 2.0 / API Key</div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="section-header">
+        <h2>Connected Providers</h2>
+        <a class="link" href="/ui/connections">Manage Connections →</a>
+    </div>
+
+    {% if connected_providers %}
+    <div class="provider-grid">
+        {% for p in connected_providers %}
+        <a class="provider-card" href="/ui/apps/{{ p.name }}">
+            <div class="provider-card-top">
+                <span class="logo">{{ p.logo_initial }}</span>
+                {% if p.status == 'reauth' %}
+                <span class="pill pill-warn">Re-auth required</span>
+                {% else %}
+                <span class="pill pill-accent">Connected</span>
+                {% endif %}
+            </div>
+            <div class="provider-card-name">{{ p.display_name }}</div>
+            <div class="provider-card-desc">{{ p.description or p.host_url }}</div>
+            <div class="provider-card-foot">
+                {% if p.status == 'reauth' %}
+                <button class="btn btn-warn-ghost" type="button">Fix</button>
+                {% else %}
+                <span class="meta">{{ p.auth_type_label }}{% if p.scope_count %} · {{ p.scope_count }} scopes{% endif %}</span>
+                <span class="icon-gear" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>
+                    </svg>
+                </span>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">
+        <div class="empty-title">No connections yet</div>
+        <div class="empty-body">Connect your first provider to get started.</div>
+        <a class="btn btn-primary" href="/ui/connections">Browse providers</a>
+    </div>
+    {% endif %}
+</section>
+
+<section class="cta-card">
+    <div>
+        <div class="cta-title">Need expert support?</div>
+        <p class="cta-body">Read the docs, file an issue, or open a discussion. Authsome is open source and runs entirely on your machine.</p>
+    </div>
+    <a class="btn btn-light" href="https://github.com/manojbajaj95/authsome" target="_blank" rel="noreferrer">Contact Us</a>
+</section>
+{% endblock %}

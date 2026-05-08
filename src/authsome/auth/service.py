@@ -183,6 +183,14 @@ class AuthService:
             return metadata.default_connection
         return "default"
 
+    def get_provider_client(self, provider: str) -> ProviderClientRecord | None:
+        """Return stored client credentials for a provider, or None if absent.
+
+        Public read-only accessor. The secret field is still stored encrypted at rest;
+        callers are responsible for redacting before display.
+        """
+        return self._get_provider_client_credentials(provider)
+
     def set_default_connection(self, provider: str, connection: str) -> None:
         """Set the default connection for a provider."""
         self.get_connection(provider, connection)
