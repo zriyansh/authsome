@@ -149,3 +149,21 @@ authsome logout <provider> [--connection <name>]   # log out + revoke remotely
 authsome revoke <provider>                          # reset all connections and client secrets
 authsome remove <provider>                          # uninstall local provider or reset bundled
 ```
+
+---
+
+## Exit Codes
+
+The CLI uses specific exit codes to signal success or distinct failure states. This allows automated scripts and tools to handle errors programmatically.
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Generic / unexpected error (last resort) |
+| 2 | Authentication failed |
+| 3 | Connection not found |
+| 4 | Provider not found |
+| 5 | Credential missing / expired |
+| 6 | Connection already exists |
+| 7 | Provider already registered |
+| 8 | Endpoint unreachable |
