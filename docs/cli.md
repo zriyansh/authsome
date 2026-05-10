@@ -33,6 +33,33 @@ All commands support `--json` for machine-readable output.
 
 ---
 
+## JSON Output Stability
+
+All commands supporting `--json` output return a top-level JSON object containing `"v": 1` as an API version identifier. 
+Field names in the JSON output are decoupled from internal Pydantic model schemas and represent a stable interface. 
+
+Example generic structure:
+```json
+{
+  "v": 1,
+  "status": "success",
+  "provider": "github",
+  ...
+}
+```
+
+### Schema Shapes
+
+- **`list`**: `{"v": 1, "bundled": [...], "custom": [...]}`
+- **`get`**: `{"v": 1, "provider": "...", "status": "...", ...}` (excludes internal metadata like `schema_version`)
+- **`whoami`**: `{"v": 1, "authsome_version": "...", "home_directory": "...", ...}`
+- **`export --json`**: `{"v": 1, "credentials": {"VAR_NAME": "value"}}`
+- **`log --json`**: `{"v": 1, "lines": [...]}`
+- **`inspect`**: `{"v": 1, ...full provider schema fields}`
+- **Errors**: All failures when `--json` is set return `{"v": 1, "error": "ErrorClassName", "message": "Human description"}` with a non-zero exit code.
+
+---
+
 ## Command Details
 
 ### `doctor` / `whoami`
