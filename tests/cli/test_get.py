@@ -69,7 +69,7 @@ class TestGetCommand:
         result = runner.invoke(cli, ["--log-file", "", "get", "openai", "--field", "provider", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data == {"provider": "openai"}
+        assert data == {"provider": "openai", "v": 1}
 
     def test_unknown_field_exits_1(self, runner: CliRunner, mock_client: MagicMock) -> None:
         mock_client.get_provider.return_value = {"name": "openai"}
