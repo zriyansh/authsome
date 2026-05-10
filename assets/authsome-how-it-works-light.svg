@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 520" fill="none">
+  <style>
+    text { font-family: Inter, system-ui, sans-serif; }
+    .mono { font-family: "JetBrains Mono", "Fira Mono", ui-monospace, monospace; }
+    .label { font-size: 10px; fill: #8E8B82; letter-spacing: 2px; font-weight: 500; }
+    .card { fill: #FCFBF9; stroke: #E6E4DD; stroke-width: 1; }
+    .name { fill: #1A1918; font-size: 13px; font-weight: 500; }
+    .sub { fill: #8E8B82; font-size: 11px; }
+  </style>
+
+  <!-- Background -->
+  <rect width="1160" height="520" fill="#F4F3EF"/>
+
+  <!-- Spatial guide lines -->
+  <line x1="0" y1="130" x2="1160" y2="130" stroke="#EAE8E1" stroke-width="1"/>
+  <line x1="0" y1="390" x2="1160" y2="390" stroke="#EAE8E1" stroke-width="1"/>
+  <line x1="290" y1="0"   x2="290"  y2="520" stroke="#EAE8E1" stroke-width="1"/>
+  <line x1="870" y1="0"   x2="870"  y2="520" stroke="#EAE8E1" stroke-width="1"/>
+
+  <!-- Inset frame -->
+  <rect x="16" y="16" width="1128" height="488" rx="20" fill="none" stroke="#E2DED6" stroke-width="1"/>
+
+  <!-- Frame corner brackets -->
+  <path d="M36,16 Q16,16 16,36"    stroke="#A39F96" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M1124,16 Q1144,16 1144,36"  stroke="#A39F96" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M16,484 Q16,504 36,504"   stroke="#A39F96" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M1144,484 Q1144,504 1124,504" stroke="#A39F96" stroke-width="1" fill="none" stroke-linecap="round"/>
+
+  <!-- AI AGENTS -->
+  <text x="580" y="72" text-anchor="middle" class="mono" fill="#E4573D" font-size="10" font-weight="600" letter-spacing="2px">AI AGENTS</text>
+
+  <rect x="52"  y="90" width="192" height="52" rx="4" class="card"/>
+  <text x="148" y="122" text-anchor="middle" class="name">Claude Code</text>
+  <rect x="268" y="90" width="192" height="52" rx="4" class="card"/>
+  <text x="364" y="122" text-anchor="middle" class="name">Codex</text>
+  <rect x="484" y="90" width="192" height="52" rx="4" class="card"/>
+  <text x="580" y="122" text-anchor="middle" class="name">OpenClaw</text>
+  <rect x="700" y="90" width="192" height="52" rx="4" class="card"/>
+  <text x="796" y="122" text-anchor="middle" class="name">Hermes</text>
+  <rect x="916" y="90" width="192" height="52" rx="4" class="card"/>
+  <text x="1012" y="122" text-anchor="middle" class="name">Any Agent</text>
+
+  <!-- Agents → Authsome -->
+  <g stroke="#C2C0B8" stroke-width="1" marker-end="url(#tip)">
+    <line x1="148"  y1="142" x2="148"  y2="178"/>
+    <line x1="364"  y1="142" x2="364"  y2="178"/>
+    <line x1="580"  y1="142" x2="580"  y2="178"/>
+    <line x1="796"  y1="142" x2="796"  y2="178"/>
+    <line x1="1012" y1="142" x2="1012" y2="178"/>
+  </g>
+
+  <!-- Authsome zone -->
+  <rect x="34" y="178" width="1092" height="164" rx="12" fill="#ECEBE5" stroke="#E6E4DD" stroke-width="1"/>
+
+  <!-- Zone corner brackets -->
+  <path d="M46,178 Q34,178 34,190"    stroke="#A39F96" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M1114,178 Q1126,178 1126,190"  stroke="#A39F96" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M34,330 Q34,342 46,342"    stroke="#A39F96" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M1126,330 Q1126,342 1114,342"  stroke="#A39F96" stroke-width="1" fill="none" stroke-linecap="round"/>
+
+  <!-- AUTHSOME label -->
+  <text x="580" y="204" text-anchor="middle" class="mono" fill="#E4573D" font-size="10" font-weight="600" letter-spacing="2px">AUTHSOME</text>
+
+<!-- CLI -->
+  <rect x="72"  y="228" width="300" height="66" rx="4" class="card"/>
+  <text x="222" y="256" text-anchor="middle" class="name">CLI</text>
+  <text x="222" y="277" text-anchor="middle" class="sub">Login, export, and run commands</text>
+
+  <!-- Local Auth Proxy — highlighted with coral border -->
+  <rect x="422" y="216" width="316" height="90" rx="8" class="card"/>
+  <!-- Proxy inner corner brackets -->
+  <path d="M430,216 Q422,216 422,224" stroke="#C2C0B8" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+  <path d="M730,216 Q738,216 738,224" stroke="#C2C0B8" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+  <path d="M422,298 Q422,306 430,306" stroke="#C2C0B8" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+  <path d="M730,306 Q738,306 738,298" stroke="#C2C0B8" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+  <text x="580" y="254" text-anchor="middle" fill="#1A1918" font-size="15" font-weight="500">Local Auth Proxy</text>
+  <text x="580" y="276" text-anchor="middle" class="sub">Injects fresh credentials at request time</text>
+  <text x="580" y="294" text-anchor="middle" class="mono" fill="#A39F96" font-size="9" letter-spacing="1.2px">CONTROLLED HANDOFF</text>
+
+  <!-- Encrypted Vault -->
+  <rect x="788" y="228" width="300" height="66" rx="4" class="card"/>
+  <text x="938" y="256" text-anchor="middle" class="name">Encrypted Vault</text>
+  <text x="938" y="277" text-anchor="middle" class="sub">Local storage and token refresh</text>
+
+  <!-- Authsome → Services -->
+  <g stroke="#C2C0B8" stroke-width="1" marker-end="url(#tip)">
+    <line x1="148"  y1="342" x2="148"  y2="414"/>
+    <line x1="364"  y1="342" x2="364"  y2="414"/>
+    <line x1="580"  y1="342" x2="580"  y2="414"/>
+    <line x1="796"  y1="342" x2="796"  y2="414"/>
+    <line x1="1012" y1="342" x2="1012" y2="414"/>
+  </g>
+
+  <!-- EXTERNAL SERVICES -->
+  <text x="580" y="396" text-anchor="middle" class="mono" fill="#E4573D" font-size="10" font-weight="600" letter-spacing="2px">EXTERNAL SERVICES</text>
+
+  <rect x="52"  y="414" width="192" height="52" rx="4" class="card"/>
+  <text x="148" y="446" text-anchor="middle" class="name">Stripe</text>
+  <rect x="268" y="414" width="192" height="52" rx="4" class="card"/>
+  <text x="364" y="446" text-anchor="middle" class="name">GitHub</text>
+  <rect x="484" y="414" width="192" height="52" rx="4" class="card"/>
+  <text x="580" y="446" text-anchor="middle" class="name">OpenAI</text>
+  <rect x="700" y="414" width="192" height="52" rx="4" class="card"/>
+  <text x="796" y="446" text-anchor="middle" class="name">Gmail</text>
+  <rect x="916" y="414" width="192" height="52" rx="4" class="card"/>
+  <text x="1012" y="446" text-anchor="middle" class="name">Any App</text>
+
+  <defs>
+    <marker id="tip" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M1 1 L7 4 L1 7" stroke="#C2C0B8" stroke-width="1.2" fill="none"/>
+    </marker>
+  </defs>
+</svg>
