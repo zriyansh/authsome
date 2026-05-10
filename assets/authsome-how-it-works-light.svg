@@ -27,7 +27,7 @@
   <path d="M1144,484 Q1144,504 1124,504" stroke="#A39F96" stroke-width="1" fill="none" stroke-linecap="round"/>
 
   <!-- AI AGENTS -->
-  <text x="580" y="72" text-anchor="middle" class="mono" fill="#E4573D" font-size="10" font-weight="600" letter-spacing="2px">AI AGENTS</text>
+  <text x="580" y="72" text-anchor="middle" class="mono" fill="#34D399" font-size="10" font-weight="600" letter-spacing="2px">AI AGENTS</text>
 
   <rect x="52"  y="90" width="192" height="52" rx="4" class="card"/>
   <text x="148" y="122" text-anchor="middle" class="name">Claude Code</text>
@@ -41,7 +41,7 @@
   <text x="1012" y="122" text-anchor="middle" class="name">Any Agent</text>
 
   <!-- Agents → Authsome -->
-  <g stroke="#C2C0B8" stroke-width="1" marker-end="url(#tip)">
+  <g stroke="#8E8B82" stroke-width="1" marker-end="url(#tip)">
     <line x1="148"  y1="142" x2="148"  y2="178"/>
     <line x1="364"  y1="142" x2="364"  y2="178"/>
     <line x1="580"  y1="142" x2="580"  y2="178"/>
@@ -59,7 +59,7 @@
   <path d="M1126,330 Q1126,342 1114,342"  stroke="#A39F96" stroke-width="1" fill="none" stroke-linecap="round"/>
 
   <!-- AUTHSOME label -->
-  <text x="580" y="204" text-anchor="middle" class="mono" fill="#E4573D" font-size="10" font-weight="600" letter-spacing="2px">AUTHSOME</text>
+  <text x="580" y="204" text-anchor="middle" class="mono" fill="#34D399" font-size="10" font-weight="600" letter-spacing="2px">AUTHSOME</text>
 
 <!-- CLI -->
   <rect x="72"  y="228" width="300" height="66" rx="4" class="card"/>
@@ -69,13 +69,13 @@
   <!-- Local Auth Proxy — highlighted with coral border -->
   <rect x="422" y="216" width="316" height="90" rx="8" class="card"/>
   <!-- Proxy inner corner brackets -->
-  <path d="M430,216 Q422,216 422,224" stroke="#C2C0B8" stroke-width="0.8" fill="none" stroke-linecap="round"/>
-  <path d="M730,216 Q738,216 738,224" stroke="#C2C0B8" stroke-width="0.8" fill="none" stroke-linecap="round"/>
-  <path d="M422,298 Q422,306 430,306" stroke="#C2C0B8" stroke-width="0.8" fill="none" stroke-linecap="round"/>
-  <path d="M730,306 Q738,306 738,298" stroke="#C2C0B8" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+  <path d="M430,216 Q422,216 422,224" stroke="#8E8B82" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+  <path d="M730,216 Q738,216 738,224" stroke="#8E8B82" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+  <path d="M422,298 Q422,306 430,306" stroke="#8E8B82" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+  <path d="M730,306 Q738,306 738,298" stroke="#8E8B82" stroke-width="0.8" fill="none" stroke-linecap="round"/>
   <text x="580" y="254" text-anchor="middle" fill="#1A1918" font-size="15" font-weight="500">Local Auth Proxy</text>
   <text x="580" y="276" text-anchor="middle" class="sub">Injects fresh credentials at request time</text>
-  <text x="580" y="294" text-anchor="middle" class="mono" fill="#A39F96" font-size="9" letter-spacing="1.2px">CONTROLLED HANDOFF</text>
+  <text x="580" y="294" text-anchor="middle" class="mono" fill="#34D399" font-size="9" letter-spacing="1.2px">CONTROLLED HANDOFF</text>
 
   <!-- Encrypted Vault -->
   <rect x="788" y="228" width="300" height="66" rx="4" class="card"/>
@@ -83,7 +83,7 @@
   <text x="938" y="277" text-anchor="middle" class="sub">Local storage and token refresh</text>
 
   <!-- Authsome → Services -->
-  <g stroke="#C2C0B8" stroke-width="1" marker-end="url(#tip)">
+  <g stroke="#8E8B82" stroke-width="1" marker-end="url(#tip)">
     <line x1="148"  y1="342" x2="148"  y2="414"/>
     <line x1="364"  y1="342" x2="364"  y2="414"/>
     <line x1="580"  y1="342" x2="580"  y2="414"/>
@@ -92,7 +92,7 @@
   </g>
 
   <!-- EXTERNAL SERVICES -->
-  <text x="580" y="396" text-anchor="middle" class="mono" fill="#E4573D" font-size="10" font-weight="600" letter-spacing="2px">EXTERNAL SERVICES</text>
+  <text x="580" y="396" text-anchor="middle" class="mono" fill="#34D399" font-size="10" font-weight="600" letter-spacing="2px">EXTERNAL SERVICES</text>
 
   <rect x="52"  y="414" width="192" height="52" rx="4" class="card"/>
   <text x="148" y="446" text-anchor="middle" class="name">Stripe</text>
@@ -107,7 +107,7 @@
 
   <defs>
     <marker id="tip" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
-      <path d="M1 1 L7 4 L1 7" stroke="#C2C0B8" stroke-width="1.2" fill="none"/>
+      <path d="M1 1 L7 4 L1 7" stroke="#8E8B82" stroke-width="1.2" fill="none"/>
     </marker>
   </defs>
 </svg>
