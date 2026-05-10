@@ -48,7 +48,9 @@ class TestAuthServiceRefreshLogs:
             expires_at=expires_at,
         )
 
-        with mock.patch.object(service, "_refresh_token", side_effect=RefreshFailedError("API down", provider="github")):
+        with mock.patch.object(
+            service, "_refresh_token", side_effect=RefreshFailedError("API down", provider="github")
+        ):
             with mock.patch("loguru.logger.warning") as mock_logger:
                 # Exercise
                 token = service._get_oauth_token(record, provider="github", connection="default")
@@ -88,7 +90,9 @@ class TestAuthServiceRefreshLogs:
             expires_at=expires_at,
         )
 
-        with mock.patch.object(service, "_refresh_token", side_effect=RefreshFailedError("API rejected", provider="github")):
+        with mock.patch.object(
+            service, "_refresh_token", side_effect=RefreshFailedError("API rejected", provider="github")
+        ):
             with mock.patch("loguru.logger.warning") as mock_logger:
                 # Exercise - should re-raise exception as there is no fallback
                 with pytest.raises(RefreshFailedError):
