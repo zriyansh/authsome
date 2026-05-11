@@ -25,8 +25,8 @@ from authsome.cli.helpers import (
     _scan_resolve_should_import,
     _validate_provider_endpoints,
     auth_command,
-    setup_logging)
-
+    setup_logging,
+)
 from authsome.utils import connection_is_active, format_error_code, format_expires_at, redact
 
 
