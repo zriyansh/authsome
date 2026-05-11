@@ -15,9 +15,9 @@
 \__,_/\__,_/\__/_/ /_/____/\____/_/ /_/ /_/\___/
 ```
 
-**Local auth for AI agents.**
+**Local-first credential broker and vault for AI Agents**
 
-Log in once via OAuth2/API Key. Authsome keeps the credentials fresh for every AI agent.
+An open-source credential broker that sits between your agents and the services they call. Instead of sharing credentials with every agent, log in once via OAuth2 or API keys. Authsome stores credentials securely and injects them via an HTTP proxy. You get one place to manage access, rotate keys, and see what every agent is doing.
 
 ---
 
@@ -27,21 +27,17 @@ https://github.com/user-attachments/assets/27f9b229-baf4-4889-be9a-378a133654dc
 
 ---
 
-## Why Agents Are Different
+## Why Agents need Authsome
 
-Agents need API access that survives outside an interactive app:
+Agents run beyond interactive sessions. They live in CI, over SSH, in cron jobs, in background workers, and in parallel pipelines. They need API access that survives without a human in the loop.
 
-- agents run without interactive sessions
-- tokens expire, rotate, and need refresh
-- tool access must work in scripts, cron, CI, SSH, background workers, and parallel pipelines
+Hardcoded environment tokens leak or go stale, and building auth flow logic, token storage, refresh handling, and per-provider config into every project rebuilds the same plumbing every time.
 
-Hardcoded env tokens leak or go stale. DIY auth means rebuilding flow logic, token storage, refresh handling, expiry checks, and per-provider config for every project.
-
-Authsome is the local credential layer agents can call at runtime.
+Authsome is the local credential layer agents call at runtime.
 
 - **No credential sprawl.** One encrypted store — every provider, every agent, one place.
-- **No SaaS, no privacy trade-off.** Credentials never leave your machine. No third-party cloud dependency.
-- **No browser required at runtime.** Setup can use browser PKCE, device code, or a browser bridge for secure API key entry. After that, agents run headlessly in CI, SSH, cron, workers, or parallel pipelines.
+- **No SaaS, no privacy trade-off.** Credentials never leave your machine. Eliminates credential exfiltration risks as agents never see them.
+- **No browser required at runtime.** Setup can use browser PKCE, device code, or a browser bridge for secure API key entry. After that, agents run headlessly.
 
 ---
 
@@ -49,14 +45,11 @@ Authsome is the local credential layer agents can call at runtime.
 
 The CLI is the agent's interface: setup once, then inject fresh credentials whenever a tool runs.
 
-```text
-┌──────────┐        authsome         ┌──────────────┐
-│  Agent   │ ──────────────────────▶ │ Local Vault  │
-└──────────┘                         └──────┬───────┘
-     ▲                                      │
-     │       fresh token / API key          │ encrypted
-     └──────────────────────────────────────┘
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/authsome-how-it-works-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/authsome-how-it-works-light.svg">
+  <img alt="Authsome Architecture" src="assets/authsome-how-it-works-light.svg" width="100%">
+</picture>
 
 Authenticate once:
 
