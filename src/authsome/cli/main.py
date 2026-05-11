@@ -946,11 +946,12 @@ def daemon() -> None:
 @daemon.command(name="serve")
 @click.option("--host", default="127.0.0.1", show_default=True, help="Host interface to bind.")
 @click.option("--port", default=7998, type=int, show_default=True, help="TCP port to listen on.")
-def daemon_serve(host: str, port: int) -> None:
+@click.option("--reload", is_flag=True, help="Enable auto-reload on code changes.")
+def daemon_serve(host: str, port: int, reload: bool) -> None:
     """Run the daemon in the foreground."""
     from authsome.server.daemon import serve
 
-    serve(host=host, port=port)
+    serve(host=host, port=port, reload=reload)
 
 
 @daemon.command(name="start")
