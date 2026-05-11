@@ -48,6 +48,41 @@ def cli(ctx: click.Context, verbose: bool, log_file: str) -> None:
     setup_logging(verbose=verbose, log_file=resolved)
 
 
+@cli.command()
+@common_options
+@pass_ctx
+@handle_errors
+def init(ctx_obj: ContextObj) -> None:
+    """Initialize the authsome home directory and verify the master key."""
+    import os
+    from pathlib import Path
+
+    from authsome.store.local import LocalAppStore
+    from authsome.vault.crypto import create_crypto
+
+    home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
+    app_store = LocalAppStore(home)
+    app_store.ensure_initialized()
+
+    config = app_store.get_config()
+    crypto_mode = config.encryption.mode if config.encryption else "auto"
+
+    try:
+        crypto = create_crypto(home / "master.key", crypto_mode)
+        backend = crypto.backend_name
+        if ctx_obj.json_output:
+            ctx_obj.print_json({"status": "ok", "home": str(home), "encryption_backend": backend})
+        else:
+            ctx_obj.echo(f"Home:                {home}", color="green")
+            ctx_obj.echo(f"Encryption backend:  {backend}", color="green")
+    except Exception as exc:
+        if ctx_obj.json_output:
+            ctx_obj.print_json({"status": "error", "home": str(home), "error": str(exc)})
+        else:
+            ctx_obj.echo(f"Encryption setup failed: {exc}", err=True, color="red")
+        raise
+
+
 @cli.command(name="list")
 @common_options
 @pass_ctx

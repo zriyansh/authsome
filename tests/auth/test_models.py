@@ -38,11 +38,13 @@ class TestGlobalConfig:
     """Global config model tests."""
 
     def test_defaults(self) -> None:
+        from authsome.auth.models.config import _major_version
+
         config = GlobalConfig()
-        assert config.spec_version == 1
+        assert config.spec_version == _major_version()
         assert config.default_profile == "default"
         assert config.encryption is not None
-        assert config.encryption.mode == "local_key"
+        assert config.encryption.mode == "auto"
 
     def test_json_roundtrip(self) -> None:
         config = GlobalConfig(spec_version=1, default_profile="work")

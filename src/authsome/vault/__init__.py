@@ -37,7 +37,7 @@ class Vault:
         self,
         app_store: AppStore,
         crypto: VaultCrypto | None = None,
-        crypto_mode: str = "local_key",
+        crypto_mode: str = "auto",
         master_key_path: Path | None = None,
     ) -> None:
         self._app_store = app_store

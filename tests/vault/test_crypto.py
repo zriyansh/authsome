@@ -1,10 +1,12 @@
 """Tests for the vault crypto layer."""
 
+import base64
+import secrets
 from pathlib import Path
 
 import pytest
 
-from authsome.vault.crypto import KeyringCrypto, LocalFileCrypto, _decode, _encode
+from authsome.vault.crypto import EnvVarCrypto, KeyringCrypto, LocalFileCrypto, _decode, _encode, create_crypto
 
 
 class TestLocalFileCrypto:
@@ -177,6 +179,88 @@ class TestKeyringCrypto:
 
         with pytest.raises(EncryptionUnavailableError, match="Failed to store master key"):
             KeyringCrypto()
+
+
+class TestEnvVarCrypto:
+    """Tests for the env var crypto backend."""
+
+    @pytest.fixture
+    def key_b64(self) -> str:
+        return base64.b64encode(secrets.token_bytes(32)).decode("ascii")
+
+    def test_encrypt_decrypt_roundtrip(self, key_b64: str) -> None:
+        crypto = EnvVarCrypto(key_b64)
+        original = "env-secret-value"
+        assert crypto.decrypt(crypto.encrypt(original)) == original
+
+    def test_backend_name(self, key_b64: str) -> None:
+        assert "AUTHSOME_MASTER_KEY" in EnvVarCrypto(key_b64).backend_name
+
+    def test_invalid_base64_raises(self) -> None:
+        from authsome.errors import EncryptionUnavailableError
+
+        with pytest.raises(EncryptionUnavailableError, match="not valid base64"):
+            EnvVarCrypto("!!!notbase64!!!")
+
+    def test_wrong_key_length_raises(self) -> None:
+        from authsome.errors import EncryptionUnavailableError
+
+        short_key = base64.b64encode(b"tooshort").decode("ascii")
+        with pytest.raises(EncryptionUnavailableError, match="32 bytes"):
+            EnvVarCrypto(short_key)
+
+
+class TestCreateCryptoPrecedence:
+    """Tests for the create_crypto factory and precedence logic."""
+
+    def test_env_var_wins_over_local_key(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        key = base64.b64encode(secrets.token_bytes(32)).decode("ascii")
+        monkeypatch.setenv("AUTHSOME_MASTER_KEY", key)
+        crypto = create_crypto(tmp_path / "master.key", mode="local_key")
+        assert isinstance(crypto, EnvVarCrypto)
+
+    def test_env_var_wins_over_keyring(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        key = base64.b64encode(secrets.token_bytes(32)).decode("ascii")
+        monkeypatch.setenv("AUTHSOME_MASTER_KEY", key)
+        crypto = create_crypto(None, mode="keyring")
+        assert isinstance(crypto, EnvVarCrypto)
+
+    def test_env_var_wins_over_auto(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        key = base64.b64encode(secrets.token_bytes(32)).decode("ascii")
+        monkeypatch.setenv("AUTHSOME_MASTER_KEY", key)
+        crypto = create_crypto(tmp_path / "master.key", mode="auto")
+        assert isinstance(crypto, EnvVarCrypto)
+
+    def test_auto_falls_back_to_local_when_no_env_no_keyring(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("AUTHSOME_MASTER_KEY", raising=False)
+        # Simulate keyring unavailable
+        monkeypatch.setitem(__import__("sys").modules, "keyring", None)
+        crypto = create_crypto(tmp_path / "master.key", mode="auto")
+        assert isinstance(crypto, LocalFileCrypto)
+
+    def test_auto_uses_keyring_when_key_exists(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("AUTHSOME_MASTER_KEY", raising=False)
+        import keyring
+
+        existing_key = base64.b64encode(secrets.token_bytes(32)).decode("ascii")
+        monkeypatch.setattr(keyring, "get_password", lambda *_: existing_key)
+        crypto = create_crypto(tmp_path / "master.key", mode="auto")
+        assert isinstance(crypto, KeyringCrypto)
+
+    def test_auto_skips_keyring_when_no_key_stored(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("AUTHSOME_MASTER_KEY", raising=False)
+        import keyring
+
+        monkeypatch.setattr(keyring, "get_password", lambda *_: None)
+        crypto = create_crypto(tmp_path / "master.key", mode="auto")
+        assert isinstance(crypto, LocalFileCrypto)
+
+    def test_explicit_local_key_mode(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("AUTHSOME_MASTER_KEY", raising=False)
+        crypto = create_crypto(tmp_path / "master.key", mode="local_key")
+        assert isinstance(crypto, LocalFileCrypto)
 
 
 class TestVaultCryptoHelpers:

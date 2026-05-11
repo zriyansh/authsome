@@ -145,16 +145,12 @@ class LocalAppStore(AppStore):
         return self._home
 
     def ensure_initialized(self) -> None:
-        if (self._home / "version").exists() and (self._profiles_dir / "default").exists():
+        if self._config_path.exists() and (self._profiles_dir / "default").exists():
             return
 
         self._home.mkdir(parents=True, exist_ok=True)
         self._providers_dir.mkdir(parents=True, exist_ok=True)
         (self._profiles_dir / "default").mkdir(parents=True, exist_ok=True)
-
-        version_file = self._home / "version"
-        if not version_file.exists():
-            version_file.write_text("2\n", encoding="utf-8")
 
         if not self._config_path.exists():
             self.save_config(GlobalConfig())

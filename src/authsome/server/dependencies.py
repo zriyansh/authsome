@@ -37,7 +37,7 @@ def create_auth_service(home: Path | None = None) -> AuthService:
     app_store.ensure_initialized()
 
     config = app_store.get_config()
-    crypto_mode = config.encryption.mode if config.encryption else "local_key"
+    crypto_mode = config.encryption.mode if config.encryption else "auto"
     vault = Vault(
         app_store=app_store,
         crypto_mode=crypto_mode,

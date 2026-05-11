@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 
 from authsome import __version__
 from authsome.auth import AuthService
+from authsome.auth.models.config import _major_version
 from authsome.server.routes._deps import get_auth_service
 from authsome.server.schemas import HealthResponse, ReadyResponse
 
@@ -28,8 +29,7 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
         config = auth.app_store.get_config()
         checks["config"] = "ok"
 
-        # Verify spec_version matches standard expected version (1)
-        expected_spec_version = 1
+        expected_spec_version = _major_version()
         if getattr(config, "spec_version", None) != expected_spec_version:
             issues.append(
                 f"config: spec_version mismatch (got {config.spec_version}, expected {expected_spec_version})"
@@ -91,29 +91,17 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
         checks["integrity"] = "failed"
         issues.append(f"vault: {exc}")
 
-    # TODO: Re-enable master.key permission checks once backend implementation stabilizes.
-    # (Previous implementation alerted users if file was world-readable)
-
-    except Exception as exc:
-        if "file_permissions" not in checks:
-            checks["file_permissions"] = "failed"
-        checks["key_age"] = "failed"
-        issues.append(f"file_checks: {exc}")
-
     status = "ready" if not issues else "not_ready"
     return ReadyResponse(status=status, checks=checks, issues=issues, warnings=warnings)
 
 
 @router.get("/whoami")
 def whoami(auth: AuthService = Depends(get_auth_service)) -> dict[str, str]:
-    config = auth.app_store.get_config()
-    enc_mode = config.encryption.mode if config.encryption else "local_key"
-    if enc_mode == "local_key":
-        enc_desc = f"Local Key ({auth.app_store.home / 'master.key'})"
-    elif enc_mode == "keyring":
-        enc_desc = "OS Keyring"
-    else:
-        enc_desc = enc_mode
+    try:
+        enc_desc = auth.vault.crypto.backend_name
+    except Exception:
+        config = auth.app_store.get_config()
+        enc_desc = config.encryption.mode if config.encryption else "auto"
     return {
         "version": __version__,
         "home": str(auth.app_store.home),

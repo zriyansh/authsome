@@ -3,9 +3,12 @@
 The vault uses AES-256-GCM to encrypt record blobs at rest.
 The compact wire format is: base64(nonce) + "." + base64(ciphertext || tag)
 
-Two backends are available:
+Three backends are available:
+- EnvVarCrypto:    master key from AUTHSOME_MASTER_KEY env var (highest priority)
+- KeyringCrypto:   master key stored in the OS keyring
 - LocalFileCrypto: master key stored in ~/.authsome/master.key (mode 0600)
-- KeyringCrypto: master key stored in the OS keyring
+
+Resolution order when mode is "auto": env var → keyring (existing key only) → local file.
 """
 
 from __future__ import annotations
@@ -26,10 +29,17 @@ _KEY_SIZE_BYTES = 32  # 256-bit
 _NONCE_SIZE_BYTES = 12  # 96-bit for AES-GCM
 _KEYRING_SERVICE = "authsome"
 _KEYRING_USERNAME = "master_key"
+_ENV_VAR = "AUTHSOME_MASTER_KEY"
 
 
 class VaultCrypto(ABC):
     """Protocol for vault-level encryption backends."""
+
+    @property
+    @abstractmethod
+    def backend_name(self) -> str:
+        """Human-readable name of the active backend."""
+        ...
 
     @abstractmethod
     def encrypt(self, plaintext: str) -> str:
@@ -56,12 +66,50 @@ def _decode(token: str) -> tuple[bytes, bytes]:
         raise EncryptionUnavailableError(f"Malformed vault ciphertext: {exc}") from exc
 
 
+class EnvVarCrypto(VaultCrypto):
+    """AES-256-GCM with master key sourced from the AUTHSOME_MASTER_KEY environment variable.
+
+    The env var must contain the base64-encoded 32-byte AES-256 key.
+    """
+
+    def __init__(self, key_b64: str) -> None:
+        try:
+            key = base64.b64decode(key_b64)
+        except Exception as exc:
+            raise EncryptionUnavailableError(f"AUTHSOME_MASTER_KEY is not valid base64: {exc}") from exc
+        if len(key) != _KEY_SIZE_BYTES:
+            raise EncryptionUnavailableError(
+                f"AUTHSOME_MASTER_KEY must decode to exactly {_KEY_SIZE_BYTES} bytes (got {len(key)})"
+            )
+        self._aesgcm = AESGCM(key)
+
+    @property
+    def backend_name(self) -> str:
+        return f"Env Var ({_ENV_VAR})"
+
+    def encrypt(self, plaintext: str) -> str:
+        nonce = secrets.token_bytes(_NONCE_SIZE_BYTES)
+        ct_with_tag = self._aesgcm.encrypt(nonce, plaintext.encode("utf-8"), None)
+        return _encode(nonce, ct_with_tag)
+
+    def decrypt(self, ciphertext: str) -> str:
+        nonce, ct_with_tag = _decode(ciphertext)
+        try:
+            return self._aesgcm.decrypt(nonce, ct_with_tag, None).decode("utf-8")
+        except Exception as exc:
+            raise EncryptionUnavailableError(f"Decryption failed: {exc}") from exc
+
+
 class LocalFileCrypto(VaultCrypto):
     """AES-256-GCM with master key stored as a local file."""
 
     def __init__(self, key_file: Path) -> None:
         self._key_file = key_file
         self._aesgcm = self._load_or_create()
+
+    @property
+    def backend_name(self) -> str:
+        return f"Local Key ({self._key_file})"
 
     def _load_or_create(self) -> AESGCM:
         if self._key_file.exists():
@@ -107,6 +155,10 @@ class KeyringCrypto(VaultCrypto):
     def __init__(self) -> None:
         self._aesgcm = self._load_or_create()
 
+    @property
+    def backend_name(self) -> str:
+        return "OS Keyring"
+
     def _load_or_create(self) -> AESGCM:
         try:
             import keyring as kr
@@ -150,10 +202,36 @@ class KeyringCrypto(VaultCrypto):
             raise EncryptionUnavailableError(f"Decryption failed: {exc}") from exc
 
 
-def create_crypto(key_file: Path | None, mode: str = "local_key") -> VaultCrypto:
-    """Factory: return the appropriate VaultCrypto backend for the given mode."""
+def create_crypto(key_file: Path | None, mode: str = "auto") -> VaultCrypto:
+    """Factory: return the appropriate VaultCrypto backend.
+
+    Resolution order (regardless of mode):
+      1. AUTHSOME_MASTER_KEY env var — if set, always wins.
+      2. Configured mode ("keyring" or "local_key") — explicit user preference.
+      3. "auto" mode: env var → existing keyring key → local file fallback.
+    """
+    env_key = os.environ.get(_ENV_VAR)
+    if env_key:
+        return EnvVarCrypto(env_key)
+
     if mode == "keyring":
         return KeyringCrypto()
+
+    if mode == "local_key":
+        if key_file is None:
+            raise ValueError("key_file is required for 'local_key' mode")
+        return LocalFileCrypto(key_file)
+
+    # "auto": check keyring for an *existing* key first, then fall back to local file.
+    try:
+        import keyring as kr
+
+        existing = kr.get_password(_KEYRING_SERVICE, _KEYRING_USERNAME)
+        if existing:
+            return KeyringCrypto()
+    except Exception:
+        pass
+
     if key_file is None:
-        raise ValueError("key_file is required for 'local_key' mode")
+        raise ValueError("key_file is required when no env var or keyring key is available")
     return LocalFileCrypto(key_file)
