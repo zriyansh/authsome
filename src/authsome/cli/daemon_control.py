@@ -70,19 +70,25 @@ def start_daemon() -> None:
 
 
 def stop_daemon() -> None:
-    pid = None
+    managed_pid = _read_pid()
+    if managed_pid is None:
+        # We do not have a local management record for a daemon.
+        # Refuse to blind-kill arbitrary OS processes.
+        return
+
     client = AuthsomeApiClient(DEFAULT_DAEMON_URL)
     try:
         health_data = client.health()
-        pid = health_data.get("pid")
+        api_pid = health_data.get("pid")
+        # Safety Validation: If the active API returns a PID, it MUST match our lock record.
+        # This prevents terminating unrelated processes if port 7998 is a tunnel to a remote host.
+        if api_pid and api_pid != managed_pid:
+            return
     except Exception:
+        # Daemon endpoint is completely down; proceed to cleanup the managed PID.
         pass
 
-    if pid is None:
-        pid = _read_pid()
-
-    if pid is None:
-        return
+    pid = managed_pid
     try:
         os.kill(pid, signal.SIGTERM)
     except ProcessLookupError:
