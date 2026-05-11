@@ -54,6 +54,10 @@ def resolve_runtime_client() -> AuthsomeApiClient:
 
 
 def start_daemon() -> None:
+    # 1. If our tracked lockfile currently points to a running process, do not disrupt it.
+    if _pid_file_process_alive():
+        return
+
     DAEMON_DIR.mkdir(parents=True, exist_ok=True)
     log = LOG_FILE.open("ab")
     process = subprocess.Popen(
@@ -70,19 +74,12 @@ def start_daemon() -> None:
 
 
 def stop_daemon() -> None:
-    pid = None
-    client = AuthsomeApiClient(DEFAULT_DAEMON_URL)
-    try:
-        health_data = client.health()
-        pid = health_data.get("pid")
-    except Exception:
-        pass
-
+    pid = _read_pid()
     if pid is None:
-        pid = _read_pid()
-
-    if pid is None:
+        # We do not have a local management record for a daemon.
+        # Refuse to blind-kill arbitrary OS processes.
         return
+
     try:
         os.kill(pid, signal.SIGTERM)
     except ProcessLookupError:
