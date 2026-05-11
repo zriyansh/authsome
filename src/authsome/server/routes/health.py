@@ -110,12 +110,7 @@ def whoami(auth: AuthService = Depends(get_auth_service)) -> dict[str, str]:
     config = auth.app_store.get_config()
     enc_mode = config.encryption.mode if config.encryption else "local_key"
     if enc_mode == "local_key":
-        key_path = (
-            auth.app_store.get_master_key_path()
-            if isinstance(auth.app_store, LocalAppStore)
-            else auth.app_store.home / "master.key"
-        )
-        enc_desc = f"Local Key ({key_path})"
+        enc_desc = f"Local Key ({auth.app_store.home / 'master.key'})"
     elif enc_mode == "keyring":
         enc_desc = "OS Keyring"
     else:
