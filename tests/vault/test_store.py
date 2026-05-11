@@ -92,3 +92,23 @@ class TestSQLiteStorage:
         store.close()
         with pytest.raises(StoreUnavailableError, match="Store connection is closed"):
             store.get("key1")
+
+    def test_check_integrity(self, store: SQLiteStorage) -> None:
+        """Ensure integrity check returns True on a healthy DB."""
+        assert store.check_integrity() is True
+
+    def test_secure_permissions(self, tmp_path: Path) -> None:
+        """Verify that store.db creation automatically applies 0600 permissions."""
+        import os
+        profile_dir = tmp_path / "profiles" / "secured"
+        profile_dir.mkdir(parents=True)
+        s = SQLiteStorage(profile_dir)
+        
+        db_file = profile_dir / "store.db"
+        assert db_file.exists()
+        
+        # Only test Unix file permissions on Posix systems
+        if os.name != "nt":
+            st = db_file.stat()
+            assert (st.st_mode & 0o077) == 0
+        s.close()

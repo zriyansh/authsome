@@ -22,6 +22,7 @@ class ReadyResponse(BaseModel):
     status: Literal["ready", "not_ready"]
     checks: dict[str, str] = Field(default_factory=dict)
     issues: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class OpenUrlAction(BaseModel):
