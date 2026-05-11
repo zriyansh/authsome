@@ -67,8 +67,8 @@ def _validate_provider_endpoints(definition: Any, ctx_obj: ContextObj) -> list[t
             endpoints_to_check.append(("revocation_url", definition.oauth.revocation_url, False))
         if definition.oauth.device_authorization_url:
             endpoints_to_check.append(("device_authorization_url", definition.oauth.device_authorization_url, False))
-        if definition.oauth.registration_endpoint:
-            endpoints_to_check.append(("registration_endpoint", definition.oauth.registration_endpoint, False))
+    if definition.registration and definition.registration.registration_endpoint:
+        endpoints_to_check.append(("registration_endpoint", definition.registration.registration_endpoint, False))
     if definition.host_url:
         endpoints_to_check.append(("host_url", definition.host_url, True))
 
