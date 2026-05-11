@@ -13,11 +13,12 @@ from datetime import timedelta
 from typing import Any
 
 import requests as http_client
+from authlib.integrations.base_client.errors import OAuthError
 from loguru import logger
 
 from authsome import audit
 from authsome.auth.flows.api_key import ApiKeyFlow
-from authsome.auth.flows.base import AuthFlow
+from authsome.auth.flows.base import AuthFlow, build_oauth_session
 from authsome.auth.flows.dcr_pkce import DcrPkceFlow
 from authsome.auth.flows.device_code import DeviceCodeFlow
 from authsome.auth.flows.pkce import PkceFlow
@@ -834,29 +835,19 @@ class AuthService:
             raise RefreshFailedError("No client_id available for refresh", provider=provider_name)
 
         state_record = self._get_or_create_provider_state(provider_name)
-        payload: dict[str, str] = {
-            "grant_type": "refresh_token",
-            "refresh_token": record.refresh_token,
-            "client_id": client_id,
-        }
-        if client_secret:
-            payload["client_secret"] = client_secret
 
         base_url = record.base_url or (client_record.base_url if client_record else None)
         resolved_definition = definition.resolve_urls(base_url)
         if not resolved_definition.oauth:
             raise RefreshFailedError("Resolved provider missing OAuth configuration", provider=provider_name)
 
+        client = build_oauth_session(client_id=client_id, client_secret=client_secret)
         try:
-            resp = http_client.post(
+            token = client.refresh_token(
                 resolved_definition.oauth.token_url,
-                data=payload,
-                headers={"Accept": "application/json"},
-                timeout=30,
+                refresh_token=record.refresh_token,
             )
-            resp.raise_for_status()
-            token = resp.json()
-        except Exception as exc:
+        except (OAuthError, http_client.RequestException) as exc:
             state_record.last_refresh_at = utc_now()
             state_record.last_refresh_error = str(exc)
             self._save_provider_state(state_record)

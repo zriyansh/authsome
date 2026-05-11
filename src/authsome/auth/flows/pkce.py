@@ -2,44 +2,25 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
-import secrets
-import urllib.parse
-from base64 import urlsafe_b64encode
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 import requests as http_client
+from authlib.common.security import generate_token
+from authlib.integrations.base_client.errors import OAuthError
 
-from authsome.auth.flows.base import AuthFlow, FlowResult
-from authsome.auth.models.connection import AccountInfo, ConnectionRecord
-from authsome.auth.models.enums import AuthType, ConnectionStatus
+from authsome.auth.flows.base import (
+    DEFAULT_CALLBACK_URL,
+    AuthFlow,
+    FlowResult,
+    build_oauth_session,
+    token_to_connection_record,
+)
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.errors import AuthenticationFailedError
-from authsome.server.urls import DEFAULT_SERVER_BASE_URL, build_callback_url
-from authsome.utils import utc_now
 
 if TYPE_CHECKING:
     from authsome.auth.sessions import AuthSession
-
-_CALLBACK_TIMEOUT_SECONDS = 300
-_DEFAULT_CALLBACK_URL = build_callback_url(DEFAULT_SERVER_BASE_URL)
-
-
-def _generate_pkce() -> tuple[str, str]:
-    code_verifier = secrets.token_urlsafe(64)[:128]
-    digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
-    code_challenge = urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
-    return code_verifier, code_challenge
-
-
-def _resolve_callback_url(runtime_session: AuthSession) -> str:
-    callback_override = runtime_session.payload.get("callback_url_override")
-    if callback_override:
-        return str(callback_override)
-
-    return _DEFAULT_CALLBACK_URL
 
 
 class PkceFlow(AuthFlow):
@@ -64,23 +45,20 @@ class PkceFlow(AuthFlow):
             raise AuthenticationFailedError("PKCE flow requires a client_id.", provider=provider.name)
 
         effective_scopes = scopes or provider.oauth.scopes or []
-        code_verifier, code_challenge = _generate_pkce()
+        redirect_uri = runtime_session.payload.get("callback_url_override") or DEFAULT_CALLBACK_URL
+        code_verifier = generate_token(48)
 
-        redirect_uri = _resolve_callback_url(runtime_session)
-
-        state = secrets.token_urlsafe(32)
-        auth_params: dict[str, str] = {
-            "response_type": "code",
-            "client_id": client_id,
-            "redirect_uri": redirect_uri,
-            "state": state,
-            "code_challenge": code_challenge,
-            "code_challenge_method": "S256",
-        }
-        if effective_scopes:
-            auth_params["scope"] = " ".join(effective_scopes)
-
-        auth_url = f"{provider.oauth.authorization_url}?{urllib.parse.urlencode(auth_params)}"
+        client = build_oauth_session(
+            client_id=client_id,
+            client_secret=client_secret,
+            scope=" ".join(effective_scopes) if effective_scopes else None,
+            redirect_uri=redirect_uri,
+            code_challenge_method="S256",
+        )
+        auth_url, state = client.create_authorization_url(
+            provider.oauth.authorization_url,
+            code_verifier=code_verifier,
+        )
 
         runtime_session.state = "waiting_for_user"
         runtime_session.payload["auth_url"] = auth_url
@@ -121,81 +99,34 @@ class PkceFlow(AuthFlow):
         redirect_uri = runtime_session.payload.get("callback_url", "")
         effective_scopes = json.loads(runtime_session.payload.get("internal_scopes", "[]"))
 
-        token_data = self._exchange_code(
-            provider=provider,
-            auth_code=auth_code,
-            redirect_uri=redirect_uri,
+        client = build_oauth_session(
             client_id=client_id,
             client_secret=client_secret,
-            code_verifier=code_verifier,
+            redirect_uri=redirect_uri,
         )
-
-        runtime_session.state = "processing"
-
-        now = utc_now()
-        expires_in = token_data.get("expires_in")
-
-        metadata: dict[str, str] = {"callback_handled_by": "runtime"}
-
-        return FlowResult(
-            connection=ConnectionRecord(
-                schema_version=2,
-                provider=provider.name,
-                profile=profile,
-                connection_name=connection_name,
-                auth_type=AuthType.OAUTH2,
-                status=ConnectionStatus.CONNECTED,
-                scopes=effective_scopes,
-                access_token=token_data.get("access_token", ""),
-                refresh_token=token_data.get("refresh_token"),
-                token_type=token_data.get("token_type", "Bearer"),
-                expires_at=now + timedelta(seconds=int(expires_in)) if expires_in else None,
-                obtained_at=now,
-                account=AccountInfo(),
-                metadata=metadata,
-            )
-        )
-
-    @staticmethod
-    def _exchange_code(
-        *,
-        provider: ProviderDefinition,
-        auth_code: str,
-        redirect_uri: str,
-        client_id: str,
-        client_secret: str | None,
-        code_verifier: str,
-    ) -> dict[str, Any]:
-        assert provider.oauth is not None
-        payload: dict[str, str] = {
-            "grant_type": "authorization_code",
-            "code": auth_code,
-            "redirect_uri": redirect_uri,
-            "client_id": client_id,
-            "code_verifier": code_verifier,
-        }
-        if client_secret:
-            payload["client_secret"] = client_secret
-
         try:
-            resp = http_client.post(
+            token = client.fetch_token(
                 provider.oauth.token_url,
-                data=payload,
-                headers={"Accept": "application/json"},
-                timeout=30,
+                grant_type="authorization_code",
+                code=auth_code,
+                code_verifier=code_verifier,
             )
-            resp.raise_for_status()
+        except OAuthError as exc:
+            raise AuthenticationFailedError(
+                f"Token exchange error: {exc.error} — {exc.description or 'Unknown error'}",
+                provider=provider.name,
+            ) from exc
         except http_client.RequestException as exc:
             raise AuthenticationFailedError(f"Token exchange failed: {exc}", provider=provider.name) from exc
 
-        try:
-            data = resp.json()
-        except json.JSONDecodeError as exc:
-            raise AuthenticationFailedError("Token response was not valid JSON", provider=provider.name) from exc
+        runtime_session.state = "processing"
 
-        if "access_token" not in data:
-            error = data.get("error", "")
-            error_desc = data.get("error_description", "Unknown error")
-            raise AuthenticationFailedError(f"Token exchange error: {error} — {error_desc}", provider=provider.name)
-
-        return data
+        return FlowResult(
+            connection=token_to_connection_record(
+                dict(token),
+                provider=provider.name,
+                profile=profile,
+                connection_name=connection_name,
+                scopes=effective_scopes,
+            )
+        )

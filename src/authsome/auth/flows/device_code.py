@@ -4,24 +4,22 @@ from __future__ import annotations
 
 import json
 import time
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 import requests
+from authlib.integrations.base_client.errors import OAuthError
 from loguru import logger
 
-from authsome.auth.flows.base import AuthFlow, FlowResult
-from authsome.auth.models.connection import AccountInfo, ConnectionRecord
-from authsome.auth.models.enums import AuthType, ConnectionStatus
+from authsome.auth.flows.base import AuthFlow, FlowResult, build_oauth_session, token_to_connection_record
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.errors import AuthenticationFailedError
-from authsome.utils import utc_now
 
 if TYPE_CHECKING:
     from authsome.auth.sessions import AuthSession
 
 _DEFAULT_POLL_INTERVAL = 5
 _MAX_POLL_DURATION = 900
+_DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code"
 
 
 class DeviceCodeFlow(AuthFlow):
@@ -87,8 +85,9 @@ class DeviceCodeFlow(AuthFlow):
 
         interval = int(runtime_session.payload.get("internal_interval", 5))
         expires_in = int(runtime_session.payload.get("expires_in", 300))
+        effective_scopes = json.loads(runtime_session.payload.get("internal_scopes", "[]"))
 
-        data = self.poll_for_token(
+        token = self._poll_for_token(
             provider=provider,
             client_id=client_id,
             client_secret=client_secret,
@@ -97,45 +96,16 @@ class DeviceCodeFlow(AuthFlow):
             expires_in=expires_in,
         )
 
-        if "access_token" in data:
-            now = utc_now()
-            token_expires_in = data.get("expires_in")
-            effective_scopes = json.loads(runtime_session.payload.get("internal_scopes", "[]"))
-            runtime_session.state = "processing"
-
-            return FlowResult(
-                connection=ConnectionRecord(
-                    schema_version=2,
-                    provider=provider.name,
-                    profile=profile,
-                    connection_name=connection_name,
-                    auth_type=AuthType.OAUTH2,
-                    status=ConnectionStatus.CONNECTED,
-                    scopes=effective_scopes,
-                    access_token=data.get("access_token", ""),
-                    refresh_token=data.get("refresh_token"),
-                    token_type=data.get("token_type", "Bearer"),
-                    expires_at=now + timedelta(seconds=int(token_expires_in)) if token_expires_in else None,
-                    obtained_at=now,
-                    account=AccountInfo(),
-                    metadata={},
-                )
-            )
-
-        error = data.get("error", "")
-        if error == "authorization_pending":
-            return None
-        elif error == "slow_down":
-            return None
-        elif error == "access_denied":
-            raise AuthenticationFailedError("User denied the authorization request", provider=provider.name)
-        elif error == "expired_token":
-            raise AuthenticationFailedError("Device code has expired. Please try again.", provider=provider.name)
-        else:
-            raise AuthenticationFailedError(
-                f"Token endpoint error: {data.get('error_description', error or 'Unknown error')}",
+        runtime_session.state = "processing"
+        return FlowResult(
+            connection=token_to_connection_record(
+                token,
                 provider=provider.name,
+                profile=profile,
+                connection_name=connection_name,
+                scopes=effective_scopes,
             )
+        )
 
     def _request_device_code(
         self, provider: ProviderDefinition, client_id: str | None, scopes: list[str]
@@ -165,7 +135,7 @@ class DeviceCodeFlow(AuthFlow):
                 "Device authorization response was not valid JSON", provider=provider.name
             ) from exc
 
-    def poll_for_token(
+    def _poll_for_token(
         self,
         provider: ProviderDefinition,
         client_id: str | None,
@@ -177,61 +147,77 @@ class DeviceCodeFlow(AuthFlow):
         assert provider.oauth is not None
         poll_interval = max(interval, 1)
 
-        # Hard cap the polling at 300 seconds, regardless of provider's expires_in
+        # Hard cap polling at 300s regardless of the provider's expires_in.
         effective_expires_in = min(expires_in, 300)
         deadline = time.monotonic() + effective_expires_in
 
+        # Postiz uses a non-standard JSON body at the token endpoint — fall back
+        # to a raw POST for that one provider rather than monkey-patching authlib.
         use_json = provider.oauth.device_token_request == "json"
+
+        client = build_oauth_session(client_id=client_id, client_secret=client_secret)
 
         while time.monotonic() < deadline:
             time.sleep(poll_interval)
 
             try:
                 if use_json:
-                    resp = requests.post(
-                        provider.oauth.token_url,
-                        json={"device_code": device_code},
-                        headers={"Accept": "application/json", "Content-Type": "application/json"},
-                        timeout=30,
-                    )
+                    token = self._fetch_token_json(provider, device_code)
                 else:
-                    payload: dict[str, str] = {
-                        "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-                        "device_code": device_code,
-                    }
-                    if client_id:
-                        payload["client_id"] = client_id
-                    if client_secret:
-                        payload["client_secret"] = client_secret
-                    resp = requests.post(
-                        provider.oauth.token_url, data=payload, headers={"Accept": "application/json"}, timeout=30
+                    token = dict(
+                        client.fetch_token(
+                            provider.oauth.token_url,
+                            grant_type=_DEVICE_CODE_GRANT,
+                            device_code=device_code,
+                        )
                     )
+            except OAuthError as exc:
+                if exc.error == "authorization_pending":
+                    continue
+                if exc.error == "slow_down":
+                    poll_interval += 5
+                    continue
+                if exc.error == "access_denied":
+                    raise AuthenticationFailedError(
+                        "User denied the authorization request", provider=provider.name
+                    ) from exc
+                if exc.error == "expired_token":
+                    raise AuthenticationFailedError(
+                        "Device code has expired. Please try again.", provider=provider.name
+                    ) from exc
+                raise AuthenticationFailedError(
+                    f"Token endpoint error: {exc.description or exc.error}",
+                    provider=provider.name,
+                ) from exc
             except requests.RequestException as exc:
                 logger.warning("Token poll request failed: {}, retrying...", exc)
                 continue
 
-            try:
-                data = resp.json()
-            except json.JSONDecodeError:
-                logger.warning("Token poll response was not JSON, retrying...")
-                continue
-
-            if resp.status_code == 200 and "access_token" in data:
-                return data
-
-            error = data.get("error", "")
-            if error == "authorization_pending":
-                continue
-            elif error == "slow_down":
-                poll_interval += 5
-            elif error == "access_denied":
-                raise AuthenticationFailedError("User denied the authorization request", provider=provider.name)
-            elif error == "expired_token":
-                raise AuthenticationFailedError("Device code has expired. Please try again.", provider=provider.name)
-            else:
-                raise AuthenticationFailedError(
-                    f"Token endpoint error: {data.get('error_description', error or 'Unknown error')}",
-                    provider=provider.name,
-                )
+            return token
 
         raise AuthenticationFailedError("Device authorization timed out.", provider=provider.name)
+
+    @staticmethod
+    def _fetch_token_json(provider: ProviderDefinition, device_code: str) -> dict[str, Any]:
+        """Fallback for providers that require a JSON body at the token endpoint.
+
+        Mirrors authlib's response handling: a JSON body with an ``error`` field
+        is raised as ``OAuthError`` so the polling loop can react identically to
+        the standard form-encoded path.
+        """
+        assert provider.oauth is not None
+        resp = requests.post(
+            provider.oauth.token_url,
+            json={"device_code": device_code},
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+            timeout=30,
+        )
+        try:
+            data = resp.json()
+        except json.JSONDecodeError:
+            logger.warning("Token poll response was not JSON, retrying...")
+            raise requests.RequestException("Non-JSON token response") from None
+
+        if "error" in data:
+            raise OAuthError(error=data["error"], description=data.get("error_description"))
+        return data
