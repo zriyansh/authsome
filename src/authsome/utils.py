@@ -8,8 +8,6 @@ from typing import Any
 
 from authsome.errors import AuthsomeError
 
-from authsome.errors import AuthsomeError
-
 
 def utc_now() -> datetime:
     """Return the current UTC datetime."""
@@ -194,8 +192,6 @@ def require_os_auth(action_name: str) -> bool:
             return False
 
     return False
-
-
 
 
 def format_expires_at(expires_at: str | None) -> str | None:

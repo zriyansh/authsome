@@ -10,10 +10,9 @@ from typing import Any
 import click
 import requests
 
-from authsome import FlowType, __version__, audit
+from authsome import AuthenticationFailedError, FlowType, __version__, audit
 from authsome.auth.models.enums import AuthType, ExportFormat
 from authsome.auth.models.provider import ProviderDefinition
-from authsome.cli.context import ContextObj, common_options, pass_ctx
 from authsome.cli.context import ContextObj, common_options, pass_ctx
 from authsome.cli.daemon_control import (
     daemon_status,
@@ -21,7 +20,7 @@ from authsome.cli.daemon_control import (
     stop_daemon,
 )
 from authsome.cli.helpers import _api_key_env_var, _validate_provider_endpoints, handle_errors, setup_logging
-from authsome.utils import connection_is_active, format_expires_at, redact
+from authsome.utils import connection_is_active, format_error_code, format_expires_at, redact
 
 
 @click.group()
