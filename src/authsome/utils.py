@@ -19,6 +19,22 @@ def to_rfc3339(dt: datetime) -> str:
     return dt.isoformat().replace("+00:00", "Z")
 
 
+def format_duration(total_seconds: int) -> str:
+    """Return a compact readable string for a duration in seconds."""
+    if total_seconds < 0:
+        total_seconds = 0
+    if total_seconds < 60:
+        return f"{total_seconds}s"
+    minutes = total_seconds // 60
+    if minutes < 60:
+        return f"{minutes}m"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours}h"
+    days = hours // 24
+    return f"{days}d"
+
+
 def parse_rfc3339(s: str) -> datetime:
     """Parse an RFC 3339 datetime string."""
     s = s.replace("Z", "+00:00")

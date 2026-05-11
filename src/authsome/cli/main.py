@@ -28,7 +28,7 @@ from authsome.cli.daemon_control import (
 )
 from authsome.errors import AuthenticationFailedError, AuthsomeError
 from authsome.proxy.runner import ProxyRunner
-from authsome.utils import redact
+from authsome.utils import format_duration, redact
 
 
 class CliRuntime:
@@ -176,9 +176,9 @@ def format_expires_at(expires_at: str | None) -> str | None:
 
     total_seconds = round((expiry - datetime.now(UTC)).total_seconds())
     if total_seconds < 0:
-        label = _format_duration(-total_seconds)
+        label = format_duration(-total_seconds)
         return f"expired {label} ago"
-    label = _format_duration(total_seconds)
+    label = format_duration(total_seconds)
     return f"expires in {label}"
 
 
@@ -198,20 +198,6 @@ def connection_is_active(connection: dict[str, Any]) -> bool:
         expiry = expiry.replace(tzinfo=UTC)
     return datetime.now(UTC) < expiry
 
-
-def _format_duration(total_seconds: int) -> str:
-    if total_seconds < 60:
-        return f"{total_seconds}s"
-    minutes = total_seconds // 60
-    if minutes < 60:
-        return f"{minutes}m"
-    hours = minutes // 60
-    if hours < 24:
-        return f"{hours}h"
-    days = hours // 24
-    return f"{days}d"
-
-
 def _api_key_env_var(definition: ProviderDefinition) -> str | None:
     """Return the canonical API key environment variable for a provider."""
     if definition.api_key:
@@ -225,7 +211,6 @@ def _api_key_env_var(definition: ProviderDefinition) -> str | None:
             return env_var.strip()
 
     return None
-
 
 def _validate_provider_endpoints(definition: Any, ctx_obj: ContextObj) -> list[tuple[str, str, bool]]:
     """Extract and validate provider endpoints for security."""
