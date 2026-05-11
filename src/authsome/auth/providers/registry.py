@@ -10,7 +10,11 @@ from loguru import logger
 
 from authsome.auth.models.enums import AuthType, FlowType
 from authsome.auth.models.provider import ProviderDefinition
-from authsome.errors import InvalidProviderSchemaError, ProviderNotFoundError
+from authsome.errors import (
+    InvalidProviderSchemaError,
+    ProviderAlreadyRegisteredError,
+    ProviderNotFoundError,
+)
 from authsome.store.interfaces import AppStore
 from authsome.utils import is_filesystem_safe
 
@@ -81,7 +85,7 @@ class ProviderRegistry:
         if force or not has_custom:
             self._app_store.save_provider(definition)
         else:
-            raise FileExistsError(f"Provider '{definition.name}' already exists. Use force=True to overwrite.")
+            raise ProviderAlreadyRegisteredError(definition.name)
         logger.info("Registered provider: {}", definition.name)
 
     def _validate_provider(self, definition: ProviderDefinition) -> None:

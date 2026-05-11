@@ -26,7 +26,7 @@ from authsome.cli.daemon_control import (
     start_daemon,
     stop_daemon,
 )
-from authsome.errors import AuthsomeError
+from authsome.errors import AuthenticationFailedError, AuthsomeError
 from authsome.proxy.runner import ProxyRunner
 from authsome.utils import redact
 
@@ -106,21 +106,23 @@ def common_options(f):
 def format_error_code(exc: Exception) -> int:
     if isinstance(exc, DaemonUnavailableError):
         return 9
-    if not isinstance(exc, AuthsomeError):
+    if not isinstance(exc, (AuthsomeError, FileExistsError)):
         return 1
     exc_name = exc.__class__.__name__
-    if exc_name == "ProviderNotFoundError":
+    if exc_name in ("AuthenticationFailedError", "InputCancelledError"):
+        return 2
+    if exc_name == "ConnectionNotFoundError":
         return 3
-    if exc_name == "AuthenticationFailedError":
+    if exc_name == "ProviderNotFoundError":
         return 4
-    if exc_name in ("CredentialMissingError", "ConnectionNotFoundError"):
+    if exc_name in ("CredentialMissingError", "TokenExpiredError", "RefreshFailedError"):
         return 5
-    if exc_name == "InputCancelledError":
-        return 8
-    if exc_name == "RefreshFailedError":
+    if exc_name == "ConnectionAlreadyExistsError":
         return 6
-    if exc_name == "StoreUnavailableError":
+    if exc_name in ("ProviderAlreadyRegisteredError", "FileExistsError"):
         return 7
+    if exc_name == "EndpointUnreachableError":
+        return 8
     return 1
 
 
@@ -765,8 +767,7 @@ def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, 
         from authsome.utils import require_os_auth
 
         if not require_os_auth("reveal secrets"):
-            ctx_obj.echo("Authentication failed or cancelled.", err=True, color="red")
-            sys.exit(1)
+            raise AuthenticationFailedError("Authentication failed or cancelled.")
         audit.log("get", provider=provider, connection=connection, field=field or "all")
 
     data = redact(record) if not show_secret else record.model_dump(mode="json")
@@ -951,7 +952,7 @@ def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> None:
 
     except Exception as exc:
         ctx_obj.echo(f"Failed to register provider: {exc}", err=True, color="red")
-        sys.exit(1)
+        sys.exit(format_error_code(exc))
 
 
 @cli.command()
