@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.6.1",
+  "checkpoint_id": "ab4984c61c3f",
+  "strategy": "manual-commit",
+  "branch": "feat/220-master-key-precedence",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "AGENTS.md",
+    "CONTRIBUTING.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/ab/4984c61c3f/0/metadata.json",
+      "transcript": "/ab/4984c61c3f/0/full.jsonl",
+      "content_hash": "/ab/4984c61c3f/0/content_hash.txt",
+      "prompt": "/ab/4984c61c3f/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 15,
+    "cache_creation_tokens": 11233,
+    "cache_read_tokens": 1116947,
+    "output_tokens": 3954,
+    "api_call_count": 11
+  }
+}
