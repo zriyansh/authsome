@@ -86,6 +86,8 @@ These rules govern all changes to this codebase — apply them without exception
 
 **Explain the why in commit messages.** The diff shows what changed; the message says why.
 
+**Never commit directly to `main`.** All changes must go through a pull request. Create a feature or chore branch, push it, and open a PR — even for single-line fixes.
+
 ---
 
 ## Conventions
