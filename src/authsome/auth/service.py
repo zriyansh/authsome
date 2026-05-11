@@ -541,24 +541,20 @@ class AuthService:
             return
 
         if record.auth_type == AuthType.OAUTH2 and (record.access_token or record.refresh_token):
-            resolved_definition = definition.resolve_urls(record.base_url)
-            if resolved_definition.oauth and resolved_definition.oauth.revocation_url:
-                # Revoke access token
-                if record.access_token:
-                    try:
-                        http_client.post(
-                            resolved_definition.oauth.revocation_url, data={"token": record.access_token}, timeout=15
-                        )
-                    except Exception as exc:
-                        logger.warning("Access token revocation failed (continuing): {}", exc)
-                # Revoke refresh token
-                if record.refresh_token:
-                    try:
-                        http_client.post(
-                            resolved_definition.oauth.revocation_url, data={"token": record.refresh_token}, timeout=15
-                        )
-                    except Exception as exc:
-                        logger.warning("Refresh token revocation failed (continuing): {}", exc)
+            handler_cls = _FLOW_HANDLERS.get(definition.flow)
+            if handler_cls:
+                handler = handler_cls()
+                client_record = self._get_provider_client_credentials(provider)
+                client_id = client_record.client_id if client_record else None
+                client_secret = client_record.client_secret if client_record else None
+
+                resolved_definition = definition.resolve_urls(record.base_url)
+                handler.revoke(
+                    provider=resolved_definition,
+                    record=record,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                )
 
         key = build_store_key(
             profile=self._identity, provider=provider, record_type="connection", connection=connection
