@@ -8,7 +8,6 @@ from authsome import __version__
 from authsome.auth import AuthService
 from authsome.server.routes._deps import get_auth_service
 from authsome.server.schemas import HealthResponse, ReadyResponse
-from authsome.store.local import LocalAppStore
 
 router = APIRouter()
 
