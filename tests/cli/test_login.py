@@ -88,9 +88,9 @@ class TestLoginCommand:
         kwargs = mock_client.start_login.call_args.kwargs
         assert kwargs["scopes"] == ["repo", "read:user"]
 
-    def test_login_failure_exits_nonzero(self, runner: CliRunner, mock_client: MagicMock) -> None:
+    def test_login_failure_exits_4(self, runner: CliRunner, mock_client: MagicMock) -> None:
         from authsome.errors import ProviderNotFoundError
 
         mock_client.start_login.side_effect = ProviderNotFoundError("nope")
         result = runner.invoke(cli, ["--log-file", "", "login", "nope"])
-        assert result.exit_code == 3
+        assert result.exit_code == 4

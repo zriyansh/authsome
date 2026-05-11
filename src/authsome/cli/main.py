@@ -16,7 +16,7 @@ import requests
 from loguru import logger
 
 from authsome import FlowType, __version__, audit
-from authsome.auth.models.enums import ExportFormat
+from authsome.auth.models.enums import AuthType, ExportFormat
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.cli.client import AuthsomeApiClient
 from authsome.cli.daemon_control import (
@@ -26,7 +26,7 @@ from authsome.cli.daemon_control import (
     start_daemon,
     stop_daemon,
 )
-from authsome.errors import AuthsomeError
+from authsome.errors import AuthenticationFailedError, AuthsomeError
 from authsome.proxy.runner import ProxyRunner
 from authsome.utils import format_duration, redact
 
@@ -61,7 +61,12 @@ class ContextObj:
         return self._ctx
 
     def print_json(self, data: Any) -> None:
-        click.echo(json_lib.dumps(data, indent=2))
+        output = {"v": 1}
+        if isinstance(data, dict):
+            output.update(data)
+        else:
+            output["data"] = data
+        click.echo(json_lib.dumps(output, indent=2))
 
     def echo(self, message: str, err: bool = False, color: str | None = None, nl: bool = True) -> None:
         if self.quiet:
@@ -101,21 +106,23 @@ def common_options(f):
 def format_error_code(exc: Exception) -> int:
     if isinstance(exc, DaemonUnavailableError):
         return 9
-    if not isinstance(exc, AuthsomeError):
+    if not isinstance(exc, (AuthsomeError, FileExistsError)):
         return 1
     exc_name = exc.__class__.__name__
-    if exc_name == "ProviderNotFoundError":
+    if exc_name in ("AuthenticationFailedError", "InputCancelledError"):
+        return 2
+    if exc_name == "ConnectionNotFoundError":
         return 3
-    if exc_name == "AuthenticationFailedError":
+    if exc_name == "ProviderNotFoundError":
         return 4
-    if exc_name in ("CredentialMissingError", "ConnectionNotFoundError"):
+    if exc_name in ("CredentialMissingError", "TokenExpiredError", "RefreshFailedError"):
         return 5
-    if exc_name == "InputCancelledError":
-        return 8
-    if exc_name == "RefreshFailedError":
+    if exc_name == "ConnectionAlreadyExistsError":
         return 6
-    if exc_name == "StoreUnavailableError":
+    if exc_name in ("ProviderAlreadyRegisteredError", "FileExistsError"):
         return 7
+    if exc_name == "EndpointUnreachableError":
+        return 8
     return 1
 
 
@@ -191,6 +198,19 @@ def connection_is_active(connection: dict[str, Any]) -> bool:
         expiry = expiry.replace(tzinfo=UTC)
     return datetime.now(UTC) < expiry
 
+def _api_key_env_var(definition: ProviderDefinition) -> str | None:
+    """Return the canonical API key environment variable for a provider."""
+    if definition.api_key:
+        env_var = getattr(definition.api_key, "env_var", None)
+        if isinstance(env_var, str) and env_var.strip():
+            return env_var.strip()
+
+    if definition.export and definition.export.env:
+        env_var = definition.export.env.get("api_key")
+        if env_var and env_var.strip():
+            return env_var.strip()
+
+    return None
 
 def _validate_provider_endpoints(definition: Any, ctx_obj: ContextObj) -> list[tuple[str, str, bool]]:
     """Extract and validate provider endpoints for security."""
@@ -437,7 +457,7 @@ def log_cmd(ctx_obj: ContextObj, lines: int) -> None:
 
         if ctx_obj.json_output:
             parsed_lines = [json_lib.loads(line) for line in target_lines]
-            ctx_obj.print_json(parsed_lines)
+            ctx_obj.print_json({"lines": parsed_lines})
         else:
             for line in target_lines:
                 ctx_obj.echo(line)
@@ -546,6 +566,97 @@ def login(
         ctx_obj.echo(f"Successfully logged in to {provider} ({connection}).", color="green")
 
 
+@cli.command(name="import-env")
+@click.argument("provider", required=False)
+@click.option("--connection", default="default", help="Connection name.")
+@click.option("--dry-run", is_flag=True, help="Show what would be imported without writing credentials.")
+@click.option("--force", is_flag=True, help="Re-import even when the stored key already matches.")
+@common_options
+@pass_ctx
+@handle_errors
+def import_env(ctx_obj: ContextObj, provider: str | None, connection: str, dry_run: bool, force: bool) -> None:
+    """Import API keys from environment variables into authsome."""
+    actx = ctx_obj.initialize()
+
+    provider_defs: list[ProviderDefinition] = []
+    if provider:
+        provider_defs = [ProviderDefinition.model_validate(actx.runtime_client.get_provider(provider))]
+    else:
+        connections = actx.runtime_client.list_connections()
+        by_source = connections.get("by_source", {})
+        for source in ("bundled", "custom"):
+            for provider_data in by_source.get(source, []):
+                provider_defs.append(ProviderDefinition.model_validate(provider_data))
+
+    results: list[dict[str, str]] = []
+    imported = 0
+    for definition in provider_defs:
+        if definition.auth_type != AuthType.API_KEY:
+            continue
+
+        env_var = _api_key_env_var(definition)
+        if not env_var:
+            results.append({"provider": definition.name, "status": "skipped_no_env_mapping"})
+            continue
+
+        env_value = os.environ.get(env_var)
+        if not env_value or not env_value.strip():
+            results.append({"provider": definition.name, "status": "skipped_env_not_set", "env_var": env_var})
+            continue
+        api_key_value = env_value.strip()
+
+        existing_record: dict[str, Any] | None = None
+        try:
+            existing_record = actx.runtime_client.get_connection(definition.name, connection)
+        except Exception:
+            existing_record = None
+
+        if (
+            not force
+            and existing_record is not None
+            and existing_record.get("status") == "connected"
+            and existing_record.get("api_key") == api_key_value
+        ):
+            results.append({"provider": definition.name, "status": "skipped_unchanged", "env_var": env_var})
+            continue
+
+        if dry_run:
+            results.append({"provider": definition.name, "status": "would_import", "env_var": env_var})
+            continue
+
+        session_info = actx.runtime_client.start_login(
+            provider=definition.name,
+            connection=connection,
+            flow=FlowType.API_KEY.value,
+            force=True,
+        )
+        session_id = session_info["id"]
+        resume_info = actx.runtime_client.resume_login_session(session_id, api_key=api_key_value)
+        if resume_info.get("status") != "completed":
+            session_status = resume_info.get("status")
+            raise RuntimeError(
+                f"Import did not complete for provider '{definition.name}' (session status: {session_status})."
+            )
+
+        imported += 1
+        results.append({"provider": definition.name, "status": "imported", "env_var": env_var})
+        audit.log("import_env", provider=definition.name, connection=connection, source_env=env_var, status="success")
+
+    if ctx_obj.json_output:
+        ctx_obj.print_json({"provider": provider, "connection": connection, "dry_run": dry_run, "results": results})
+    else:
+        if not results:
+            ctx_obj.echo("No API key providers found to process.", color="yellow")
+        else:
+            for item in results:
+                env_hint = f" ({item['env_var']})" if item.get("env_var") else ""
+                ctx_obj.echo(f"{item['provider']}: {item['status']}{env_hint}")
+            if dry_run:
+                ctx_obj.echo("Dry run only. No credentials were imported.", color="yellow")
+            else:
+                ctx_obj.echo(f"Imported {imported} provider(s).", color="green")
+
+
 @cli.command()
 @click.argument("provider")
 @click.option("--connection", default="default", help="Connection name.")
@@ -641,11 +752,12 @@ def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, 
         from authsome.utils import require_os_auth
 
         if not require_os_auth("reveal secrets"):
-            ctx_obj.echo("Authentication failed or cancelled.", err=True, color="red")
-            sys.exit(1)
+            raise AuthenticationFailedError("Authentication failed or cancelled.")
         audit.log("get", provider=provider, connection=connection, field=field or "all")
 
     data = redact(record) if not show_secret else record.model_dump(mode="json")
+    # Decouple from internal schema fields
+    data.pop("schema_version", None)
 
     if field:
         if field in data:
@@ -698,6 +810,7 @@ def inspect(ctx_obj: ContextObj, provider: str) -> None:
             break
 
     if ctx_obj.json_output:
+        data.pop("schema_version", None)
         ctx_obj.print_json(data)
     else:
         ctx_obj.echo(json_lib.dumps(data, indent=2))
@@ -716,11 +829,22 @@ def export(ctx_obj: ContextObj, provider: str | None, connection: str, export_fo
     fmt = ExportFormat(export_format)
     output = actx.runtime_client.export(provider, connection, format=fmt.value)
     audit.log("export", provider=provider, connection=connection, format=fmt.value)
+    if ctx_obj.json_output:
+        # Call with format=json and parse the result to properly wrap with version info
+        output_str = actx.runtime_client.export(provider, connection, format="json")
+        try:
+            data = json_lib.loads(output_str)
+        except Exception:
+            data = {}
+        ctx_obj.print_json({"credentials": data})
+        return
+
     ctx_obj.echo(
         "Note: secrets are now in your shell environment for this session. Prefer 'authsome run' for scoped injection.",
         err=True,
         color="yellow",
     )
+
     if output:
         click.echo(output)
 
@@ -813,7 +937,7 @@ def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> None:
 
     except Exception as exc:
         ctx_obj.echo(f"Failed to register provider: {exc}", err=True, color="red")
-        sys.exit(1)
+        sys.exit(format_error_code(exc))
 
 
 @cli.command()
@@ -886,21 +1010,14 @@ def doctor(ctx_obj: ContextObj) -> None:
     else:
         all_ok = results.get("status") == "ready"
         for key, val in results.get("checks", {}).items():
+            ok = val == "ok"
             ctx_obj.echo(f"{key}: ", nl=False)
-            if val == "ok":
-                ctx_obj.echo("OK", color="green")
-            elif val == "warn":
-                ctx_obj.echo("WARN", color="yellow")
-            else:
-                ctx_obj.echo("FAIL", color="red")
+            ctx_obj.echo("OK" if ok else "FAIL", color="green" if ok else "red")
         issues = results.get("issues", [])
         if issues:
-            ctx_obj.echo("\nIssues/warnings found:")
+            ctx_obj.echo("\nIssues found:", color="red")
             for issue in issues:
-                if issue.startswith("warning:"):
-                    ctx_obj.echo(f" - {issue}", color="yellow")
-                else:
-                    ctx_obj.echo(f" - {issue}", color="red")
+                ctx_obj.echo(f" - {issue}", color="red")
 
         if not all_ok:
             sys.exit(1)
@@ -933,11 +1050,12 @@ def daemon() -> None:
 @daemon.command(name="serve")
 @click.option("--host", default="127.0.0.1", show_default=True, help="Host interface to bind.")
 @click.option("--port", default=7998, type=int, show_default=True, help="TCP port to listen on.")
-def daemon_serve(host: str, port: int) -> None:
+@click.option("--reload", is_flag=True, help="Enable auto-reload on code changes.")
+def daemon_serve(host: str, port: int, reload: bool) -> None:
     """Run the daemon in the foreground."""
     from authsome.server.daemon import serve
 
-    serve(host=host, port=port)
+    serve(host=host, port=port, reload=reload)
 
 
 @daemon.command(name="start")

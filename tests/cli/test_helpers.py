@@ -16,7 +16,11 @@ from authsome.cli.main import (
 )
 from authsome.errors import (
     AuthenticationFailedError,
+    ConnectionAlreadyExistsError,
+    ConnectionNotFoundError,
     CredentialMissingError,
+    EndpointUnreachableError,
+    ProviderAlreadyRegisteredError,
     ProviderNotFoundError,
     RefreshFailedError,
     StoreUnavailableError,
@@ -150,11 +154,11 @@ def test_format_error_code_daemon_unavailable() -> None:
 
 
 def test_format_error_code_provider_not_found() -> None:
-    assert format_error_code(ProviderNotFoundError("x")) == 3
+    assert format_error_code(ProviderNotFoundError("x")) == 4
 
 
 def test_format_error_code_authentication_failed() -> None:
-    assert format_error_code(AuthenticationFailedError("bad", provider="x")) == 4
+    assert format_error_code(AuthenticationFailedError("bad", provider="x")) == 2
 
 
 def test_format_error_code_credential_missing() -> None:
@@ -162,11 +166,29 @@ def test_format_error_code_credential_missing() -> None:
 
 
 def test_format_error_code_refresh_failed() -> None:
-    assert format_error_code(RefreshFailedError("fail", provider="x")) == 6
+    assert format_error_code(RefreshFailedError("fail", provider="x")) == 5
 
 
 def test_format_error_code_store_unavailable() -> None:
-    assert format_error_code(StoreUnavailableError("disk")) == 7
+    # StoreUnavailableError is now classified as generic (last resort)
+    assert format_error_code(StoreUnavailableError("disk")) == 1
+
+
+def test_format_error_code_connection_not_found() -> None:
+    assert format_error_code(ConnectionNotFoundError(provider="x")) == 3
+
+
+def test_format_error_code_connection_already_exists() -> None:
+    assert format_error_code(ConnectionAlreadyExistsError(provider="x")) == 6
+
+
+def test_format_error_code_provider_already_registered() -> None:
+    assert format_error_code(ProviderAlreadyRegisteredError(name="x")) == 7
+    assert format_error_code(FileExistsError("oops")) == 7
+
+
+def test_format_error_code_endpoint_unreachable() -> None:
+    assert format_error_code(EndpointUnreachableError(endpoint="x")) == 8
 
 
 def test_format_error_code_unknown_authsome_error() -> None:
