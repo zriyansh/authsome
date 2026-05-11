@@ -13,13 +13,18 @@ import requests
 from authsome import AuthenticationFailedError, FlowType, __version__, audit
 from authsome.auth.models.enums import AuthType, ExportFormat
 from authsome.auth.models.provider import ProviderDefinition
-from authsome.cli.context import ContextObj, common_options, pass_ctx
+from authsome.cli.context import ContextObj, common_options
 from authsome.cli.daemon_control import (
     daemon_status,
     start_daemon,
     stop_daemon,
 )
-from authsome.cli.helpers import _api_key_env_var, _validate_provider_endpoints, handle_errors, setup_logging
+from authsome.cli.helpers import (
+    _api_key_env_var,
+    _validate_provider_endpoints,
+    auth_command,
+    setup_logging,
+)
 from authsome.utils import connection_is_active, format_error_code, format_expires_at, redact
 
 
@@ -42,9 +47,7 @@ def cli(ctx: click.Context, verbose: bool, log_file: str) -> None:
 
 
 @cli.command(name="list")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def list_cmd(ctx_obj: ContextObj) -> None:
     """List providers and connection states."""
     actx = ctx_obj.initialize()
@@ -204,9 +207,7 @@ def list_cmd(ctx_obj: ContextObj) -> None:
 
 @cli.command(name="log")
 @click.option("-n", "--lines", default=50, help="Number of lines to show.")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def log_cmd(ctx_obj: ContextObj, lines: int) -> None:
     """View the authsome audit log."""
     actx = ctx_obj.initialize()
@@ -245,9 +246,7 @@ def log_cmd(ctx_obj: ContextObj, lines: int) -> None:
 @click.option("--scopes", help="Comma-separated scopes to request.")
 @click.option("--base-url", help="Base URL for the provider (e.g. for GitHub Enterprise).")
 @click.option("--force", is_flag=True, help="Overwrite an existing connection if it already exists.")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def login(
     ctx_obj: ContextObj,
     provider: str,
@@ -340,9 +339,7 @@ def login(
 @click.option("--connection", default="default", help="Connection name.")
 @click.option("--dry-run", is_flag=True, help="Show what would be imported without writing credentials.")
 @click.option("--force", is_flag=True, help="Re-import even when the stored key already matches.")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def import_env(ctx_obj: ContextObj, provider: str | None, connection: str, dry_run: bool, force: bool) -> None:
     """Import API keys from environment variables into authsome."""
     actx = ctx_obj.initialize()
@@ -429,9 +426,7 @@ def import_env(ctx_obj: ContextObj, provider: str | None, connection: str, dry_r
 @cli.command()
 @click.argument("provider")
 @click.option("--connection", default="default", help="Connection name.")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def logout(ctx_obj: ContextObj, provider: str, connection: str) -> None:
     """Log out of a connection and remove local state."""
     actx = ctx_obj.initialize()
@@ -444,17 +439,10 @@ def logout(ctx_obj: ContextObj, provider: str, connection: str) -> None:
         ctx_obj.echo(f"Logged out of {provider} ({connection}).", color="green")
 
 
-@cli.group(name="connection")
-def connection_group() -> None:
-    """Manage provider connections."""
-
-
-@connection_group.command(name="set-default")
+@cli.command(name="set-default")
 @click.argument("provider")
 @click.argument("connection")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def set_default_connection(ctx_obj: ContextObj, provider: str, connection: str) -> None:
     """Set the default connection for a provider."""
     actx = ctx_obj.initialize()
@@ -467,9 +455,7 @@ def set_default_connection(ctx_obj: ContextObj, provider: str, connection: str) 
 
 @cli.command()
 @click.argument("provider")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def revoke(ctx_obj: ContextObj, provider: str) -> None:
     """Complete reset of the provider, removing all connections and client secrets."""
     actx = ctx_obj.initialize()
@@ -484,9 +470,7 @@ def revoke(ctx_obj: ContextObj, provider: str) -> None:
 
 @cli.command()
 @click.argument("provider")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def remove(ctx_obj: ContextObj, provider: str) -> None:
     """Delete a custom provider definition."""
     actx = ctx_obj.initialize()
@@ -504,9 +488,7 @@ def remove(ctx_obj: ContextObj, provider: str) -> None:
 @click.option("--connection", default="default", help="Connection name.")
 @click.option("--field", help="Return only a specific field.")
 @click.option("--show-secret", is_flag=True, help="Reveal encrypted secrets.")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, show_secret: bool) -> None:
     """Return provider connection metadata by default."""
     actx = ctx_obj.initialize()
@@ -563,9 +545,7 @@ def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, 
 
 @cli.command()
 @click.argument("provider")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def inspect(ctx_obj: ContextObj, provider: str) -> None:
     """Return provider definition and local connection summary."""
     actx = ctx_obj.initialize()
@@ -589,9 +569,7 @@ def inspect(ctx_obj: ContextObj, provider: str) -> None:
 @click.argument("provider", required=False)
 @click.option("--connection", default="default", help="Connection name.")
 @click.option("--format", "export_format", type=click.Choice(["env", "json", "shell"]), default="env")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def export(ctx_obj: ContextObj, provider: str | None, connection: str, export_format: str) -> None:
     """Export credential material in selected format."""
     actx = ctx_obj.initialize()
@@ -620,9 +598,7 @@ def export(ctx_obj: ContextObj, provider: str | None, connection: str, export_fo
 
 @cli.command(context_settings=dict(ignore_unknown_options=True))
 @click.argument("command", nargs=-1, required=True)
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def run(ctx_obj: ContextObj, command: tuple[str]) -> None:
     """Run a subprocess behind the local auth proxy."""
     actx = ctx_obj.initialize()
@@ -634,9 +610,7 @@ def run(ctx_obj: ContextObj, command: tuple[str]) -> None:
 @click.argument("path")
 @click.option("--force", is_flag=True, help="Force overwrite if provider exists.")
 @click.option("--yes", is_flag=True, help="Skip the registration confirmation prompt.")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> None:
     """Register a provider definition from a local JSON file path."""
 
@@ -710,9 +684,7 @@ def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> None:
 
 
 @cli.command()
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def whoami(ctx_obj: ContextObj) -> None:
     """Show basic local context."""
     actx = ctx_obj.initialize()
@@ -766,9 +738,7 @@ def whoami(ctx_obj: ContextObj) -> None:
 
 
 @cli.command()
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def doctor(ctx_obj: ContextObj) -> None:
     """Run health checks on directory layout and encryption."""
     actx = ctx_obj.initialize()
@@ -800,9 +770,7 @@ def doctor(ctx_obj: ContextObj) -> None:
 
 @cli.command()
 @click.option("--no-browser", is_flag=True, help="Print the URL instead of opening a browser.")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def ui(ctx_obj: ContextObj, no_browser: bool) -> None:
     """Open the daemon dashboard in the browser."""
     actx = ctx_obj.initialize()
@@ -834,9 +802,7 @@ def daemon_serve(host: str, port: int, reload: bool) -> None:
 
 
 @daemon.command(name="start")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def daemon_start(ctx_obj: ContextObj) -> None:
     """Start the local daemon in the background."""
     start_daemon()
@@ -844,9 +810,7 @@ def daemon_start(ctx_obj: ContextObj) -> None:
 
 
 @daemon.command(name="stop")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def daemon_stop(ctx_obj: ContextObj) -> None:
     """Stop the local daemon."""
     stop_daemon()
@@ -854,9 +818,7 @@ def daemon_stop(ctx_obj: ContextObj) -> None:
 
 
 @daemon.command(name="restart")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def daemon_restart(ctx_obj: ContextObj) -> None:
     """Restart the local daemon."""
     stop_daemon()
@@ -865,9 +827,7 @@ def daemon_restart(ctx_obj: ContextObj) -> None:
 
 
 @daemon.command(name="status")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def daemon_status_cmd(ctx_obj: ContextObj) -> None:
     """Show daemon status."""
     status = daemon_status()
@@ -879,9 +839,7 @@ def daemon_status_cmd(ctx_obj: ContextObj) -> None:
 
 @daemon.command(name="logs")
 @click.option("-n", "--lines", default=80, help="Number of lines to show.")
-@common_options
-@pass_ctx
-@handle_errors
+@auth_command
 def daemon_logs(ctx_obj: ContextObj, lines: int) -> None:
     """Show daemon log output."""
     from authsome.cli.daemon_control import LOG_FILE

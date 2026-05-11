@@ -10,7 +10,7 @@ from typing import Any
 from loguru import logger
 
 from authsome.auth.models.provider import ProviderDefinition
-from authsome.cli.context import ContextObj
+from authsome.cli.context import ContextObj, common_options, pass_ctx
 from authsome.utils import format_error_code
 
 
@@ -29,6 +29,11 @@ def handle_errors(func):
             sys.exit(format_error_code(exc))
 
     return wrapper
+
+
+def auth_command(func):
+    """Composite decorator combining common options, context injection, and error handling."""
+    return common_options(pass_ctx(handle_errors(func)))
 
 
 def setup_logging(verbose: bool, log_file: Path | None) -> None:
