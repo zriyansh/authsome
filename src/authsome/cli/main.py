@@ -19,7 +19,14 @@ from authsome.cli.daemon_control import (
     start_daemon,
     stop_daemon,
 )
-from authsome.cli.helpers import _api_key_env_var, _validate_provider_endpoints, handle_errors, setup_logging
+from authsome.cli.helpers import (
+    _api_key_env_var,
+    _scan_env_sources,
+    _scan_resolve_should_import,
+    _validate_provider_endpoints,
+    handle_errors,
+    setup_logging,
+)
 from authsome.utils import connection_is_active, format_error_code, format_expires_at, redact
 
 
@@ -335,44 +342,35 @@ def login(
         ctx_obj.echo(f"Successfully logged in to {provider} ({connection}).", color="green")
 
 
-@cli.command(name="import-env")
-@click.argument("provider", required=False)
+@cli.command(name="scan")
 @click.option("--connection", default="default", help="Connection name.")
-@click.option("--dry-run", is_flag=True, help="Show what would be imported without writing credentials.")
-@click.option("--force", is_flag=True, help="Re-import even when the stored key already matches.")
+@click.option("--import", "auto_import", is_flag=True, help="Import detected keys without interactive prompt.")
 @common_options
 @pass_ctx
 @handle_errors
-def import_env(ctx_obj: ContextObj, provider: str | None, connection: str, dry_run: bool, force: bool) -> None:
-    """Import API keys from environment variables into authsome."""
+def scan(ctx_obj: ContextObj, connection: str, auto_import: bool) -> None:
+    """Scan env files and process env for provider API keys.
+
+    Use ``--json`` for a drift report only unless ``--import`` is also passed.
+    """
+    if ctx_obj.quiet:
+        raise click.UsageError("'scan' does not support --quiet. Use --json for report-only or --import to apply.")
+
     actx = ctx_obj.initialize()
+    scanned_env = _scan_env_sources()
 
     provider_defs: list[ProviderDefinition] = []
-    if provider:
-        provider_defs = [ProviderDefinition.model_validate(actx.runtime_client.get_provider(provider))]
-    else:
-        connections = actx.runtime_client.list_connections()
-        by_source = connections.get("by_source", {})
-        for source in ("bundled", "custom"):
-            for provider_data in by_source.get(source, []):
-                provider_defs.append(ProviderDefinition.model_validate(provider_data))
+    connections = actx.runtime_client.list_connections()
+    by_source = connections.get("by_source", {})
+    for source in ("bundled", "custom"):
+        for provider_data in by_source.get(source, []):
+            provider_defs.append(ProviderDefinition.model_validate(provider_data))
 
-    results: list[dict[str, str]] = []
-    imported = 0
+    results: list[dict[str, Any]] = []
+    configured: list[dict[str, Any]] = []
     for definition in provider_defs:
         if definition.auth_type != AuthType.API_KEY:
             continue
-
-        env_var = _api_key_env_var(definition)
-        if not env_var:
-            results.append({"provider": definition.name, "status": "skipped_no_env_mapping"})
-            continue
-
-        env_value = os.environ.get(env_var)
-        if not env_value or not env_value.strip():
-            results.append({"provider": definition.name, "status": "skipped_env_not_set", "env_var": env_var})
-            continue
-        api_key_value = env_value.strip()
 
         existing_record: dict[str, Any] | None = None
         try:
@@ -380,50 +378,114 @@ def import_env(ctx_obj: ContextObj, provider: str | None, connection: str, dry_r
         except Exception:
             existing_record = None
 
-        if (
-            not force
-            and existing_record is not None
-            and existing_record.get("status") == "connected"
-            and existing_record.get("api_key") == api_key_value
-        ):
-            results.append({"provider": definition.name, "status": "skipped_unchanged", "env_var": env_var})
+        existing_api_key = existing_record.get("api_key") if existing_record else None
+        existing_api_key = existing_api_key.strip() if isinstance(existing_api_key, str) else None
+        authsome_has_key = bool(existing_api_key and existing_record and existing_record.get("status") == "connected")
+
+        env_var = _api_key_env_var(definition)
+        if not env_var:
+            status = "no_env_mapping_authsome_present" if authsome_has_key else "no_env_mapping"
+            results.append({"provider": definition.name, "status": status})
             continue
 
-        if dry_run:
-            results.append({"provider": definition.name, "status": "would_import", "env_var": env_var})
+        env_entry = scanned_env.get(env_var)
+        env_value_raw = env_entry[0] if env_entry else None
+        env_value = env_value_raw.strip() if isinstance(env_value_raw, str) and env_value_raw.strip() else None
+        source_name = env_entry[1] if env_entry else None
+
+        if env_value and authsome_has_key:
+            drift_status = "env_and_authsome_match" if env_value == existing_api_key else "env_and_authsome_different"
+        elif env_value and not authsome_has_key:
+            drift_status = "env_only"
+        elif not env_value and authsome_has_key:
+            drift_status = "authsome_only"
+        else:
+            drift_status = "both_missing"
+
+        results.append({"provider": definition.name, "status": drift_status, "env_var": env_var, "source": source_name})
+
+        if env_value is None:
             continue
 
-        session_info = actx.runtime_client.start_login(
-            provider=definition.name,
-            connection=connection,
-            flow=FlowType.API_KEY.value,
-            force=True,
+        configured.append(
+            {
+                "provider": definition.name,
+                "env_var": env_var,
+                "source": source_name,
+                "api_key": env_value,
+                "drift": drift_status,
+            }
         )
-        session_id = session_info["id"]
-        resume_info = actx.runtime_client.resume_login_session(session_id, api_key=api_key_value)
-        if resume_info.get("status") != "completed":
-            session_status = resume_info.get("status")
-            raise RuntimeError(
-                f"Import did not complete for provider '{definition.name}' (session status: {session_status})."
+
+    should_import = _scan_resolve_should_import(
+        auto_import=auto_import,
+        configured_count=len(configured),
+        json_output=ctx_obj.json_output,
+        quiet=ctx_obj.quiet,
+    )
+
+    imported = 0
+    if should_import:
+        for item in configured:
+            provider_name = item["provider"]
+            api_key_value = item["api_key"]
+            if item.get("drift") == "env_and_authsome_match":
+                results.append(
+                    {
+                        "provider": provider_name,
+                        "status": "skipped_unchanged",
+                        "env_var": item["env_var"],
+                        "source": item.get("source"),
+                    }
+                )
+                continue
+
+            session_info = actx.runtime_client.start_login(
+                provider=provider_name,
+                connection=connection,
+                flow=FlowType.API_KEY.value,
+                force=True,
+            )
+            session_id = session_info["id"]
+            resume_info = actx.runtime_client.resume_login_session(session_id, api_key=api_key_value)
+            if resume_info.get("status") != "completed":
+                session_status = resume_info.get("status")
+                raise RuntimeError(
+                    f"Import did not complete for provider '{provider_name}' (session status: {session_status})."
+                )
+
+            imported += 1
+            results.append({"provider": provider_name, "status": "imported", "env_var": item["env_var"]})
+            audit.log(
+                "scan",
+                provider=provider_name,
+                connection=connection,
+                source=item["source"],
+                source_env=item["env_var"],
+                status="success",
             )
 
-        imported += 1
-        results.append({"provider": definition.name, "status": "imported", "env_var": env_var})
-        audit.log("import_env", provider=definition.name, connection=connection, source_env=env_var, status="success")
-
     if ctx_obj.json_output:
-        ctx_obj.print_json({"provider": provider, "connection": connection, "dry_run": dry_run, "results": results})
+        ctx_obj.print_json(
+            {
+                "connection": connection,
+                "import": should_import,
+                "configured_count": len(configured),
+                "imported_count": imported,
+                "results": results,
+            }
+        )
     else:
         if not results:
             ctx_obj.echo("No API key providers found to process.", color="yellow")
         else:
             for item in results:
                 env_hint = f" ({item['env_var']})" if item.get("env_var") else ""
-                ctx_obj.echo(f"{item['provider']}: {item['status']}{env_hint}")
-            if dry_run:
-                ctx_obj.echo("Dry run only. No credentials were imported.", color="yellow")
-            else:
-                ctx_obj.echo(f"Imported {imported} provider(s).", color="green")
+                source_hint = f" from {item['source']}" if item.get("source") else ""
+                ctx_obj.echo(f"{item['provider']}: {item['status']}{env_hint}{source_hint}")
+            if configured and not should_import:
+                ctx_obj.echo("Import skipped by user.", color="yellow")
+            ctx_obj.echo(f"Imported {imported} provider(s).", color="green")
 
 
 @cli.command()

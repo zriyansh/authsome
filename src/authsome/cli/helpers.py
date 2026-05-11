@@ -2,11 +2,13 @@
 
 import functools
 import ipaddress
+import os
 import sys
 import urllib.parse
 from pathlib import Path
 from typing import Any
 
+import click
 from loguru import logger
 
 from authsome.auth.models.provider import ProviderDefinition
@@ -108,3 +110,62 @@ def _api_key_env_var(definition: ProviderDefinition) -> str | None:
             return env_var.strip()
 
     return None
+
+
+def _load_dotenv(path: Path) -> dict[str, str]:
+    """Parse .env-style files into key/value pairs."""
+    if not path.exists():
+        return {}
+
+    values: dict[str, str] = {}
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :].strip()
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            continue
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        values[key] = value
+
+    return values
+
+
+def _scan_env_sources() -> dict[str, tuple[str, str]]:
+    """Return env values from .env, .env.prod, and process env."""
+    scanned: dict[str, tuple[str, str]] = {}
+
+    for key, value in _load_dotenv(Path(".env")).items():
+        scanned[key] = (value, ".env")
+    for key, value in _load_dotenv(Path(".env.prod")).items():
+        scanned[key] = (value, ".env.prod")
+    for key, value in os.environ.items():
+        scanned[key] = (value, "environment")
+
+    return scanned
+
+
+def _scan_resolve_should_import(
+    *,
+    auto_import: bool,
+    configured_count: int,
+    json_output: bool,
+    quiet: bool,
+) -> bool:
+    """Decide whether to import: explicit flag or interactive confirmation."""
+    if auto_import:
+        return True
+    if configured_count == 0:
+        return False
+    if json_output:
+        return False
+    if quiet:
+        return False
+    return click.confirm(f"Found {configured_count} configured provider(s). Import now?", default=True)
