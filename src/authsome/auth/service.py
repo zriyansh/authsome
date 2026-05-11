@@ -877,9 +877,7 @@ class AuthService:
             return self._get_oauth_token(record, record.provider, record.connection_name)
         raise CredentialMissingError(f"Unsupported auth type: {record.auth_type}", provider=record.provider)
 
-    def _get_auth_headers_from_record(
-        self, record: ConnectionRecord, definition: ProviderDefinition
-    ) -> dict[str, str]:
+    def _get_auth_headers_from_record(self, record: ConnectionRecord, definition: ProviderDefinition) -> dict[str, str]:
         token = self._get_access_token_from_record(record)
 
         if record.auth_type == AuthType.OAUTH2:
