@@ -42,6 +42,7 @@ class SQLiteVaultStorage(VaultStorage):
             self._conn.commit()
             try:
                 import os
+
                 os.chmod(self._db_path, 0o600)
             except OSError:
                 pass

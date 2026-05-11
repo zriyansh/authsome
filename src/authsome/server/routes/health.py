@@ -30,11 +30,13 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
     try:
         config = auth.app_store.get_config()
         checks["config"] = "ok"
-        
+
         # Verify spec_version matches standard expected version (1)
         expected_spec_version = 1
         if getattr(config, "spec_version", None) != expected_spec_version:
-            issues.append(f"config: spec_version mismatch (got {config.spec_version}, expected {expected_spec_version})")
+            issues.append(
+                f"config: spec_version mismatch (got {config.spec_version}, expected {expected_spec_version})"
+            )
             checks["version_compatibility"] = "failed"
         else:
             checks["version_compatibility"] = "ok"
@@ -63,9 +65,7 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
     try:
         conn_list = auth.list_connections()
         checks["connections"] = "ok"
-        connected_count = sum(
-            1 for p in conn_list for c in p.get("connections", []) if c.get("status") == "connected"
-        )
+        connected_count = sum(1 for p in conn_list for c in p.get("connections", []) if c.get("status") == "connected")
         if connected_count == 0:
             warnings.append("no active provider connections found")
     except Exception as exc:
@@ -83,7 +83,7 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
             checks["vault"] = "failed"
         else:
             checks["vault"] = "ok"
-            
+
         if not auth.vault.check_integrity(profile=auth.identity):
             issues.append("vault: sqlite store failed integrity check")
             checks["integrity"] = "failed"
@@ -98,8 +98,8 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
     try:
         home = auth.app_store.home
         master_key_file = home / "master.key"
-        checks["key_age"] = "ok" # Default to ok
-        
+        checks["key_age"] = "ok"  # Default to ok
+
         # Permissions only checked on posix
         def check_permissions(file_path: os.PathLike) -> bool:
             st = os.stat(file_path)
@@ -109,19 +109,19 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
             if not check_permissions(master_key_file):
                 issues.append("master.key has world-readable permissions (must be 0600)")
                 checks["file_permissions"] = "failed"
-            
+
             # Check key age
             mtime = master_key_file.stat().st_mtime
             age_days = int((time.time() - mtime) / 86400)
             if age_days > 90:
                 warnings.append(f"master.key has not been rotated in {age_days} days")
-        
+
         store_db_file = home / "profiles" / auth.identity / "store.db"
         if store_db_file.exists():
             if not check_permissions(store_db_file):
                 issues.append("store.db has world-readable permissions (must be 0600)")
                 checks["file_permissions"] = "failed"
-        
+
         if "file_permissions" not in checks:
             checks["file_permissions"] = "ok"
     except Exception as exc:

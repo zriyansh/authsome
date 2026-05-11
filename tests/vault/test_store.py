@@ -100,13 +100,14 @@ class TestSQLiteStorage:
     def test_secure_permissions(self, tmp_path: Path) -> None:
         """Verify that store.db creation automatically applies 0600 permissions."""
         import os
+
         profile_dir = tmp_path / "profiles" / "secured"
         profile_dir.mkdir(parents=True)
         s = SQLiteStorage(profile_dir)
-        
+
         db_file = profile_dir / "store.db"
         assert db_file.exists()
-        
+
         # Only test Unix file permissions on Posix systems
         if os.name != "nt":
             st = db_file.stat()
