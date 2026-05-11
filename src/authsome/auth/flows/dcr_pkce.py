@@ -104,8 +104,6 @@ class DcrPkceFlow(AuthFlow):
         if returned_state != expected_state:
             raise AuthenticationFailedError("OAuth state mismatch — potential CSRF attack", provider=provider.name)
 
-        # DCR-registered credentials live on the session payload; user-supplied
-        # credentials are passed in via kwargs.
         if "internal_client_id" in runtime_session.payload:
             client_id = runtime_session.payload["internal_client_id"]
             client_secret = runtime_session.payload.get("internal_client_secret")

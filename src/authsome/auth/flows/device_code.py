@@ -151,8 +151,6 @@ class DeviceCodeFlow(AuthFlow):
         effective_expires_in = min(expires_in, 300)
         deadline = time.monotonic() + effective_expires_in
 
-        # Postiz uses a non-standard JSON body at the token endpoint — fall back
-        # to a raw POST for that one provider rather than monkey-patching authlib.
         use_json = provider.oauth.device_token_request == "json"
 
         client = build_oauth_session(client_id=client_id, client_secret=client_secret)
@@ -199,12 +197,6 @@ class DeviceCodeFlow(AuthFlow):
 
     @staticmethod
     def _fetch_token_json(provider: ProviderDefinition, device_code: str) -> dict[str, Any]:
-        """Fallback for providers that require a JSON body at the token endpoint.
-
-        Mirrors authlib's response handling: a JSON body with an ``error`` field
-        is raised as ``OAuthError`` so the polling loop can react identically to
-        the standard form-encoded path.
-        """
         assert provider.oauth is not None
         resp = requests.post(
             provider.oauth.token_url,
