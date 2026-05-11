@@ -77,6 +77,7 @@ class AuthFlow(ABC):
         """
         ...
 
+
 def build_oauth_session(**kwargs: Any) -> OAuth2Session:
     """OAuth2Session pinned to ``client_secret_post`` when a secret is present.
 
