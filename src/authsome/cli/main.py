@@ -61,7 +61,12 @@ class ContextObj:
         return self._ctx
 
     def print_json(self, data: Any) -> None:
-        click.echo(json_lib.dumps(data, indent=2))
+        output = {"v": 1}
+        if isinstance(data, dict):
+            output.update(data)
+        else:
+            output["data"] = data
+        click.echo(json_lib.dumps(output, indent=2))
 
     def echo(self, message: str, err: bool = False, color: str | None = None, nl: bool = True) -> None:
         if self.quiet:
@@ -465,7 +470,7 @@ def log_cmd(ctx_obj: ContextObj, lines: int) -> None:
 
         if ctx_obj.json_output:
             parsed_lines = [json_lib.loads(line) for line in target_lines]
-            ctx_obj.print_json(parsed_lines)
+            ctx_obj.print_json({"lines": parsed_lines})
         else:
             for line in target_lines:
                 ctx_obj.echo(line)
@@ -765,6 +770,8 @@ def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, 
         audit.log("get", provider=provider, connection=connection, field=field or "all")
 
     data = redact(record) if not show_secret else record.model_dump(mode="json")
+    # Decouple from internal schema fields
+    data.pop("schema_version", None)
 
     if field:
         if field in data:
@@ -817,6 +824,7 @@ def inspect(ctx_obj: ContextObj, provider: str) -> None:
             break
 
     if ctx_obj.json_output:
+        data.pop("schema_version", None)
         ctx_obj.print_json(data)
     else:
         ctx_obj.echo(json_lib.dumps(data, indent=2))
@@ -835,11 +843,22 @@ def export(ctx_obj: ContextObj, provider: str | None, connection: str, export_fo
     fmt = ExportFormat(export_format)
     output = actx.runtime_client.export(provider, connection, format=fmt.value)
     audit.log("export", provider=provider, connection=connection, format=fmt.value)
+    if ctx_obj.json_output:
+        # Call with format=json and parse the result to properly wrap with version info
+        output_str = actx.runtime_client.export(provider, connection, format="json")
+        try:
+            data = json_lib.loads(output_str)
+        except Exception:
+            data = {}
+        ctx_obj.print_json({"credentials": data})
+        return
+
     ctx_obj.echo(
         "Note: secrets are now in your shell environment for this session. Prefer 'authsome run' for scoped injection.",
         err=True,
         color="yellow",
     )
+
     if output:
         click.echo(output)
 
