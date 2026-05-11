@@ -1,7 +1,7 @@
 """Tests for `authsome get`.
 
-Covers: JSON output, --field extraction, provider-not-found (exit 3),
-connection-not-found (exit 5), and field-not-found (exit 1).
+Covers: JSON output, --field extraction, provider-not-found (exit 4),
+connection-not-found (exit 3), and field-not-found (exit 1).
 """
 
 import json
@@ -69,7 +69,7 @@ class TestGetCommand:
         result = runner.invoke(cli, ["--log-file", "", "get", "openai", "--field", "provider", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data == {"provider": "openai"}
+        assert data == {"provider": "openai", "v": 1}
 
     def test_unknown_field_exits_1(self, runner: CliRunner, mock_client: MagicMock) -> None:
         mock_client.get_provider.return_value = {"name": "openai"}
@@ -78,20 +78,20 @@ class TestGetCommand:
         result = runner.invoke(cli, ["--log-file", "", "get", "openai", "--field", "nonexistent"])
         assert result.exit_code == 1
 
-    def test_provider_not_found_exits_3(self, runner: CliRunner, mock_client: MagicMock) -> None:
+    def test_provider_not_found_exits_4(self, runner: CliRunner, mock_client: MagicMock) -> None:
         mock_client.get_provider.side_effect = ProviderNotFoundError("unknown")
 
         result = runner.invoke(cli, ["--log-file", "", "get", "unknown"])
-        assert result.exit_code == 3
+        assert result.exit_code == 4
 
-    def test_connection_not_found_exits_5(self, runner: CliRunner, mock_client: MagicMock) -> None:
+    def test_connection_not_found_exits_3(self, runner: CliRunner, mock_client: MagicMock) -> None:
         mock_client.get_provider.return_value = {"name": "openai"}
         mock_client.get_connection.side_effect = ConnectionNotFoundError(
             provider="openai", connection="missing", profile="default"
         )
 
         result = runner.invoke(cli, ["--log-file", "", "get", "openai", "--connection", "missing"])
-        assert result.exit_code == 5
+        assert result.exit_code == 3
 
     def test_human_output_shows_key_value_pairs(self, runner: CliRunner, mock_client: MagicMock) -> None:
         mock_client.get_provider.return_value = {"name": "openai"}

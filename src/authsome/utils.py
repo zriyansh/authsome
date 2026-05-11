@@ -6,6 +6,8 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
+from authsome.errors import AuthsomeError
+
 
 def utc_now() -> datetime:
     """Return the current UTC datetime."""
@@ -17,6 +19,22 @@ def to_rfc3339(dt: datetime) -> str:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=UTC)
     return dt.isoformat().replace("+00:00", "Z")
+
+
+def format_duration(total_seconds: int) -> str:
+    """Return a compact readable string for a duration in seconds."""
+    if total_seconds < 0:
+        total_seconds = 0
+    if total_seconds < 60:
+        return f"{total_seconds}s"
+    minutes = total_seconds // 60
+    if minutes < 60:
+        return f"{minutes}m"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours}h"
+    days = hours // 24
+    return f"{days}d"
 
 
 def parse_rfc3339(s: str) -> datetime:
@@ -174,3 +192,63 @@ def require_os_auth(action_name: str) -> bool:
             return False
 
     return False
+
+
+def format_expires_at(expires_at: str | None) -> str | None:
+    """Return a compact relative expiry label for CLI output."""
+    if not expires_at:
+        return None
+    try:
+        expiry = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+    except ValueError:
+        return f"expires at {expires_at}"
+    if expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=UTC)
+
+    total_seconds = round((expiry - datetime.now(UTC)).total_seconds())
+    if total_seconds < 0:
+        label = format_duration(-total_seconds)
+        return f"expired {label} ago"
+    label = format_duration(total_seconds)
+    return f"expires in {label}"
+
+
+def connection_is_active(connection: dict[str, Any]) -> bool:
+    """Return whether a connection should count as actively connected."""
+    if connection.get("status") != "connected":
+        return False
+
+    expires_at = connection.get("expires_at")
+    if not expires_at:
+        return True
+    try:
+        expiry = datetime.fromisoformat(str(expires_at).replace("Z", "+00:00"))
+    except ValueError:
+        return True
+    if expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=UTC)
+    return datetime.now(UTC) < expiry
+
+
+def format_error_code(exc: Exception) -> int:
+    """Return a numerical exit code representing the exception type."""
+    if exc.__class__.__name__ == "DaemonUnavailableError":
+        return 9
+    if not isinstance(exc, (AuthsomeError, FileExistsError)):
+        return 1
+    exc_name = exc.__class__.__name__
+    if exc_name in ("AuthenticationFailedError", "InputCancelledError"):
+        return 2
+    if exc_name == "ConnectionNotFoundError":
+        return 3
+    if exc_name == "ProviderNotFoundError":
+        return 4
+    if exc_name in ("CredentialMissingError", "TokenExpiredError", "RefreshFailedError"):
+        return 5
+    if exc_name == "ConnectionAlreadyExistsError":
+        return 6
+    if exc_name in ("ProviderAlreadyRegisteredError", "FileExistsError"):
+        return 7
+    if exc_name == "EndpointUnreachableError":
+        return 8
+    return 1

@@ -15,6 +15,7 @@ from typing import Any
 import requests as http_client
 from loguru import logger
 
+from authsome import audit
 from authsome.auth.flows.api_key import ApiKeyFlow
 from authsome.auth.flows.base import AuthFlow
 from authsome.auth.flows.dcr_pkce import DcrPkceFlow
@@ -42,7 +43,7 @@ from authsome.errors import (
     UnsupportedFlowError,
 )
 from authsome.store.interfaces import AppStore
-from authsome.utils import build_store_key, utc_now
+from authsome.utils import build_store_key, format_duration, utc_now
 from authsome.vault import Vault
 
 _NEAR_EXPIRY_SECONDS = 300
@@ -775,18 +776,37 @@ class AuthService:
                         raise RefreshFailedError("Refreshed record missing access token", provider=provider)
                     return refreshed.access_token
                 except RefreshFailedError as exc:
-                    if now < record.expires_at:
-                        logger.warning(
-                            "Token refresh failed for provider={} connection={} profile={}: {}; "
-                            "using cached token until {}. Re-authenticate with: authsome login {}",
-                            provider,
-                            connection,
-                            self._identity,
-                            exc,
-                            record.expires_at.isoformat(),
-                            provider,
-                        )
+                    fallback_available = record.expires_at and now < record.expires_at
+                    audit.log(
+                        "refresh_failed",
+                        provider=provider,
+                        connection=connection,
+                        profile=self._identity,
+                        error=str(exc),
+                        fallback_available=bool(fallback_available),
+                    )
+
+                    if record.expires_at:
+                        duration_secs = int((record.expires_at - now).total_seconds())
+                        time_desc = format_duration(max(0, duration_secs))
+                        if fallback_available:
+                            msg = (
+                                f"Warning: token refresh failed for {provider}/{connection} "
+                                f"— using existing token (expires in {time_desc}). Re-authenticate soon."
+                            )
+                        else:
+                            msg = (
+                                f"Warning: token refresh failed for {provider}/{connection} "
+                                f"— token expired {time_desc} ago. Re-authenticate soon."
+                            )
+                    else:
+                        msg = f"Warning: token refresh failed for {provider}/{connection}. Re-authenticate soon."
+
+                    logger.warning(msg)
+
+                    if fallback_available:
                         return record.access_token
+
                     record.status = ConnectionStatus.EXPIRED
                     self._save_connection(record)
                     raise

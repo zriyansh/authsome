@@ -54,6 +54,10 @@ def resolve_runtime_client() -> AuthsomeApiClient:
 
 
 def start_daemon() -> None:
+    # 1. If our tracked lockfile currently points to a running process, do not disrupt it.
+    if _pid_file_process_alive():
+        return
+
     DAEMON_DIR.mkdir(parents=True, exist_ok=True)
     log = LOG_FILE.open("ab")
     process = subprocess.Popen(
@@ -70,19 +74,12 @@ def start_daemon() -> None:
 
 
 def stop_daemon() -> None:
-    pid = None
-    client = AuthsomeApiClient(DEFAULT_DAEMON_URL)
-    try:
-        health_data = client.health()
-        pid = health_data.get("pid")
-    except Exception:
-        pass
-
+    pid = _read_pid()
     if pid is None:
-        pid = _read_pid()
-
-    if pid is None:
+        # We do not have a local management record for a daemon.
+        # Refuse to blind-kill arbitrary OS processes.
         return
+
     try:
         os.kill(pid, signal.SIGTERM)
     except ProcessLookupError:
@@ -118,16 +115,6 @@ def _is_ready(client: AuthsomeApiClient) -> bool:
 
         if health.get("version") != __version__:
             return False
-
-        # If we are in local development, auto-restart the daemon if any code file changes.
-        if STATE_FILE.exists():
-            daemon_start_time = STATE_FILE.stat().st_mtime
-            src_dir = Path(__file__).parent.parent
-            for path in src_dir.glob("**/*"):
-                if path.is_file() and not any(part.startswith("__") or part == ".pytest_cache" for part in path.parts):
-                    if path.suffix in (".py", ".json", ".html", ".css", ".js"):
-                        if path.stat().st_mtime > daemon_start_time:
-                            return False
 
         if health.get("status") != "ok":
             return False

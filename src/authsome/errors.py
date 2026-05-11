@@ -130,3 +130,27 @@ class DiscoveryError(AuthsomeError):
 
     def __init__(self, reason: str, *, provider: str | None = None) -> None:
         super().__init__(f"Discovery failed: {reason}", provider=provider)
+
+
+class ConnectionAlreadyExistsError(AuthsomeError):
+    """Raised when trying to create a connection that already exists."""
+
+    def __init__(self, provider: str, connection: str = "default") -> None:
+        super().__init__(
+            f"Connection '{connection}' already exists for provider '{provider}'",
+            provider=provider,
+        )
+
+
+class ProviderAlreadyRegisteredError(AuthsomeError):
+    """Raised when trying to register a provider that is already registered."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(f"Provider '{name}' already registered", provider=name)
+
+
+class EndpointUnreachableError(AuthsomeError):
+    """Raised when an external auth or API endpoint is unreachable."""
+
+    def __init__(self, endpoint: str, reason: str = "Unreachable", *, provider: str | None = None) -> None:
+        super().__init__(f"Endpoint '{endpoint}' is unreachable: {reason}", provider=provider)

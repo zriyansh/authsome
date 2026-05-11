@@ -34,9 +34,9 @@ class TestRevokeCommand:
         runner.invoke(cli, ["--log-file", "", "revoke", "openai"])
         mock_client.revoke.assert_called_once_with("openai")
 
-    def test_revoke_provider_not_found_exits_3(self, runner: CliRunner, mock_client: MagicMock) -> None:
+    def test_revoke_provider_not_found_exits_4(self, runner: CliRunner, mock_client: MagicMock) -> None:
         from authsome.errors import ProviderNotFoundError
 
         mock_client.revoke.side_effect = ProviderNotFoundError("unknown")
         result = runner.invoke(cli, ["--log-file", "", "revoke", "unknown"])
-        assert result.exit_code == 3
+        assert result.exit_code == 4
