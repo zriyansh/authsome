@@ -70,6 +70,10 @@ These rules govern all changes to this codebase — apply them without exception
 
 ## AI agent rules
 
+**Never commit directly to main.** Every change — no matter how small — must happen on a branch. Create a `feat/`, `fix/`, or `chore/` branch before touching any file. Push the branch and open a PR when done.
+
+**Update docstrings when touching a function.** Any function or method you modify must have its docstring updated to reflect the change. If it had no docstring, add one in Google-style format. This applies to public and private callables alike.
+
 **Verify before claiming done.** Run `uv run pytest`, `uv run ruff check`, and `uv run ty check`. Confirm they pass before stating work is complete. Never assume.
 
 **Minimal blast radius.** Change only what was asked. Don't refactor, rename, or reorganize while implementing a feature — save cleanup for a dedicated commit.

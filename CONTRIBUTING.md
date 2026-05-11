@@ -57,6 +57,12 @@ If you change behavior, update the relevant docstring, `README.md`, or this file
 
 When using an AI coding assistant (Claude Code, Copilot, Codex, etc.), these additional practices apply.
 
+**Never commit directly to main.**
+Every change must happen on a branch. Create a `feat/`, `fix/`, or `chore/` branch before making any edits, even for one-line fixes. Push the branch and open a PR — do not commit or push directly to `main`.
+
+**Update docstrings when touching a function.**
+Any function or method you modify must have its docstring updated to match the new behavior. If it had none, add one in Google-style format. This applies to both public and private callables.
+
 **Verify before claiming done.**
 Run `uv run pytest`, `uv run ruff check`, and `uv run ty check` and confirm they pass before stating work is complete. Never assume. Plausible-sounding output is not the same as passing output.
 
@@ -101,6 +107,7 @@ pre-commit install          # runs ruff automatically on every commit
 | **Commits** | [Conventional Commits](https://www.conventionalcommits.org/) — `feat:`, `fix:`, `chore:`, `docs:`, `refactor:` |
 | **Breaking changes** | Append `!` (e.g. `feat!:`) or add a `BREAKING CHANGE:` footer |
 | **Branch names** | `feat/<short-description>`, `fix/<short-description>` |
+| **Never on main** | Direct commits to `main` are prohibited. Always work on a branch and open a PR. |
 | **PR scope** | One logical change per PR |
 
 ---
