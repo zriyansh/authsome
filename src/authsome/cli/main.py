@@ -198,6 +198,7 @@ def connection_is_active(connection: dict[str, Any]) -> bool:
         expiry = expiry.replace(tzinfo=UTC)
     return datetime.now(UTC) < expiry
 
+
 def _api_key_env_var(definition: ProviderDefinition) -> str | None:
     """Return the canonical API key environment variable for a provider."""
     if definition.api_key:
@@ -211,6 +212,7 @@ def _api_key_env_var(definition: ProviderDefinition) -> str | None:
             return env_var.strip()
 
     return None
+
 
 def _validate_provider_endpoints(definition: Any, ctx_obj: ContextObj) -> list[tuple[str, str, bool]]:
     """Extract and validate provider endpoints for security."""

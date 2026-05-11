@@ -16,7 +16,6 @@ class HealthResponse(BaseModel):
     status: Literal["ok"]
     version: str
     mode: Literal["local"] = "local"
-    pid: int
 
 
 class ReadyResponse(BaseModel):
