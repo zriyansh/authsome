@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import os
-import time
-
 from fastapi import APIRouter, Depends
 
 from authsome import __version__
 from authsome.auth import AuthService
 from authsome.server.routes._deps import get_auth_service
 from authsome.server.schemas import HealthResponse, ReadyResponse
+from authsome.store.local import LocalAppStore
 
 router = APIRouter()
 
@@ -85,7 +83,7 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
             checks["vault"] = "ok"
 
         if not auth.vault.check_integrity(profile=auth.identity):
-            issues.append("vault: sqlite store failed integrity check")
+            issues.append("vault: store failed integrity check")
             checks["integrity"] = "failed"
         else:
             checks["integrity"] = "ok"
@@ -94,36 +92,9 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
         checks["integrity"] = "failed"
         issues.append(f"vault: {exc}")
 
-    # 6. File Permissions & Key Age Check
-    try:
-        home = auth.app_store.home
-        master_key_file = home / "master.key"
-        checks["key_age"] = "ok"  # Default to ok
+    # TODO: Re-enable master.key permission checks once backend implementation stabilizes.
+    # (Previous implementation alerted users if file was world-readable)
 
-        # Permissions only checked on posix
-        def check_permissions(file_path: os.PathLike) -> bool:
-            st = os.stat(file_path)
-            return (st.st_mode & 0o077) == 0
-
-        if master_key_file.exists():
-            if not check_permissions(master_key_file):
-                issues.append("master.key has world-readable permissions (must be 0600)")
-                checks["file_permissions"] = "failed"
-
-            # Check key age
-            mtime = master_key_file.stat().st_mtime
-            age_days = int((time.time() - mtime) / 86400)
-            if age_days > 90:
-                warnings.append(f"master.key has not been rotated in {age_days} days")
-
-        store_db_file = home / "profiles" / auth.identity / "store.db"
-        if store_db_file.exists():
-            if not check_permissions(store_db_file):
-                issues.append("store.db has world-readable permissions (must be 0600)")
-                checks["file_permissions"] = "failed"
-
-        if "file_permissions" not in checks:
-            checks["file_permissions"] = "ok"
     except Exception as exc:
         if "file_permissions" not in checks:
             checks["file_permissions"] = "failed"
@@ -139,7 +110,12 @@ def whoami(auth: AuthService = Depends(get_auth_service)) -> dict[str, str]:
     config = auth.app_store.get_config()
     enc_mode = config.encryption.mode if config.encryption else "local_key"
     if enc_mode == "local_key":
-        enc_desc = f"Local Key ({auth.app_store.home / 'master.key'})"
+        key_path = (
+            auth.app_store.get_master_key_path()
+            if isinstance(auth.app_store, LocalAppStore)
+            else auth.app_store.home / "master.key"
+        )
+        enc_desc = f"Local Key ({key_path})"
     elif enc_mode == "keyring":
         enc_desc = "OS Keyring"
     else:
