@@ -231,3 +231,20 @@ class TestApiKeyFlow:
             callback_data={},
         )
         assert result.connection.api_key == "982832"
+
+    def test_resume_uses_callback_data_api_key_when_session_payload_missing(self) -> None:
+        from unittest.mock import Mock
+
+        flow = ApiKeyFlow()
+        provider = _make_api_key_provider()
+        session = Mock()
+        session.payload = {}
+
+        result = flow.resume(
+            provider=provider,
+            profile="default",
+            connection_name="default",
+            runtime_session=session,
+            callback_data={"api_key": "sk-from-callback"},
+        )
+        assert result.connection.api_key == "sk-from-callback"
