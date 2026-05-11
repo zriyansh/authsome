@@ -504,32 +504,12 @@ class AuthService:
 
     def get_access_token(self, provider: str, connection: str = "default") -> str:
         record = self.get_connection(provider, connection)
-        if record.auth_type == AuthType.API_KEY:
-            return self._get_api_key(record)
-        if record.auth_type == AuthType.OAUTH2:
-            return self._get_oauth_token(record, provider, connection)
-        raise CredentialMissingError(f"Unsupported auth type: {record.auth_type}", provider=provider)
+        return self._get_access_token_from_record(record)
 
     def get_auth_headers(self, provider: str, connection: str = "default") -> dict[str, str]:
-        connection = self.resolve_connection_name(provider, connection)
         definition = self.get_provider(provider)
         record = self.get_connection(provider, connection)
-
-        if record.auth_type == AuthType.OAUTH2:
-            token = self.get_access_token(provider, connection)
-            return {"Authorization": f"Bearer {token}"}
-
-        if record.auth_type == AuthType.API_KEY:
-            api_key_value = self._get_api_key(record)
-            if definition.api_key:
-                header_name = definition.api_key.header_name
-                prefix = definition.api_key.header_prefix
-                if prefix:
-                    return {header_name: f"{prefix} {api_key_value}"}
-                return {header_name: api_key_value}
-            return {"Authorization": f"Bearer {api_key_value}"}
-
-        raise CredentialMissingError(f"Cannot build headers for auth type: {record.auth_type}", provider=provider)
+        return self._get_auth_headers_from_record(record, definition)
 
     # ── Lifecycle operations ──────────────────────────────────────────────
 
@@ -889,3 +869,31 @@ class AuthService:
     def _save_provider_state(self, state: ProviderStateRecord) -> None:
         key = build_store_key(profile=self._identity, provider=state.provider, record_type="state")
         self._vault.put(key, state.model_dump_json(), profile=self._identity)
+
+    def _get_access_token_from_record(self, record: ConnectionRecord) -> str:
+        if record.auth_type == AuthType.API_KEY:
+            return self._get_api_key(record)
+        if record.auth_type == AuthType.OAUTH2:
+            return self._get_oauth_token(record, record.provider, record.connection_name)
+        raise CredentialMissingError(f"Unsupported auth type: {record.auth_type}", provider=record.provider)
+
+    def _get_auth_headers_from_record(
+        self, record: ConnectionRecord, definition: ProviderDefinition
+    ) -> dict[str, str]:
+        token = self._get_access_token_from_record(record)
+
+        if record.auth_type == AuthType.OAUTH2:
+            return {"Authorization": f"Bearer {token}"}
+
+        if record.auth_type == AuthType.API_KEY:
+            if definition.api_key:
+                header_name = definition.api_key.header_name
+                prefix = definition.api_key.header_prefix
+                if prefix:
+                    return {header_name: f"{prefix} {token}"}
+                return {header_name: token}
+            return {"Authorization": f"Bearer {token}"}
+
+        raise CredentialMissingError(
+            f"Cannot build headers for auth type: {record.auth_type}", provider=record.provider
+        )
