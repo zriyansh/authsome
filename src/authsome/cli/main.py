@@ -1,259 +1,26 @@
 """Command-line interface for authsome."""
 
-import functools
-import ipaddress
 import json as json_lib
 import os
 import pathlib
 import sys
-import urllib.parse
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import click
 import requests
-from loguru import logger
 
-from authsome import FlowType, __version__, audit
+from authsome import AuthenticationFailedError, FlowType, __version__, audit
 from authsome.auth.models.enums import AuthType, ExportFormat
 from authsome.auth.models.provider import ProviderDefinition
-from authsome.cli.client import AuthsomeApiClient
+from authsome.cli.context import ContextObj, common_options, pass_ctx
 from authsome.cli.daemon_control import (
-    DaemonUnavailableError,
     daemon_status,
-    resolve_runtime_client,
     start_daemon,
     stop_daemon,
 )
-from authsome.errors import AuthenticationFailedError, AuthsomeError
-from authsome.proxy.runner import ProxyRunner
-from authsome.utils import format_duration, redact
-
-
-class CliRuntime:
-    """CLI-local wiring around the daemon API client."""
-
-    def __init__(self, client: AuthsomeApiClient) -> None:
-        self.runtime_client = client
-        self.home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
-
-    def doctor(self) -> dict[str, Any]:
-        return self.runtime_client.doctor()
-
-    def require_local_proxy(self) -> ProxyRunner:
-        return ProxyRunner(client=self.runtime_client)
-
-
-class ContextObj:
-    """Context object passed to all commands."""
-
-    def __init__(self, json_output: bool, quiet: bool, no_color: bool):
-        self.json_output = json_output
-        self.quiet = quiet
-        self.no_color = no_color
-        self._ctx: CliRuntime | None = None
-
-    def initialize(self) -> CliRuntime:
-        if self._ctx is None:
-            self._ctx = CliRuntime(resolve_runtime_client())
-            audit.setup(self._ctx.home / "audit.log")
-        return self._ctx
-
-    def print_json(self, data: Any) -> None:
-        output = {"v": 1}
-        if isinstance(data, dict):
-            output.update(data)
-        else:
-            output["data"] = data
-        click.echo(json_lib.dumps(output, indent=2))
-
-    def echo(self, message: str, err: bool = False, color: str | None = None, nl: bool = True) -> None:
-        if self.quiet:
-            return
-        if self.no_color:
-            color = None
-        click.secho(message, err=err, fg=color, nl=nl)
-
-
-pass_ctx = click.make_pass_decorator(ContextObj)
-
-
-def common_options(f):
-    @click.option("--json", "json_output", is_flag=True, help="Output in machine-readable JSON format.")
-    @click.option("--quiet", is_flag=True, help="Suppress non-essential output.")
-    @click.option("--no-color", is_flag=True, help="Disable ANSI colors.")
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        json_output = kwargs.pop("json_output", False)
-        quiet = kwargs.pop("quiet", False)
-        no_color = kwargs.pop("no_color", False)
-        ctx = click.get_current_context()
-        if getattr(ctx, "obj", None) is None:
-            ctx.obj = ContextObj(json_output, quiet, no_color)
-        else:
-            if json_output:
-                ctx.obj.json_output = True
-            if quiet:
-                ctx.obj.quiet = True
-            if no_color:
-                ctx.obj.no_color = True
-        return f(*args, **kwargs)
-
-    return wrapper
-
-
-def format_error_code(exc: Exception) -> int:
-    if isinstance(exc, DaemonUnavailableError):
-        return 9
-    if not isinstance(exc, (AuthsomeError, FileExistsError)):
-        return 1
-    exc_name = exc.__class__.__name__
-    if exc_name in ("AuthenticationFailedError", "InputCancelledError"):
-        return 2
-    if exc_name == "ConnectionNotFoundError":
-        return 3
-    if exc_name == "ProviderNotFoundError":
-        return 4
-    if exc_name in ("CredentialMissingError", "TokenExpiredError", "RefreshFailedError"):
-        return 5
-    if exc_name == "ConnectionAlreadyExistsError":
-        return 6
-    if exc_name in ("ProviderAlreadyRegisteredError", "FileExistsError"):
-        return 7
-    if exc_name == "EndpointUnreachableError":
-        return 8
-    return 1
-
-
-def handle_errors(func):
-    @functools.wraps(func)
-    def wrapper(ctx_obj: ContextObj, *args, **kwargs):
-        try:
-            return func(ctx_obj, *args, **kwargs)
-        except Exception as exc:
-            if ctx_obj.json_output:
-                ctx_obj.print_json({"error": exc.__class__.__name__, "message": str(exc)})
-            else:
-                ctx_obj.echo(f"Error: {exc}", err=True, color="red")
-            sys.exit(format_error_code(exc))
-
-    return wrapper
-
-
-def setup_logging(verbose: bool, log_file: Path | None) -> None:
-    """Enable authsome library logs and wire up sinks. CLI-only — never called from library code."""
-    logger.remove()
-    logger.enable("authsome")
-
-    level = "DEBUG" if verbose else "WARNING"
-    logger.add(sys.stderr, level=level, colorize=True, diagnose=False)
-    if verbose:
-        logger.debug("Verbose logging enabled.")
-
-    if log_file is not None:
-        log_file.parent.mkdir(parents=True, exist_ok=True)
-        logger.add(
-            str(log_file),
-            level="DEBUG",
-            rotation="10 MB",
-            retention=5,
-            compression="zip",
-            diagnose=False,
-        )
-
-
-def format_expires_at(expires_at: str | None) -> str | None:
-    """Return a compact relative expiry label for CLI output."""
-    if not expires_at:
-        return None
-    try:
-        expiry = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
-    except ValueError:
-        return f"expires at {expires_at}"
-    if expiry.tzinfo is None:
-        expiry = expiry.replace(tzinfo=UTC)
-
-    total_seconds = round((expiry - datetime.now(UTC)).total_seconds())
-    if total_seconds < 0:
-        label = format_duration(-total_seconds)
-        return f"expired {label} ago"
-    label = format_duration(total_seconds)
-    return f"expires in {label}"
-
-
-def connection_is_active(connection: dict[str, Any]) -> bool:
-    """Return whether a connection should count as actively connected."""
-    if connection.get("status") != "connected":
-        return False
-
-    expires_at = connection.get("expires_at")
-    if not expires_at:
-        return True
-    try:
-        expiry = datetime.fromisoformat(str(expires_at).replace("Z", "+00:00"))
-    except ValueError:
-        return True
-    if expiry.tzinfo is None:
-        expiry = expiry.replace(tzinfo=UTC)
-    return datetime.now(UTC) < expiry
-
-
-def _api_key_env_var(definition: ProviderDefinition) -> str | None:
-    """Return the canonical API key environment variable for a provider."""
-    if definition.api_key:
-        env_var = getattr(definition.api_key, "env_var", None)
-        if isinstance(env_var, str) and env_var.strip():
-            return env_var.strip()
-
-    if definition.export and definition.export.env:
-        env_var = definition.export.env.get("api_key")
-        if env_var and env_var.strip():
-            return env_var.strip()
-
-    return None
-
-
-def _validate_provider_endpoints(definition: Any, ctx_obj: ContextObj) -> list[tuple[str, str, bool]]:
-    """Extract and validate provider endpoints for security."""
-    endpoints_to_check: list[tuple[str, str, bool]] = []
-    if definition.oauth:
-        if definition.oauth.authorization_url:
-            endpoints_to_check.append(("authorization_url", definition.oauth.authorization_url, False))
-        if definition.oauth.token_url:
-            endpoints_to_check.append(("token_url", definition.oauth.token_url, False))
-        if definition.oauth.revocation_url:
-            endpoints_to_check.append(("revocation_url", definition.oauth.revocation_url, False))
-        if definition.oauth.device_authorization_url:
-            endpoints_to_check.append(("device_authorization_url", definition.oauth.device_authorization_url, False))
-        if definition.oauth.registration_endpoint:
-            endpoints_to_check.append(("registration_endpoint", definition.oauth.registration_endpoint, False))
-    if definition.host_url:
-        endpoints_to_check.append(("host_url", definition.host_url, True))
-
-    for name, val, is_host in endpoints_to_check:
-        if "://" in val:
-            parsed = urllib.parse.urlparse(val)
-            if parsed.scheme != "https":
-                ctx_obj.echo(f"Error: {name} must use HTTPS scheme ({val})", err=True, color="red")
-                sys.exit(1)
-            host = parsed.hostname
-        else:
-            host = val
-
-        if host in ("localhost", "127.0.0.1", "::1"):
-            ctx_obj.echo(f"Error: {name} cannot be localhost ({val})", err=True, color="red")
-            sys.exit(1)
-
-        if host:
-            try:
-                ipaddress.ip_address(host)
-                ctx_obj.echo(f"Error: {name} cannot be a bare IP address ({val})", err=True, color="red")
-                sys.exit(1)
-            except ValueError:
-                pass
-
-    return endpoints_to_check
+from authsome.cli.helpers import _api_key_env_var, _validate_provider_endpoints, handle_errors, setup_logging
+from authsome.utils import connection_is_active, format_error_code, format_expires_at, redact
 
 
 @click.group()
