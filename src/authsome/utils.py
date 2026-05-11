@@ -8,6 +8,8 @@ from typing import Any
 
 from authsome.errors import AuthsomeError
 
+from authsome.errors import AuthsomeError
+
 
 def utc_now() -> datetime:
     """Return the current UTC datetime."""
