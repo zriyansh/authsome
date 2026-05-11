@@ -1,5 +1,6 @@
-"""Tests for `authsome import-env`."""
+"""Tests for `authsome scan`."""
 
+import json
 from unittest.mock import MagicMock
 
 from click.testing import CliRunner
@@ -30,70 +31,104 @@ def _oauth_provider(name: str) -> dict:
     }
 
 
-class TestImportEnvCommand:
-    """Behavior tests for headless API key imports."""
+class TestScanCommand:
+    """Behavior tests for scan and import workflow."""
 
-    def test_imports_env_key_for_api_provider(self, runner: CliRunner, mock_client: MagicMock, monkeypatch) -> None:
+    def test_scan_import_flag_imports_key_from_dotenv(
+        self, runner: CliRunner, mock_client: MagicMock, monkeypatch, tmp_path
+    ) -> None:
         mock_client.list_connections.return_value = {
             "connections": [],
             "by_source": {
-                "bundled": [_api_key_provider("openai", "OPENAI_API_KEY"), _oauth_provider("github")],
+                "bundled": [_api_key_provider("brevo", "BREVO_API_KEY"), _oauth_provider("github")],
                 "custom": [],
             },
         }
         mock_client.get_connection.side_effect = Exception("not found")
         mock_client.start_login.return_value = {"id": "sess-1", "status": "pending"}
         mock_client.resume_login_session.return_value = {"id": "sess-1", "status": "completed"}
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-value")
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / ".env").write_text("BREVO_API_KEY=test123\n", encoding="utf-8")
 
-        result = runner.invoke(cli, ["--log-file", "", "import-env"])
+        result = runner.invoke(cli, ["--log-file", "", "scan", "--import"])
 
         assert result.exit_code == 0, result.output
         mock_client.start_login.assert_called_once_with(
-            provider="openai", connection="default", flow="api_key", force=True
+            provider="brevo", connection="default", flow="api_key", force=True
         )
-        mock_client.resume_login_session.assert_called_once_with("sess-1", api_key="sk-test-value")
+        mock_client.resume_login_session.assert_called_once_with("sess-1", api_key="test123")
 
-    def test_dry_run_does_not_write_credentials(self, runner: CliRunner, mock_client: MagicMock, monkeypatch) -> None:
+    def test_scan_prompts_and_imports_when_confirmed(
+        self, runner: CliRunner, mock_client: MagicMock, monkeypatch
+    ) -> None:
         mock_client.list_connections.return_value = {
             "connections": [],
             "by_source": {"bundled": [_api_key_provider("openai", "OPENAI_API_KEY")], "custom": []},
         }
         monkeypatch.setenv("OPENAI_API_KEY", "sk-test-value")
+        monkeypatch.setattr("authsome.cli.main.click.confirm", lambda *args, **kwargs: True)
+        mock_client.get_connection.side_effect = Exception("not found")
+        mock_client.start_login.return_value = {"id": "sess-9", "status": "pending"}
+        mock_client.resume_login_session.return_value = {"id": "sess-9", "status": "completed"}
 
-        result = runner.invoke(cli, ["--log-file", "", "import-env", "--dry-run"])
+        result = runner.invoke(cli, ["--log-file", "", "scan"])
+
+        assert result.exit_code == 0, result.output
+        mock_client.start_login.assert_called_once()
+        mock_client.resume_login_session.assert_called_once_with("sess-9", api_key="sk-test-value")
+
+    def test_scan_prompts_and_skips_import_when_declined(
+        self, runner: CliRunner, mock_client: MagicMock, monkeypatch
+    ) -> None:
+        mock_client.list_connections.return_value = {
+            "connections": [],
+            "by_source": {"bundled": [_api_key_provider("openai", "OPENAI_API_KEY")], "custom": []},
+        }
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-value")
+        monkeypatch.setattr("authsome.cli.main.click.confirm", lambda *args, **kwargs: False)
+        result = runner.invoke(cli, ["--log-file", "", "scan"])
 
         assert result.exit_code == 0, result.output
         mock_client.start_login.assert_not_called()
         mock_client.resume_login_session.assert_not_called()
-        assert "would_import" in result.output
+        assert "Import skipped by user." in result.output
 
-    def test_skips_unchanged_key_without_force(self, runner: CliRunner, mock_client: MagicMock, monkeypatch) -> None:
+    def test_scan_rejects_quiet_flag(self, runner: CliRunner, mock_client: MagicMock) -> None:
+        result = runner.invoke(cli, ["--log-file", "", "scan", "--quiet"])
+        assert result.exit_code == 1
+        assert result.output == ""
+        mock_client.list_connections.assert_not_called()
+
+    def test_scan_reports_drift_states_in_json(self, runner: CliRunner, mock_client: MagicMock, monkeypatch) -> None:
         mock_client.list_connections.return_value = {
             "connections": [],
-            "by_source": {"bundled": [_api_key_provider("openai", "OPENAI_API_KEY")], "custom": []},
+            "by_source": {
+                "bundled": [
+                    _api_key_provider("openai", "OPENAI_API_KEY"),
+                    _api_key_provider("brevo", "BREVO_API_KEY"),
+                    _api_key_provider("resend", "RESEND_API_KEY"),
+                ],
+                "custom": [],
+            },
         }
-        mock_client.get_connection.return_value = {"status": "connected", "api_key": "sk-same"}
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-same")
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-openai-1")
+        monkeypatch.delenv("BREVO_API_KEY", raising=False)
+        monkeypatch.delenv("RESEND_API_KEY", raising=False)
 
-        result = runner.invoke(cli, ["--log-file", "", "import-env"])
+        def _get_connection(provider: str, connection: str):
+            if provider == "openai":
+                return {"status": "connected", "api_key": "sk-other"}
+            if provider == "brevo":
+                return {"status": "connected", "api_key": "brevo-live"}
+            raise Exception("not found")
+
+        mock_client.get_connection.side_effect = _get_connection
+
+        result = runner.invoke(cli, ["--log-file", "", "scan", "--json"])
 
         assert result.exit_code == 0, result.output
-        mock_client.start_login.assert_not_called()
-        assert "skipped_unchanged" in result.output
-
-    def test_force_reimports_even_when_unchanged(self, runner: CliRunner, mock_client: MagicMock, monkeypatch) -> None:
-        mock_client.list_connections.return_value = {
-            "connections": [],
-            "by_source": {"bundled": [_api_key_provider("openai", "OPENAI_API_KEY")], "custom": []},
-        }
-        mock_client.get_connection.return_value = {"status": "connected", "api_key": "sk-same"}
-        mock_client.start_login.return_value = {"id": "sess-2", "status": "pending"}
-        mock_client.resume_login_session.return_value = {"id": "sess-2", "status": "completed"}
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-same")
-
-        result = runner.invoke(cli, ["--log-file", "", "import-env", "--force"])
-
-        assert result.exit_code == 0, result.output
-        mock_client.start_login.assert_called_once()
-        mock_client.resume_login_session.assert_called_once_with("sess-2", api_key="sk-same")
+        payload = json.loads(result.output)
+        statuses = {item["provider"]: item["status"] for item in payload["results"]}
+        assert statuses["openai"] == "env_and_authsome_different"
+        assert statuses["brevo"] == "authsome_only"
+        assert statuses["resend"] == "both_missing"
