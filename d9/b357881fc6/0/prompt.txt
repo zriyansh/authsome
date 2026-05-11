@@ -1,0 +1,5 @@
+Create a github issue to remove version file, the config in the folder is sufficient. Explore the codebase
+
+---
+
+/commit-push-pr Fix the issue and create the commit and pr in new branch. Also add the rule in AGENTS.md file to never work on main branch directly, always open pr
