@@ -42,6 +42,11 @@ class VaultStorage(ABC):
         ...
 
     @abstractmethod
+    def check_integrity(self) -> bool:
+        """Perform a health check on the storage medium."""
+        ...
+
+    @abstractmethod
     def close(self) -> None:
         """Release any resources held by the backend."""
         ...

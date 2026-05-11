@@ -788,6 +788,12 @@ def doctor(ctx_obj: ContextObj) -> None:
             for issue in issues:
                 ctx_obj.echo(f" - {issue}", color="red")
 
+        warnings = results.get("warnings", [])
+        if warnings:
+            ctx_obj.echo("\nWarnings:", color="yellow")
+            for warning in warnings:
+                ctx_obj.echo(f" - {warning}", color="yellow")
+
         if not all_ok:
             sys.exit(1)
 

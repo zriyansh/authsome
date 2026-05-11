@@ -40,6 +40,12 @@ class SQLiteVaultStorage(VaultStorage):
             self._conn.execute("PRAGMA journal_mode=WAL")
             self._conn.execute("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);")
             self._conn.commit()
+            try:
+                import os
+
+                os.chmod(self._db_path, 0o600)
+            except OSError:
+                pass
         except sqlite3.Error as exc:
             raise StoreUnavailableError(f"Failed to open store at {self._db_path}: {exc}") from exc
 
@@ -104,6 +110,15 @@ class SQLiteVaultStorage(VaultStorage):
         else:
             cursor = conn.execute("SELECT key FROM kv ORDER BY key")
         return [row[0] for row in cursor.fetchall()]
+
+    def check_integrity(self) -> bool:
+        try:
+            conn = self._ensure_connection()
+            cursor = conn.execute("PRAGMA integrity_check;")
+            result = cursor.fetchone()
+            return bool(result and result[0] == "ok")
+        except sqlite3.Error:
+            return False
 
     def close(self) -> None:
         self._release_lock()

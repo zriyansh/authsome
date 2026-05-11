@@ -77,6 +77,10 @@ class Vault:
         """List all keys matching a prefix."""
         return self._storage(profile).list_keys(prefix)
 
+    def check_integrity(self, *, profile: str = _DEFAULT_PROFILE) -> bool:
+        """Perform health check on underlying store."""
+        return self._storage(profile).check_integrity()
+
     def close(self) -> None:
         """Close all open storage connections."""
         # Vault doesn't own the connections anymore, the AppStore does.
