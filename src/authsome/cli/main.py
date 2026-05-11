@@ -16,7 +16,7 @@ import requests
 from loguru import logger
 
 from authsome import FlowType, __version__, audit
-from authsome.auth.models.enums import ExportFormat
+from authsome.auth.models.enums import AuthType, ExportFormat
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.cli.client import AuthsomeApiClient
 from authsome.cli.daemon_control import (
@@ -203,6 +203,21 @@ def _format_duration(total_seconds: int) -> str:
         return f"{hours}h"
     days = hours // 24
     return f"{days}d"
+
+
+def _api_key_env_var(definition: ProviderDefinition) -> str | None:
+    """Return the canonical API key environment variable for a provider."""
+    if definition.api_key:
+        env_var = getattr(definition.api_key, "env_var", None)
+        if isinstance(env_var, str) and env_var.strip():
+            return env_var.strip()
+
+    if definition.export and definition.export.env:
+        env_var = definition.export.env.get("api_key")
+        if env_var and env_var.strip():
+            return env_var.strip()
+
+    return None
 
 
 def _validate_provider_endpoints(definition: Any, ctx_obj: ContextObj) -> list[tuple[str, str, bool]]:
@@ -557,6 +572,97 @@ def login(
         )
     else:
         ctx_obj.echo(f"Successfully logged in to {provider} ({connection}).", color="green")
+
+
+@cli.command(name="import-env")
+@click.argument("provider", required=False)
+@click.option("--connection", default="default", help="Connection name.")
+@click.option("--dry-run", is_flag=True, help="Show what would be imported without writing credentials.")
+@click.option("--force", is_flag=True, help="Re-import even when the stored key already matches.")
+@common_options
+@pass_ctx
+@handle_errors
+def import_env(ctx_obj: ContextObj, provider: str | None, connection: str, dry_run: bool, force: bool) -> None:
+    """Import API keys from environment variables into authsome."""
+    actx = ctx_obj.initialize()
+
+    provider_defs: list[ProviderDefinition] = []
+    if provider:
+        provider_defs = [ProviderDefinition.model_validate(actx.runtime_client.get_provider(provider))]
+    else:
+        connections = actx.runtime_client.list_connections()
+        by_source = connections.get("by_source", {})
+        for source in ("bundled", "custom"):
+            for provider_data in by_source.get(source, []):
+                provider_defs.append(ProviderDefinition.model_validate(provider_data))
+
+    results: list[dict[str, str]] = []
+    imported = 0
+    for definition in provider_defs:
+        if definition.auth_type != AuthType.API_KEY:
+            continue
+
+        env_var = _api_key_env_var(definition)
+        if not env_var:
+            results.append({"provider": definition.name, "status": "skipped_no_env_mapping"})
+            continue
+
+        env_value = os.environ.get(env_var)
+        if not env_value or not env_value.strip():
+            results.append({"provider": definition.name, "status": "skipped_env_not_set", "env_var": env_var})
+            continue
+        api_key_value = env_value.strip()
+
+        existing_record: dict[str, Any] | None = None
+        try:
+            existing_record = actx.runtime_client.get_connection(definition.name, connection)
+        except Exception:
+            existing_record = None
+
+        if (
+            not force
+            and existing_record is not None
+            and existing_record.get("status") == "connected"
+            and existing_record.get("api_key") == api_key_value
+        ):
+            results.append({"provider": definition.name, "status": "skipped_unchanged", "env_var": env_var})
+            continue
+
+        if dry_run:
+            results.append({"provider": definition.name, "status": "would_import", "env_var": env_var})
+            continue
+
+        session_info = actx.runtime_client.start_login(
+            provider=definition.name,
+            connection=connection,
+            flow=FlowType.API_KEY.value,
+            force=True,
+        )
+        session_id = session_info["id"]
+        resume_info = actx.runtime_client.resume_login_session(session_id, api_key=api_key_value)
+        if resume_info.get("status") != "completed":
+            session_status = resume_info.get("status")
+            raise RuntimeError(
+                f"Import did not complete for provider '{definition.name}' (session status: {session_status})."
+            )
+
+        imported += 1
+        results.append({"provider": definition.name, "status": "imported", "env_var": env_var})
+        audit.log("import_env", provider=definition.name, connection=connection, source_env=env_var, status="success")
+
+    if ctx_obj.json_output:
+        ctx_obj.print_json({"provider": provider, "connection": connection, "dry_run": dry_run, "results": results})
+    else:
+        if not results:
+            ctx_obj.echo("No API key providers found to process.", color="yellow")
+        else:
+            for item in results:
+                env_hint = f" ({item['env_var']})" if item.get("env_var") else ""
+                ctx_obj.echo(f"{item['provider']}: {item['status']}{env_hint}")
+            if dry_run:
+                ctx_obj.echo("Dry run only. No credentials were imported.", color="yellow")
+            else:
+                ctx_obj.echo(f"Imported {imported} provider(s).", color="green")
 
 
 @cli.command()
