@@ -8,12 +8,13 @@ from typing import TYPE_CHECKING, Any
 import requests as http_client
 from authlib.common.security import generate_token
 from authlib.integrations.base_client.errors import OAuthError
+from authlib.integrations.requests_client import OAuth2Session
 
 from authsome.auth.flows.base import (
     DEFAULT_CALLBACK_URL,
     AuthFlow,
     FlowResult,
-    build_oauth_session,
+    build_authorization_response,
     token_to_connection_record,
 )
 from authsome.auth.models.provider import ProviderDefinition
@@ -48,7 +49,8 @@ class PkceFlow(AuthFlow):
         redirect_uri = runtime_session.payload.get("callback_url_override") or DEFAULT_CALLBACK_URL
         code_verifier = generate_token(48)
 
-        client = build_oauth_session(
+        client = OAuth2Session(
+            token_endpoint_auth_method="client_secret_post" if client_secret else "none",
             client_id=client_id,
             client_secret=client_secret,
             scope=" ".join(effective_scopes) if effective_scopes else None,
@@ -82,24 +84,14 @@ class PkceFlow(AuthFlow):
         if not client_id:
             raise AuthenticationFailedError("PKCE flow requires a client_id.", provider=provider.name)
 
-        error = callback_data.get("error")
-        if error:
-            raise AuthenticationFailedError(f"OAuth error: {error}", provider=provider.name)
-
-        auth_code = callback_data.get("code")
-        if not auth_code:
-            raise AuthenticationFailedError("Authorization timed out or no code received", provider=provider.name)
-
-        returned_state = callback_data.get("state")
         expected_state = runtime_session.payload.get("internal_state")
-        if returned_state != expected_state:
-            raise AuthenticationFailedError("OAuth state mismatch — potential CSRF attack", provider=provider.name)
-
         code_verifier = runtime_session.payload.get("internal_code_verifier", "")
         redirect_uri = runtime_session.payload.get("callback_url", "")
         effective_scopes = json.loads(runtime_session.payload.get("internal_scopes", "[]"))
+        authorization_response = build_authorization_response(callback_data, redirect_uri)
 
-        client = build_oauth_session(
+        client = OAuth2Session(
+            token_endpoint_auth_method="client_secret_post" if client_secret else "none",
             client_id=client_id,
             client_secret=client_secret,
             redirect_uri=redirect_uri,
@@ -107,8 +99,8 @@ class PkceFlow(AuthFlow):
         try:
             token = client.fetch_token(
                 provider.oauth.token_url,
-                grant_type="authorization_code",
-                code=auth_code,
+                authorization_response=authorization_response,
+                state=expected_state,
                 code_verifier=code_verifier,
             )
         except OAuthError as exc:

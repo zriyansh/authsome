@@ -8,9 +8,10 @@ from typing import TYPE_CHECKING, Any
 
 import requests
 from authlib.integrations.base_client.errors import OAuthError
+from authlib.integrations.requests_client import OAuth2Session
 from loguru import logger
 
-from authsome.auth.flows.base import AuthFlow, FlowResult, build_oauth_session, token_to_connection_record
+from authsome.auth.flows.base import AuthFlow, FlowResult, token_to_connection_record
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.errors import AuthenticationFailedError
 
@@ -153,14 +154,18 @@ class DeviceCodeFlow(AuthFlow):
 
         use_json = provider.oauth.device_token_request == "json"
 
-        client = build_oauth_session(client_id=client_id, client_secret=client_secret)
+        client = OAuth2Session(
+            token_endpoint_auth_method="client_secret_post" if client_secret else "none",
+            client_id=client_id,
+            client_secret=client_secret,
+        )
 
         while time.monotonic() < deadline:
             time.sleep(poll_interval)
 
             try:
                 if use_json:
-                    token = self._fetch_token_json(provider, device_code)
+                    token = self._fetch_token_json(client, provider, device_code)
                 else:
                     token = dict(
                         client.fetch_token(
@@ -196,7 +201,7 @@ class DeviceCodeFlow(AuthFlow):
         raise AuthenticationFailedError("Device authorization timed out.", provider=provider.name)
 
     @staticmethod
-    def _fetch_token_json(provider: ProviderDefinition, device_code: str) -> dict[str, Any]:
+    def _fetch_token_json(client: OAuth2Session, provider: ProviderDefinition, device_code: str) -> dict[str, Any]:
         assert provider.oauth is not None
         resp = requests.post(
             provider.oauth.token_url,
@@ -205,11 +210,7 @@ class DeviceCodeFlow(AuthFlow):
             timeout=30,
         )
         try:
-            data = resp.json()
+            return dict(client.parse_response_token(resp))
         except json.JSONDecodeError:
             logger.warning("Token poll response was not JSON, retrying...")
             raise requests.RequestException("Non-JSON token response") from None
-
-        if "error" in data:
-            raise OAuthError(error=data["error"], description=data.get("error_description"))
-        return data

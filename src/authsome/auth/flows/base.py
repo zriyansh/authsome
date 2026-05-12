@@ -1,4 +1,4 @@
-"""Abstract base class, result type, and shared OAuth helpers for authentication flows."""
+"""Abstract base class, result type, and shared flow helpers."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlencode
 
 import requests as http_client
-from authlib.integrations.requests_client import OAuth2Session
 from loguru import logger
 
 from authsome.auth.models.connection import AccountInfo, ConnectionRecord, ProviderClientRecord
@@ -119,16 +119,6 @@ class AuthFlow(ABC):
             _do_revoke(record.refresh_token, "refresh")
 
 
-def build_oauth_session(**kwargs: Any) -> OAuth2Session:
-    """OAuth2Session pinned to ``client_secret_post`` when a secret is present.
-
-    authlib defaults to HTTP Basic; authsome has always sent credentials in
-    the body, and DCR clients are registered with ``client_secret_post``.
-    """
-    auth_method = "client_secret_post" if kwargs.get("client_secret") else "none"
-    return OAuth2Session(token_endpoint_auth_method=auth_method, **kwargs)
-
-
 def token_to_connection_record(
     token: dict[str, Any],
     *,
@@ -155,3 +145,11 @@ def token_to_connection_record(
         obtained_at=now,
         account=AccountInfo(),
     )
+
+
+def build_authorization_response(callback_data: dict[str, Any], redirect_uri: str) -> str:
+    """Build a callback URL for authlib authorization_response parsing."""
+    params = {k: v for k, v in callback_data.items() if v is not None}
+    query = urlencode(params, doseq=True)
+    sep = "&" if "?" in redirect_uri else "?"
+    return f"{redirect_uri}{sep}{query}" if query else redirect_uri

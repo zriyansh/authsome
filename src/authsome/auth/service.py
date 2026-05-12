@@ -14,11 +14,12 @@ from typing import Any
 
 import requests as http_client
 from authlib.integrations.base_client.errors import OAuthError
+from authlib.integrations.requests_client import OAuth2Session
 from loguru import logger
 
 from authsome import audit
 from authsome.auth.flows.api_key import ApiKeyFlow
-from authsome.auth.flows.base import AuthFlow, build_oauth_session
+from authsome.auth.flows.base import AuthFlow
 from authsome.auth.flows.dcr_pkce import DcrPkceFlow
 from authsome.auth.flows.device_code import DeviceCodeFlow
 from authsome.auth.flows.pkce import PkceFlow
@@ -817,7 +818,11 @@ class AuthService:
         if not resolved_definition.oauth:
             raise RefreshFailedError("Resolved provider missing OAuth configuration", provider=provider_name)
 
-        client = build_oauth_session(client_id=client_id, client_secret=client_secret)
+        client = OAuth2Session(
+            token_endpoint_auth_method="client_secret_post" if client_secret else "none",
+            client_id=client_id,
+            client_secret=client_secret,
+        )
         try:
             token = client.refresh_token(
                 resolved_definition.oauth.token_url,
