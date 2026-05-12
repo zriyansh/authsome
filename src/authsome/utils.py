@@ -4,9 +4,18 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, NamedTuple
 
 from authsome.errors import AuthsomeError
+
+
+class StoreKeyParts(NamedTuple):
+    """Parsed components of a credential store key."""
+
+    profile: str | None = None
+    provider: str | None = None
+    record_type: str | None = None
+    connection: str | None = None
 
 
 def utc_now() -> datetime:
@@ -94,6 +103,43 @@ def build_store_key(
         f"Cannot build store key with profile={profile}, provider={provider}, "
         f"record_type={record_type}, connection={connection}"
     )
+
+
+def parse_store_key(key: str) -> StoreKeyParts:
+    """
+    Parse a credential store key into its components.
+
+    Safely handles provider and connection names that may contain colons.
+    """
+    if key.startswith("provider:") and key.endswith(":definition"):
+        provider = key[len("provider:") : -len(":definition")]
+        return StoreKeyParts(provider=provider, record_type="definition")
+
+    if key.startswith("profile:"):
+        # Format: profile:<profile_name>:<remainder>
+        parts = key.split(":", 2)
+        if len(parts) < 3:
+            return StoreKeyParts()
+        profile = parts[1]
+        remainder = parts[2]
+
+        if remainder.endswith(":metadata"):
+            return StoreKeyParts(profile=profile, provider=remainder[:-9], record_type="metadata")
+        if remainder.endswith(":state"):
+            return StoreKeyParts(profile=profile, provider=remainder[:-6], record_type="state")
+        if remainder.endswith(":client"):
+            return StoreKeyParts(profile=profile, provider=remainder[:-7], record_type="client")
+
+        if ":connection:" in remainder:
+            provider, _, connection = remainder.partition(":connection:")
+            return StoreKeyParts(
+                profile=profile,
+                provider=provider,
+                record_type="connection",
+                connection=connection,
+            )
+
+    return StoreKeyParts()
 
 
 def redact(record: Any, redacted_value: str = "***REDACTED***") -> dict[str, Any]:

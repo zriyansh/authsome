@@ -44,7 +44,7 @@ from authsome.errors import (
     TokenExpiredError,
     UnsupportedFlowError,
 )
-from authsome.utils import build_store_key, format_duration, is_filesystem_safe, utc_now
+from authsome.utils import build_store_key, format_duration, is_filesystem_safe, parse_store_key, utc_now
 from authsome.vault import Vault
 
 _VALID_FLOWS: dict[AuthType, set[FlowType]] = {
@@ -267,10 +267,10 @@ class AuthService:
         providers: dict[str, list[dict[str, Any]]] = {}
         defaults: dict[str, str] = {}
         for key in keys:
-            parts = key.split(":")
-            if len(parts) >= 5 and parts[3] == "connection":
-                provider_name = parts[2]
-                connection_name = parts[4]
+            parts = parse_store_key(key)
+            if parts.record_type == "connection" and parts.provider and parts.connection:
+                provider_name = parts.provider
+                connection_name = parts.connection
                 if provider_name not in defaults:
                     meta_key = build_store_key(profile=self._identity, provider=provider_name, record_type="metadata")
                     meta_json = await self._vault.get(meta_key, collection=self._coll)
