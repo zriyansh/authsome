@@ -36,7 +36,7 @@ class AuthFlow(ABC):
     """
 
     @abstractmethod
-    def begin(
+    async def begin(
         self,
         provider: ProviderDefinition,
         profile: str,
@@ -55,7 +55,7 @@ class AuthFlow(ABC):
         ...
 
     @abstractmethod
-    def resume(
+    async def resume(
         self,
         provider: ProviderDefinition,
         profile: str,
@@ -71,7 +71,7 @@ class AuthFlow(ABC):
         """
         ...
 
-    def revoke(
+    async def revoke(
         self,
         provider: ProviderDefinition,
         record: ConnectionRecord,

@@ -47,7 +47,7 @@ class PkceFlow(AuthFlow):
 
     callback_port: int = 7999
 
-    def begin(
+    async def begin(
         self,
         provider: ProviderDefinition,
         profile: str,
@@ -89,7 +89,7 @@ class PkceFlow(AuthFlow):
         runtime_session.payload["internal_state"] = state
         runtime_session.payload["internal_scopes"] = json.dumps(effective_scopes)
 
-    def resume(
+    async def resume(
         self,
         provider: ProviderDefinition,
         profile: str,
@@ -121,7 +121,7 @@ class PkceFlow(AuthFlow):
         redirect_uri = runtime_session.payload.get("callback_url", "")
         effective_scopes = json.loads(runtime_session.payload.get("internal_scopes", "[]"))
 
-        token_data = self._exchange_code(
+        token_data = await self._exchange_code(
             provider=provider,
             auth_code=auth_code,
             redirect_uri=redirect_uri,
@@ -157,7 +157,7 @@ class PkceFlow(AuthFlow):
         )
 
     @staticmethod
-    def _exchange_code(
+    async def _exchange_code(
         *,
         provider: ProviderDefinition,
         auth_code: str,

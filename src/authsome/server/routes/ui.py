@@ -110,9 +110,9 @@ def _build_provider_view(
     }
 
 
-def _all_provider_views(auth: AuthService) -> list[dict[str, Any]]:
-    by_source = auth.list_providers_by_source()
-    connections_by_provider = {group["name"]: group["connections"] for group in auth.list_connections()}
+async def _all_provider_views(auth: AuthService) -> list[dict[str, Any]]:
+    by_source = await auth.list_providers_by_source()
+    connections_by_provider = {group["name"]: group["connections"] for group in await auth.list_connections()}
     views: list[dict[str, Any]] = []
     for source in ("bundled", "custom"):
         for provider in by_source.get(source, []):
@@ -121,8 +121,8 @@ def _all_provider_views(auth: AuthService) -> list[dict[str, Any]]:
 
 
 @router.get("/", response_class=HTMLResponse)
-def overview(request: Request, auth: AuthService = Depends(get_auth_service)) -> HTMLResponse:
-    providers = _all_provider_views(auth)
+async def overview(request: Request, auth: AuthService = Depends(get_auth_service)) -> HTMLResponse:
+    providers = await _all_provider_views(auth)
     connected = [p for p in providers if p["status"] != "available"]
     available_count = len(providers) - len(connected)
     oauth_count = sum(1 for p in connected if p["auth_type"] == AuthType.OAUTH2.value)
@@ -165,8 +165,8 @@ def overview(request: Request, auth: AuthService = Depends(get_auth_service)) ->
 
 
 @router.get("/connections", response_class=HTMLResponse)
-def connections(request: Request, auth: AuthService = Depends(get_auth_service)) -> HTMLResponse:
-    providers = _all_provider_views(auth)
+async def connections(request: Request, auth: AuthService = Depends(get_auth_service)) -> HTMLResponse:
+    providers = await _all_provider_views(auth)
     connected_count = sum(1 for p in providers if p["status"] != "available")
     return templates.TemplateResponse(
         request,
@@ -185,21 +185,21 @@ def connections(request: Request, auth: AuthService = Depends(get_auth_service))
 
 
 @router.get("/apps/{provider_name}", response_class=HTMLResponse)
-def app_detail(
+async def app_detail(
     provider_name: str,
     request: Request,
     auth: AuthService = Depends(get_auth_service),
     server_base_url: str = Depends(get_server_base_url),
 ) -> Response:
-    provider = auth.get_provider(provider_name)
+    provider = await auth.get_provider(provider_name)
 
     connection_record = None
     try:
-        connection_record = auth.get_connection(provider_name)
+        connection_record = await auth.get_connection(provider_name)
     except ConnectionNotFoundError:
         pass
 
-    client_record = auth.get_provider_client(provider_name)
+    client_record = await auth.get_provider_client(provider_name)
     redirect_uri = build_callback_url(server_base_url)
     host_url = provider.host_url or (provider.oauth.base_url if provider.oauth else None) or provider.name
 
@@ -267,14 +267,14 @@ def app_detail(
 
 
 @router.post("/apps/{provider_name}/{connection_name}/disconnect")
-def disconnect_app(
+async def disconnect_app(
     provider_name: str,
     connection_name: str,
     request: Request,
     auth: AuthService = Depends(get_auth_service),
 ) -> Response:
     """Disconnect a provider connection from the dashboard."""
-    auth.logout(provider_name, connection_name)
+    await auth.logout(provider_name, connection_name)
     return _redirect(request, "/ui/connections")
 
 
@@ -292,7 +292,7 @@ async def connect_app(
     connection_name = str(form.get("connection", "default") or "default")
     force = str(form.get("force", "false")).lower() in {"1", "true", "on", "yes"}
 
-    definition = auth.get_provider(provider_name)
+    definition = await auth.get_provider(provider_name)
     flow = definition.flow
     session = sessions.create(
         provider=provider_name,
@@ -306,19 +306,19 @@ async def connect_app(
 
     if not force:
         try:
-            existing = auth.get_connection(provider_name, connection_name)
+            existing = await auth.get_connection(provider_name, connection_name)
             if auth._connection_is_valid(existing):
                 session.status_message = "Already connected"
                 return _redirect(request, f"/ui/apps/{provider_name}")
         except Exception:
             pass
 
-    fields = auth.get_required_inputs(session)
+    fields = await auth.get_required_inputs(session)
     if fields:
         session.payload["input_fields"] = [field.model_dump(mode="json", exclude_none=True) for field in fields]
         return _redirect(request, build_auth_input_url(server_base_url, session.session_id))
 
-    auth.begin_login_flow(session=session, force=force)
+    await auth.begin_login_flow(session=session, force=force)
     if flow == FlowType.DEVICE_CODE:
         _update_device_code_expiry(sessions, session)
         background_tasks.add_task(auth.background_resume, session)

@@ -21,8 +21,8 @@ class CliRuntime:
         self.runtime_client = client
         self.home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
 
-    def doctor(self) -> dict[str, Any]:
-        return self.runtime_client.doctor()
+    async def doctor(self) -> dict[str, Any]:
+        return await self.runtime_client.doctor()
 
     def require_local_proxy(self) -> ProxyRunner:
         return ProxyRunner(client=self.runtime_client)
@@ -37,9 +37,9 @@ class ContextObj:
         self.no_color = no_color
         self._ctx: CliRuntime | None = None
 
-    def initialize(self) -> CliRuntime:
+    async def initialize(self) -> CliRuntime:
         if self._ctx is None:
-            self._ctx = CliRuntime(resolve_runtime_client())
+            self._ctx = CliRuntime(await resolve_runtime_client())
             audit.setup(self._ctx.home / "audit.log")
         return self._ctx
 

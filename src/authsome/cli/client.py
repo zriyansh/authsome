@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from collections.abc import Mapping
 from typing import Any
@@ -74,75 +75,78 @@ class AuthsomeApiClient:
     def base_url(self) -> str:
         return self._base_url
 
-    def _get(self, path: str) -> dict[str, Any]:
-        response = requests.get(f"{self._base_url}{path}", timeout=10)
+    async def _get(self, path: str) -> dict[str, Any]:
+        response = await asyncio.to_thread(requests.get, f"{self._base_url}{path}", timeout=10)
         raise_for_error(response)
         return response.json()
 
-    def _post(self, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
-        response = requests.post(f"{self._base_url}{path}", json=body or {}, timeout=30)
+    async def _post(self, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+        response = await asyncio.to_thread(requests.post, f"{self._base_url}{path}", json=body or {}, timeout=30)
         raise_for_error(response)
         return response.json()
 
-    def _delete(self, path: str) -> dict[str, Any]:
-        response = requests.delete(f"{self._base_url}{path}", timeout=30)
+    async def _delete(self, path: str) -> dict[str, Any]:
+        response = await asyncio.to_thread(requests.delete, f"{self._base_url}{path}", timeout=30)
         raise_for_error(response)
         return response.json()
 
-    def health(self) -> dict[str, Any]:
-        return self._get("/health")
+    async def health(self) -> dict[str, Any]:
+        return await self._get("/health")
 
-    def ready(self) -> dict[str, Any]:
-        return self._get("/ready")
+    async def ready(self) -> dict[str, Any]:
+        return await self._get("/ready")
 
-    def start_login(self, **kwargs: Any) -> dict[str, Any]:
-        return self._post("/auth/sessions", kwargs)
+    async def start_login(self, **kwargs: Any) -> dict[str, Any]:
+        return await self._post("/auth/sessions", kwargs)
 
-    def get_session(self, session_id: str) -> dict[str, Any]:
-        return self._get(f"/auth/sessions/{session_id}")
+    async def get_session(self, session_id: str) -> dict[str, Any]:
+        return await self._get(f"/auth/sessions/{session_id}")
 
-    def resume_login_session(self, session_id: str, **kwargs: Any) -> dict[str, Any]:
-        return self._post(f"/auth/sessions/{session_id}/resume", {"data": kwargs})
+    async def resume_login_session(self, session_id: str, **kwargs: Any) -> dict[str, Any]:
+        return await self._post(f"/auth/sessions/{session_id}/resume", {"data": kwargs})
 
-    def list_connections(self) -> dict[str, Any]:
-        return self._get("/connections")
+    async def list_connections(self) -> dict[str, Any]:
+        return await self._get("/connections")
 
-    def get_connection(self, provider: str, connection_name: str = "default") -> dict[str, Any]:
-        return self._get(f"/connections/{provider}/{connection_name}")
+    async def get_connection(self, provider: str, connection_name: str = "default") -> dict[str, Any]:
+        return await self._get(f"/connections/{provider}/{connection_name}")
 
-    def logout(self, provider: str, connection_name: str = "default") -> None:
-        self._post(f"/connections/{provider}/{connection_name}/logout")
+    async def logout(self, provider: str, connection_name: str = "default") -> None:
+        await self._post(f"/connections/{provider}/{connection_name}/logout")
 
-    def revoke(self, provider: str) -> None:
-        self._post(f"/connections/{provider}/revoke")
+    async def revoke(self, provider: str) -> None:
+        await self._post(f"/connections/{provider}/revoke")
 
-    def set_default_connection(self, provider: str, connection_name: str) -> None:
-        self._post(f"/connections/{provider}/{connection_name}/default")
+    async def set_default_connection(self, provider: str, connection_name: str) -> None:
+        await self._post(f"/connections/{provider}/{connection_name}/default")
 
-    def get_provider(self, provider: str) -> dict[str, Any]:
-        return self._get(f"/providers/{provider}")
+    async def get_provider(self, provider: str) -> dict[str, Any]:
+        return await self._get(f"/providers/{provider}")
 
-    def register_provider(self, definition_dict: dict[str, Any], force: bool = False) -> None:
-        self._post("/providers", {"definition": definition_dict, "force": force})
+    async def register_provider(self, definition_dict: dict[str, Any], force: bool = False) -> None:
+        await self._post("/providers", {"definition": definition_dict, "force": force})
 
-    def remove(self, provider: str) -> None:
-        self._delete(f"/providers/{provider}")
+    async def remove(self, provider: str) -> None:
+        await self._delete(f"/providers/{provider}")
 
-    def export(self, provider: str | None = None, connection_name: str = "default", format: str = "env") -> str:
-        result = self._post(
+    async def list_providers_by_source(self) -> dict[str, Any]:
+        return await self._get("/providers")
+
+    async def export(self, provider: str | None = None, connection_name: str = "default", format: str = "env") -> str:
+        result = await self._post(
             "/credentials/export",
             {"provider": provider, "connection": connection_name, "format": format},
         )
         return result["output"]
 
-    def proxy_routes(self) -> dict[str, Any]:
-        return self._get("/proxy/routes")
+    async def proxy_routes(self) -> dict[str, Any]:
+        return await self._get("/proxy/routes")
 
-    def resolve_credentials(self, **kwargs: Any) -> dict[str, Any]:
-        return self._post("/credentials/resolve", kwargs)
+    async def resolve_credentials(self, **kwargs: Any) -> dict[str, Any]:
+        return await self._post("/credentials/resolve", kwargs)
 
-    def whoami(self) -> dict[str, Any]:
-        return self._get("/whoami")
+    async def whoami(self) -> dict[str, Any]:
+        return await self._get("/whoami")
 
-    def doctor(self) -> dict[str, Any]:
-        return self.ready()
+    async def doctor(self) -> dict[str, Any]:
+        return await self.ready()

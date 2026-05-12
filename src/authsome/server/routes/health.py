@@ -18,14 +18,14 @@ def health() -> HealthResponse:
 
 
 @router.get("/ready", response_model=ReadyResponse)
-def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
+async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
     checks: dict[str, str] = {}
     issues: list[str] = []
     warnings: list[str] = []
 
     # 1. Config & Schema Version Check
     try:
-        config = auth.vault.get_config()
+        config = await auth.vault.get_config()
         checks["config"] = "ok"
 
         # Verify spec_version matches standard expected version (1)
@@ -44,7 +44,7 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
 
     # 2. Profiles Count Check
     try:
-        auth.list_profiles()
+        await auth.list_profiles()
         checks["profiles"] = "ok"
     except Exception as exc:
         checks["profiles"] = "failed"
@@ -52,7 +52,7 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
 
     # 3. Providers List Check
     try:
-        auth.list_providers()
+        await auth.list_providers()
         checks["providers"] = "ok"
     except Exception as exc:
         checks["providers"] = "failed"
@@ -60,7 +60,7 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
 
     # 4. Connected Providers Check
     try:
-        conn_list = auth.list_connections()
+        conn_list = await auth.list_connections()
         checks["connections"] = "ok"
         connected_count = sum(1 for p in conn_list for c in p.get("connections", []) if c.get("status") == "connected")
         if connected_count == 0:
@@ -71,9 +71,9 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
 
     # 5. Vault Roundtrip & Store Integrity Check
     try:
-        auth.vault.put("__ready_test__", "ok", collection=f"vault:{auth.identity}")
-        value = auth.vault.get("__ready_test__", collection=f"vault:{auth.identity}")
-        auth.vault.delete("__ready_test__", collection=f"vault:{auth.identity}")
+        await auth.vault.put("__ready_test__", "ok", collection=f"vault:{auth.identity}")
+        value = await auth.vault.get("__ready_test__", collection=f"vault:{auth.identity}")
+        await auth.vault.delete("__ready_test__", collection=f"vault:{auth.identity}")
         checks["vault"] = "ok" if value == "ok" else "failed"
         if value != "ok":
             issues.append("vault: readiness roundtrip failed")
@@ -81,7 +81,7 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
         else:
             checks["vault"] = "ok"
 
-        if not auth.vault.check_integrity(profile=auth.identity):
+        if not await auth.vault.check_integrity(profile=auth.identity):
             issues.append("vault: store failed integrity check")
             checks["integrity"] = "failed"
         else:
@@ -94,19 +94,13 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
     # TODO: Re-enable master.key permission checks once backend implementation stabilizes.
     # (Previous implementation alerted users if file was world-readable)
 
-    except Exception as exc:
-        if "file_permissions" not in checks:
-            checks["file_permissions"] = "failed"
-        checks["key_age"] = "failed"
-        issues.append(f"file_checks: {exc}")
-
     status = "ready" if not issues else "not_ready"
     return ReadyResponse(status=status, checks=checks, issues=issues, warnings=warnings)
 
 
 @router.get("/whoami")
-def whoami(auth: AuthService = Depends(get_auth_service)) -> dict[str, str]:
-    config = auth.vault.get_config()
+async def whoami(auth: AuthService = Depends(get_auth_service)) -> dict[str, str]:
+    config = await auth.vault.get_config()
     enc_mode = config.encryption.mode if config.encryption else "local_key"
     if enc_mode == "local_key":
         enc_desc = f"Local Key ({auth.vault.home / 'master.key'})"

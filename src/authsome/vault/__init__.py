@@ -13,10 +13,9 @@ from __future__ import annotations
 import builtins
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from authsome.store.interfaces import AppStore
-from authsome.utils import run_sync
 
 if TYPE_CHECKING:
     from authsome.auth.models.config import GlobalConfig
@@ -44,9 +43,6 @@ class Vault:
         self._crypto_mode = crypto_mode
         self._master_key_path = master_key_path
 
-    def _run(self, coro: Any) -> Any:
-        return run_sync(coro)
-
     @property
     def crypto(self) -> VaultCrypto:
         if self._crypto is None:
@@ -62,70 +58,70 @@ class Vault:
 
     # ── Config (delegated, unencrypted — bootstrap dependency) ────────────
 
-    def get_config(self) -> GlobalConfig:
-        return self._app_store.get_config()
+    async def get_config(self) -> GlobalConfig:
+        return await self._app_store.get_config()
 
-    def save_config(self, config: GlobalConfig) -> None:
-        self._app_store.save_config(config)
+    async def save_config(self, config: GlobalConfig) -> None:
+        await self._app_store.save_config(config)
 
     # ── Index helpers ─────────────────────────────────────────────────────
 
-    def _get_index(self, collection: str) -> builtins.list[str]:
-        val = self._run(self._app_store.kv.get("__index__", collection=collection))
+    async def _get_index(self, collection: str) -> builtins.list[str]:
+        val = await self._app_store.kv.get("__index__", collection=collection)
         if not val:
             return []
         return json.loads(val["data"])
 
-    def _save_index(self, collection: str, keys: builtins.list[str]) -> None:
-        self._run(self._app_store.kv.put("__index__", {"data": json.dumps(sorted(keys))}, collection=collection))
+    async def _save_index(self, collection: str, keys: builtins.list[str]) -> None:
+        await self._app_store.kv.put("__index__", {"data": json.dumps(sorted(keys))}, collection=collection)
 
     # ── Encrypted KV interface ────────────────────────────────────────────
 
-    def get(self, key: str, *, collection: str) -> str | None:
+    async def get(self, key: str, *, collection: str) -> str | None:
         """Retrieve and decrypt a value. Returns None if key not found."""
-        val = self._run(self._app_store.kv.get(key, collection=collection))
+        val = await self._app_store.kv.get(key, collection=collection)
         if val is None:
             return None
         return self.crypto.decrypt(val["data"])
 
-    def put(self, key: str, value: str, *, collection: str) -> None:
+    async def put(self, key: str, value: str, *, collection: str) -> None:
         """Encrypt and store a value."""
         encrypted = self.crypto.encrypt(value)
-        self._run(self._app_store.kv.put(key, {"data": encrypted}, collection=collection))
+        await self._app_store.kv.put(key, {"data": encrypted}, collection=collection)
         if key != "__index__":
-            idx = set(self._get_index(collection))
+            idx = set(await self._get_index(collection))
             if key not in idx:
                 idx.add(key)
-                self._save_index(collection, builtins.list(idx))
+                await self._save_index(collection, builtins.list(idx))
 
-    def delete(self, key: str, *, collection: str) -> bool:
+    async def delete(self, key: str, *, collection: str) -> bool:
         """Delete a key. Returns True if the key existed."""
-        existed = self._run(self._app_store.kv.delete(key, collection=collection))
+        existed = await self._app_store.kv.delete(key, collection=collection)
         if existed and key != "__index__":
-            idx = set(self._get_index(collection))
+            idx = set(await self._get_index(collection))
             idx.discard(key)
-            self._save_index(collection, builtins.list(idx))
+            await self._save_index(collection, builtins.list(idx))
         return existed
 
-    def list(self, prefix: str = "", *, collection: str) -> builtins.list[str]:
+    async def list(self, prefix: str = "", *, collection: str) -> builtins.list[str]:
         """List all keys matching a prefix within a collection."""
-        idx = self._get_index(collection)
+        idx = await self._get_index(collection)
         if prefix:
             return [k for k in idx if k.startswith(prefix)]
         return list(idx)
 
     # ── Lifecycle ─────────────────────────────────────────────────────────
 
-    def check_integrity(self, *, profile: str | None = None) -> bool:
+    async def check_integrity(self, *, profile: str | None = None) -> bool:
         """Perform health check on underlying store."""
-        return self._app_store.check_integrity()
+        return await self._app_store.check_integrity()
 
-    def close(self) -> None:
+    async def close(self) -> None:
         """Release resources."""
-        pass
+        await self._app_store.close()
 
-    def __enter__(self) -> Vault:
+    async def __aenter__(self) -> Vault:
         return self
 
-    def __exit__(self, *args: object) -> None:
-        self.close()
+    async def __aexit__(self, *args: object) -> None:
+        await self.close()

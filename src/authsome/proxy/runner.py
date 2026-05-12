@@ -14,13 +14,15 @@ from authsome.proxy.server import RunningProxy, start_proxy_server
 
 
 class ProxyClient(Protocol):
-    def list_connections(self) -> dict: ...
+    async def list_connections(self) -> dict: ...
 
-    def get_provider(self, provider: str) -> dict: ...
+    async def get_provider(self, provider: str) -> dict: ...
 
-    def resolve_credentials(self, **kwargs) -> dict: ...
+    async def resolve_credentials(self, **kwargs) -> dict: ...
 
-    def proxy_routes(self) -> dict: ...
+    async def proxy_routes(self) -> dict: ...
+
+    async def list_providers_by_source(self) -> dict: ...
 
 
 class ProxyRunner:
@@ -29,7 +31,7 @@ class ProxyRunner:
     def __init__(self, client: ProxyClient) -> None:
         self._client = client
 
-    def run(self, command: list[str]) -> subprocess.CompletedProcess[str]:
+    async def run(self, command: list[str]) -> subprocess.CompletedProcess[str]:
         """Run *command* behind the auth-injecting proxy."""
         proxy_url, server = self._start_proxy()
         env = os.environ.copy()
@@ -45,7 +47,7 @@ class ProxyRunner:
 
         # Set dummy env vars for connected providers so SDKs that require
         # e.g. OPENAI_API_KEY to be set will initialise and route through the proxy
-        self._inject_dummy_credentials(env)
+        await self._inject_dummy_credentials(env)
 
         # Build a combined CA bundle so subprocesses trust the mitmproxy CA
         ca_bundle_path = self._build_ca_bundle(server)
@@ -72,10 +74,10 @@ class ProxyRunner:
         server = start_proxy_server(self._client)
         return server.url, server
 
-    def _inject_dummy_credentials(self, env: dict[str, str]) -> None:
-        connections_data = self._client.list_connections()
+    async def _inject_dummy_credentials(self, env: dict[str, str]) -> None:
+        connections_data = await self._client.list_connections()
         if isinstance(connections_data, list):
-            by_source = getattr(self._client, "list_providers_by_source")()
+            by_source = await self._client.list_providers_by_source()
             connections_data = {
                 "connections": connections_data,
                 "by_source": {

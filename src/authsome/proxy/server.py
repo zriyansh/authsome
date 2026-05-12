@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 import threading
 from dataclasses import dataclass
@@ -27,13 +28,13 @@ _HOST_SPECIFICITY_EXACT = 1
 
 
 class ProxyClient(Protocol):
-    def list_connections(self) -> dict: ...
+    async def list_connections(self) -> dict: ...
 
-    def get_provider(self, provider: str) -> dict: ...
+    async def get_provider(self, provider: str) -> dict: ...
 
-    def resolve_credentials(self, **kwargs) -> dict: ...
+    async def resolve_credentials(self, **kwargs) -> dict: ...
 
-    def proxy_routes(self) -> dict: ...
+    async def proxy_routes(self) -> dict: ...
 
 
 @dataclass(frozen=True)
@@ -59,8 +60,19 @@ class _HeaderCacheEntry:
 class ProxyRouter:
     """Cached provider route table for proxy request matching."""
 
-    def __init__(self, client: ProxyClient) -> None:
-        self._routes_by_host, self._regex_routes = self._build_routes(client)
+    def __init__(
+        self,
+        routes_by_host: dict[str, tuple[_RouteTarget, ...]],
+        regex_routes: tuple[_RegexRouteTarget, ...],
+    ) -> None:
+        self._routes_by_host = routes_by_host
+        self._regex_routes = regex_routes
+
+    @classmethod
+    async def create(cls, client: ProxyClient) -> ProxyRouter:
+        """Async factory for ProxyRouter."""
+        routes_by_host, regex_routes = await cls._build_routes(client)
+        return cls(routes_by_host, regex_routes)
 
     def route(self, scheme: str, host: str, port: int, path: str) -> RouteMatch | None:
         """Return a route for a request, or None when the request should pass through."""
@@ -101,7 +113,7 @@ class ProxyRouter:
         return best_targets[0].match
 
     @staticmethod
-    def _build_routes(
+    async def _build_routes(
         client: ProxyClient,
     ) -> tuple[dict[str, tuple[_RouteTarget, ...]], tuple[_RegexRouteTarget, ...]]:
         routes_by_host: dict[str, list[_RouteTarget]] = {}
@@ -110,7 +122,7 @@ class ProxyRouter:
 
         if hasattr(client, "proxy_routes"):
             try:
-                route_data = client.proxy_routes()
+                route_data = await client.proxy_routes()
                 for route in route_data.get("routes", []):
                     route_match = RouteMatch(provider=route["provider"], connection=route.get("connection"))
                     regex_pattern = _compile_host_regex(route["host_url"])
@@ -143,7 +155,7 @@ class ProxyRouter:
             except Exception as exc:
                 logger.warning("Could not load daemon proxy routes, falling back to local route build: {}", exc)
 
-        connections_data = client.list_connections()
+        connections_data = await client.list_connections()
         if isinstance(connections_data, list):
             connections_data = {"connections": connections_data}
         for provider_group in connections_data["connections"]:
@@ -151,7 +163,7 @@ class ProxyRouter:
             selected_connections = provider_group["connections"]
 
             try:
-                definition_dict = client.get_provider(provider_name)
+                definition_dict = await client.get_provider(provider_name)
                 if isinstance(definition_dict, dict):
                     definition = ProviderDefinition.model_validate(definition_dict)
                 else:
@@ -201,12 +213,13 @@ class ProxyRouter:
         return {host: tuple(routes) for host, routes in routes_by_host.items()}, tuple(regex_routes)
 
 
-def _route(client: ProxyClient, scheme: str, host: str, port: int, path: str) -> RouteMatch | None:
+async def _route(client: ProxyClient, scheme: str, host: str, port: int, path: str) -> RouteMatch | None:
     """Return a RouteMatch when exactly one connected provider matches the request.
 
     Returns None for loopback targets, OAuth endpoints, zero matches, or ambiguous matches.
     """
-    return ProxyRouter(client).route(scheme, host, port, path)
+    router = await ProxyRouter.create(client)
+    return router.route(scheme, host, port, path)
 
 
 def _is_auth_endpoint(provider, host: str, path: str) -> bool:
@@ -314,17 +327,23 @@ class AuthProxyAddon:
 
     def __init__(self, client: ProxyClient) -> None:
         self._client = client
-        self._router = ProxyRouter(client)
+        self._router: ProxyRouter | None = None
         self._header_cache: dict[tuple[str, str], _HeaderCacheEntry] = {}
-        self._header_locks: dict[tuple[str, str], threading.Lock] = {}
+        self._header_locks: dict[tuple[str, str], asyncio.Lock] = {}
 
-    def request(self, flow: http.HTTPFlow) -> None:
-        match = self._router.route(flow.request.scheme, flow.request.host, flow.request.port, flow.request.path)
+    async def _get_router(self) -> ProxyRouter:
+        if self._router is None:
+            self._router = await ProxyRouter.create(self._client)
+        return self._router
+
+    async def request(self, flow: http.HTTPFlow) -> None:
+        router = await self._get_router()
+        match = router.route(flow.request.scheme, flow.request.host, flow.request.port, flow.request.path)
         if match is None:
             return
 
         try:
-            headers = self._get_auth_headers(match)
+            headers = await self._get_auth_headers(match)
         except Exception:
             logger.warning(
                 "Failed to retrieve auth headers for provider={} connection={}. Forwarding unchanged.",
@@ -336,22 +355,26 @@ class AuthProxyAddon:
         for key, value in headers.items():
             flow.request.headers[key] = value
 
-    def _get_auth_headers(self, match: RouteMatch) -> dict[str, str]:
+    async def _get_auth_headers(self, match: RouteMatch) -> dict[str, str]:
         cache_key = (match.provider, match.connection or "")
         now = utc_now()
         cached = self._header_cache.get(cache_key)
         if cached and _header_cache_valid(cached, now):
             return cached.headers.copy()
 
-        lock = self._header_locks.setdefault(cache_key, threading.Lock())
-        with lock:
+        lock = self._header_locks.get(cache_key)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._header_locks[cache_key] = lock
+
+        async with lock:
             now = utc_now()
             cached = self._header_cache.get(cache_key)
             if cached and _header_cache_valid(cached, now):
                 return cached.headers.copy()
 
             # Resolve through runtime client
-            headers_resp = self._client.resolve_credentials(
+            headers_resp = await self._client.resolve_credentials(
                 provider=match.provider,
                 connection=match.connection,
             )
@@ -440,7 +463,6 @@ def start_proxy_server(
     port: int = 0,
 ) -> RunningProxy:
     """Start a mitmproxy DumpMaster in a background thread."""
-    import asyncio
 
     confdir = Path.home() / ".mitmproxy"
     auth_addon = AuthProxyAddon(client=client)

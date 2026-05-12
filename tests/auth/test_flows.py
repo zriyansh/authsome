@@ -21,10 +21,11 @@ def _make_api_key_provider() -> ProviderDefinition:
     )
 
 
+@pytest.mark.asyncio
 class TestApiKeyFlow:
     """API key flow tests."""
 
-    def test_successful_login(self) -> None:
+    async def test_successful_login(self) -> None:
         from unittest.mock import Mock
 
         flow = ApiKeyFlow()
@@ -32,7 +33,7 @@ class TestApiKeyFlow:
         session = Mock()
         session.payload = {"api_key": "sk-test-key-123"}
 
-        result = flow.resume(
+        result = await flow.resume(
             provider=provider,
             profile="default",
             connection_name="default",
@@ -50,7 +51,7 @@ class TestApiKeyFlow:
         assert record.api_key == "sk-test-key-123"
         assert record.schema_version == 2
 
-    def test_empty_key_rejected(self) -> None:
+    async def test_empty_key_rejected(self) -> None:
         from unittest.mock import Mock
 
         flow = ApiKeyFlow()
@@ -59,7 +60,7 @@ class TestApiKeyFlow:
         session.payload = {"api_key": ""}
 
         with pytest.raises(AuthenticationFailedError, match="cannot be empty"):
-            flow.resume(
+            await flow.resume(
                 provider=provider,
                 profile="default",
                 connection_name="default",
@@ -67,7 +68,7 @@ class TestApiKeyFlow:
                 callback_data={},
             )
 
-    def test_whitespace_only_rejected(self) -> None:
+    async def test_whitespace_only_rejected(self) -> None:
         from unittest.mock import Mock
 
         flow = ApiKeyFlow()
@@ -76,7 +77,7 @@ class TestApiKeyFlow:
         session.payload = {"api_key": "   "}
 
         with pytest.raises(AuthenticationFailedError, match="cannot be empty"):
-            flow.resume(
+            await flow.resume(
                 provider=provider,
                 profile="default",
                 connection_name="default",
@@ -84,7 +85,7 @@ class TestApiKeyFlow:
                 callback_data={},
             )
 
-    def test_missing_api_key_config(self) -> None:
+    async def test_missing_api_key_config(self) -> None:
         from unittest.mock import Mock
 
         flow = ApiKeyFlow()
@@ -98,7 +99,7 @@ class TestApiKeyFlow:
         session.payload = {"api_key": "sk-test-key-123"}
 
         with pytest.raises(AuthenticationFailedError, match="missing 'api_key'"):
-            flow.resume(
+            await flow.resume(
                 provider=provider,
                 profile="default",
                 connection_name="default",
@@ -106,7 +107,7 @@ class TestApiKeyFlow:
                 callback_data={},
             )
 
-    def test_missing_api_key_parameter(self) -> None:
+    async def test_missing_api_key_parameter(self) -> None:
         from unittest.mock import Mock
 
         flow = ApiKeyFlow()
@@ -115,7 +116,7 @@ class TestApiKeyFlow:
         session.payload = {"api_key": None}
 
         with pytest.raises(AuthenticationFailedError, match="cannot be empty"):
-            flow.resume(
+            await flow.resume(
                 provider=provider,
                 profile="default",
                 connection_name="default",
@@ -123,7 +124,7 @@ class TestApiKeyFlow:
                 callback_data={},
             )
 
-    def test_api_key_stripped(self) -> None:
+    async def test_api_key_stripped(self) -> None:
         from unittest.mock import Mock
 
         flow = ApiKeyFlow()
@@ -131,7 +132,7 @@ class TestApiKeyFlow:
         session = Mock()
         session.payload = {"api_key": "  sk-test-key-123  "}
 
-        result = flow.resume(
+        result = await flow.resume(
             provider=provider,
             profile="default",
             connection_name="default",
@@ -140,7 +141,7 @@ class TestApiKeyFlow:
         )
         assert result.connection.api_key == "sk-test-key-123"
 
-    def test_key_pattern_match_succeeds(self) -> None:
+    async def test_key_pattern_match_succeeds(self) -> None:
         from unittest.mock import Mock
 
         flow = ApiKeyFlow()
@@ -157,7 +158,7 @@ class TestApiKeyFlow:
         session = Mock()
         session.payload = {"api_key": "sk-abcdefgh12345"}
 
-        result = flow.resume(
+        result = await flow.resume(
             provider=provider,
             profile="default",
             connection_name="default",
@@ -166,7 +167,7 @@ class TestApiKeyFlow:
         )
         assert result.connection.api_key == "sk-abcdefgh12345"
 
-    def test_key_pattern_mismatch_uses_hint(self) -> None:
+    async def test_key_pattern_mismatch_uses_hint(self) -> None:
         from unittest.mock import Mock
 
         flow = ApiKeyFlow()
@@ -184,7 +185,7 @@ class TestApiKeyFlow:
         session.payload = {"api_key": "982832"}
 
         with pytest.raises(AuthenticationFailedError, match="Keys start with 'sk-'"):
-            flow.resume(
+            await flow.resume(
                 provider=provider,
                 profile="default",
                 connection_name="default",
@@ -192,7 +193,7 @@ class TestApiKeyFlow:
                 callback_data={},
             )
 
-    def test_key_pattern_mismatch_default_message(self) -> None:
+    async def test_key_pattern_mismatch_default_message(self) -> None:
         from unittest.mock import Mock
 
         flow = ApiKeyFlow()
@@ -207,7 +208,7 @@ class TestApiKeyFlow:
         session.payload = {"api_key": "982832"}
 
         with pytest.raises(AuthenticationFailedError, match="doesn't match the expected format"):
-            flow.resume(
+            await flow.resume(
                 provider=provider,
                 profile="default",
                 connection_name="default",
@@ -215,7 +216,7 @@ class TestApiKeyFlow:
                 callback_data={},
             )
 
-    def test_no_pattern_skips_validation(self) -> None:
+    async def test_no_pattern_skips_validation(self) -> None:
         from unittest.mock import Mock
 
         flow = ApiKeyFlow()
@@ -223,7 +224,7 @@ class TestApiKeyFlow:
         session = Mock()
         session.payload = {"api_key": "982832"}
 
-        result = flow.resume(
+        result = await flow.resume(
             provider=provider,
             profile="default",
             connection_name="default",
@@ -232,7 +233,7 @@ class TestApiKeyFlow:
         )
         assert result.connection.api_key == "982832"
 
-    def test_resume_uses_callback_data_api_key_when_session_payload_missing(self) -> None:
+    async def test_resume_uses_callback_data_api_key_when_session_payload_missing(self) -> None:
         from unittest.mock import Mock
 
         flow = ApiKeyFlow()
@@ -240,7 +241,7 @@ class TestApiKeyFlow:
         session = Mock()
         session.payload = {}
 
-        result = flow.resume(
+        result = await flow.resume(
             provider=provider,
             profile="default",
             connection_name="default",

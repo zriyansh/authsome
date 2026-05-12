@@ -35,33 +35,33 @@ class AppStore(ABC):
     # ── Initialization ────────────────────────────────────────────────────
 
     @abstractmethod
-    def ensure_initialized(self) -> None:
+    async def ensure_initialized(self) -> None:
         """Seed the store with version marker and default config."""
         ...
 
     @abstractmethod
-    def is_healthy(self) -> bool:
+    async def is_healthy(self) -> bool:
         """Check if the store is accessible."""
         ...
 
     @abstractmethod
-    def check_integrity(self) -> bool:
+    async def check_integrity(self) -> bool:
         """Perform a health check on the storage medium."""
         ...
 
     # ── Config (unencrypted — needed before crypto is available) ──────────
 
     @abstractmethod
-    def get_config(self) -> GlobalConfig:
+    async def get_config(self) -> GlobalConfig:
         """Get global configuration."""
         ...
 
     @abstractmethod
-    def save_config(self, config: GlobalConfig) -> None:
+    async def save_config(self, config: GlobalConfig) -> None:
         """Save global configuration."""
         ...
 
     @abstractmethod
-    def close(self) -> None:
+    async def close(self) -> None:
         """Close all underlying storage connections."""
         ...

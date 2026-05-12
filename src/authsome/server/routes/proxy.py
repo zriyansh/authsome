@@ -19,12 +19,12 @@ router = APIRouter(tags=["proxy"])
 
 
 @router.get("/proxy/routes", response_model=ProxyRoutesResponse)
-def proxy_routes(auth: AuthService = Depends(get_auth_service)) -> ProxyRoutesResponse:
+async def proxy_routes(auth: AuthService = Depends(get_auth_service)) -> ProxyRoutesResponse:
     routes: list[ProviderRoute] = []
-    for provider_group in auth.list_connections():
+    for provider_group in await auth.list_connections():
         provider_name = provider_group["name"]
         try:
-            definition = auth.get_provider(provider_name)
+            definition = await auth.get_provider(provider_name)
         except Exception:
             continue
         if not definition.host_url:
@@ -42,13 +42,13 @@ def proxy_routes(auth: AuthService = Depends(get_auth_service)) -> ProxyRoutesRe
 
 
 @router.post("/credentials/resolve", response_model=CredentialResolutionResponse)
-def resolve_credentials(
+async def resolve_credentials(
     body: CredentialResolutionRequest,
     auth: AuthService = Depends(get_auth_service),
 ) -> CredentialResolutionResponse:
-    connection = auth.resolve_connection_name(body.provider, body.connection)
-    record = auth.get_connection(body.provider, connection)
-    headers = auth.get_auth_headers(body.provider, connection)
+    connection = await auth.resolve_connection_name(body.provider, body.connection)
+    record = await auth.get_connection(body.provider, connection)
+    headers = await auth.get_auth_headers(body.provider, connection)
     return CredentialResolutionResponse(
         provider=body.provider,
         connection=connection,
