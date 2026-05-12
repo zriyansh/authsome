@@ -27,7 +27,13 @@ def message_page(title: str, message: str) -> str:
 </html>"""
 
 
-def input_page(session_id: str, display_name: str, docs_url: str | None, fields: list[dict[str, Any]]) -> str:
+def input_page(
+    session_id: str,
+    display_name: str,
+    docs_url: str | None,
+    fields: list[dict[str, Any]],
+    callback_url: str | None = None,
+) -> str:
     """Generate a dynamic input form for provider credentials."""
     required_rows = []
     optional_rows = []
@@ -43,6 +49,25 @@ def input_page(session_id: str, display_name: str, docs_url: str | None, fields:
         if docs_url
         else ""
     )
+
+    callback_hint = ""
+    if callback_url:
+        callback_hint = f"""
+        <p style="margin: -12px 0 24px; font-size: 12px; line-height: 1.5; color: var(--muted);">
+          OAuth Redirect URI:<br>
+          <code style="
+            font-family: ui-monospace, monospace;
+            background: #111;
+            border: 1px solid var(--line);
+            padding: 2px 4px;
+            border-radius: 4px;
+            color: var(--accent);
+            word-break: break-all;
+            display: inline-block;
+            margin-top: 4px;
+          ">{html.escape(callback_url)}</code>
+        </p>
+        """
 
     optional = ""
     if optional_rows:
@@ -60,6 +85,7 @@ def input_page(session_id: str, display_name: str, docs_url: str | None, fields:
     <main>
       <h1>{html.escape(display_name)}</h1>
       {docs}
+      {callback_hint}
       <form method="post" action="/auth/sessions/{html.escape(session_id)}/input">
         {"".join(required_rows)}
         {optional}

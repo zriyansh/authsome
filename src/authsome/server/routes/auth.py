@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from authsome.auth import AuthService
 from authsome.auth.input_provider import InputField
-from authsome.auth.models.enums import FlowType
+from authsome.auth.models.enums import AuthType, FlowType
 from authsome.auth.sessions import AuthSession, AuthSessionStatus, AuthSessionStore
 from authsome.server.routes._deps import get_auth_service, get_auth_sessions, get_server_base_url
 from authsome.server.schemas import (
@@ -150,6 +150,7 @@ async def input_page(
     session_id: str,
     auth: AuthService = Depends(get_auth_service),
     sessions: AuthSessionStore = Depends(get_auth_sessions),
+    server_base_url: str = Depends(get_server_base_url),
 ) -> HTMLResponse:
     try:
         session = sessions.get(session_id)
@@ -160,7 +161,20 @@ async def input_page(
         )
     definition = await auth.get_provider(session.provider)
     fields = session.payload.get("input_fields", [])
-    return HTMLResponse(pages.input_page(session.session_id, definition.display_name, definition.docs, fields))
+
+    callback_url = None
+    if definition.auth_type == AuthType.OAUTH2:
+        callback_url = build_callback_url(server_base_url)
+
+    return HTMLResponse(
+        pages.input_page(
+            session.session_id,
+            definition.display_name,
+            definition.docs,
+            fields,
+            callback_url=callback_url,
+        )
+    )
 
 
 @router.get("/sessions/{session_id}/device", response_class=HTMLResponse)

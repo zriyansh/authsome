@@ -38,12 +38,16 @@ from authsome.utils import connection_is_active, format_error_code, format_expir
     "log_file",
     default=str(Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome"))) / "logs" / "authsome.log"),
     show_default=True,
+    metavar="PATH",
     help="Path for the rotating log file. Pass empty string to disable.",
 )
 @common_options
 @click.pass_context
 def cli(ctx: click.Context, verbose: bool, log_file: str) -> None:
-    """Authsome: Portable local authentication library for AI agents and tools."""
+    """Authsome: Portable local authentication library for AI agents and tools.
+
+    Securely manage credentials and API keys for third-party providers from your terminal.
+    """
     resolved = Path(log_file) if log_file else None
     setup_logging(verbose=verbose, log_file=resolved)
 
@@ -51,7 +55,7 @@ def cli(ctx: click.Context, verbose: bool, log_file: str) -> None:
 @cli.command(name="list")
 @auth_command
 async def list_cmd(ctx_obj: ContextObj) -> None:
-    """List providers and connection states."""
+    """List configured providers and active connection states."""
     actx = await ctx_obj.initialize()
     data = await actx.runtime_client.list_connections()
     raw_list = data["connections"]
@@ -208,7 +212,7 @@ async def list_cmd(ctx_obj: ContextObj) -> None:
 
 
 @cli.command(name="log")
-@click.option("-n", "--lines", default=50, help="Number of lines to show.")
+@click.option("-n", "--lines", default=50, metavar="COUNT", help="Number of lines to show.")
 @auth_command
 async def log_cmd(ctx_obj: ContextObj, lines: int) -> None:
     """View the authsome audit log."""
@@ -243,10 +247,15 @@ async def log_cmd(ctx_obj: ContextObj, lines: int) -> None:
 
 @cli.command()
 @click.argument("provider")
-@click.option("--connection", default="default", help="Connection name.")
-@click.option("--flow", help="Authentication flow override.")
-@click.option("--scopes", help="Comma-separated scopes to request.")
-@click.option("--base-url", help="Base URL for the provider (e.g. for GitHub Enterprise).")
+@click.option("--connection", default="default", metavar="NAME", help="Connection name.")
+@click.option(
+    "--flow",
+    type=click.Choice([e.value for e in FlowType], case_sensitive=False),
+    metavar="FLOW",
+    help=f"Authentication flow override ({', '.join(e.value for e in FlowType)}).",
+)
+@click.option("--scopes", metavar="SCOPES", help="Comma-separated list of permission scopes to request.")
+@click.option("--base-url", metavar="URL", help="Override provider API base URL (e.g. for self-hosted enterprise).")
 @click.option("--force", is_flag=True, help="Overwrite an existing connection if it already exists.")
 @auth_command
 async def login(
@@ -258,7 +267,7 @@ async def login(
     base_url: str | None,
     force: bool,
 ) -> None:
-    """Authenticate with a provider using its configured flow."""
+    """Authenticate with PROVIDER using the configured flow."""
     actx = await ctx_obj.initialize()
     flow_value = FlowType(flow).value if flow else None
     scope_list = [s.strip() for s in scopes.split(",")] if scopes else None
@@ -337,7 +346,7 @@ async def login(
 
 
 @cli.command(name="scan")
-@click.option("--connection", default="default", help="Connection name.")
+@click.option("--connection", default="default", metavar="NAME", help="Connection name.")
 @click.option("--import", "auto_import", is_flag=True, help="Import detected keys without interactive prompt.")
 @auth_command
 async def scan(ctx_obj: ContextObj, connection: str, auto_import: bool) -> None:
@@ -482,10 +491,10 @@ async def scan(ctx_obj: ContextObj, connection: str, auto_import: bool) -> None:
 
 @cli.command()
 @click.argument("provider")
-@click.option("--connection", default="default", help="Connection name.")
+@click.option("--connection", default="default", metavar="NAME", help="Connection name.")
 @auth_command
 async def logout(ctx_obj: ContextObj, provider: str, connection: str) -> None:
-    """Log out of a connection and remove local state."""
+    """Log out of the specified PROVIDER connection."""
     actx = await ctx_obj.initialize()
     await actx.runtime_client.logout(provider, connection)
     audit.log("logout", provider=provider, connection=connection)
@@ -501,7 +510,7 @@ async def logout(ctx_obj: ContextObj, provider: str, connection: str) -> None:
 @click.argument("connection")
 @auth_command
 async def set_default_connection(ctx_obj: ContextObj, provider: str, connection: str) -> None:
-    """Set the default connection for a provider."""
+    """Set the default CONNECTION for PROVIDER."""
     actx = await ctx_obj.initialize()
     await actx.runtime_client.set_default_connection(provider, connection)
     if ctx_obj.json_output:
@@ -514,7 +523,7 @@ async def set_default_connection(ctx_obj: ContextObj, provider: str, connection:
 @click.argument("provider")
 @auth_command
 async def revoke(ctx_obj: ContextObj, provider: str) -> None:
-    """Complete reset of the provider, removing all connections and client secrets."""
+    """Reset and delete all stored connections and secrets for PROVIDER."""
     actx = await ctx_obj.initialize()
     await actx.runtime_client.revoke(provider)
     audit.log("revoke", provider=provider, connection="all")
@@ -529,7 +538,7 @@ async def revoke(ctx_obj: ContextObj, provider: str) -> None:
 @click.argument("provider")
 @auth_command
 async def remove(ctx_obj: ContextObj, provider: str) -> None:
-    """Delete a custom provider definition."""
+    """Permanently uninstall the specified custom PROVIDER definition."""
     actx = await ctx_obj.initialize()
     await actx.runtime_client.remove(provider)
     audit.log("remove", provider=provider, connection="all")
@@ -542,12 +551,12 @@ async def remove(ctx_obj: ContextObj, provider: str) -> None:
 
 @cli.command()
 @click.argument("provider")
-@click.option("--connection", default="default", help="Connection name.")
-@click.option("--field", help="Return only a specific field.")
+@click.option("--connection", default="default", metavar="NAME", help="Connection name.")
+@click.option("--field", metavar="FIELD", help="Retrieve only the value of the specified metadata FIELD.")
 @click.option("--show-secret", is_flag=True, help="Reveal encrypted secrets.")
 @auth_command
 async def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, show_secret: bool) -> None:
-    """Return provider connection metadata by default."""
+    """Retrieve credential and metadata details for PROVIDER."""
     actx = await ctx_obj.initialize()
     # Verify provider exists first to raise ProviderNotFoundError if unknown
     await actx.runtime_client.get_provider(provider)
@@ -604,7 +613,7 @@ async def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | 
 @click.argument("provider")
 @auth_command
 async def inspect(ctx_obj: ContextObj, provider: str) -> None:
-    """Return provider definition and local connection summary."""
+    """Summarize configuration settings and active connections for PROVIDER."""
     actx = await ctx_obj.initialize()
     definition_dict = await actx.runtime_client.get_provider(provider)
     data = definition_dict
@@ -624,11 +633,18 @@ async def inspect(ctx_obj: ContextObj, provider: str) -> None:
 
 @cli.command(name="export")
 @click.argument("provider", required=False)
-@click.option("--connection", default="default", help="Connection name.")
-@click.option("--format", "export_format", type=click.Choice(["env", "json", "shell"]), default="env")
+@click.option("--connection", default="default", metavar="NAME", help="Connection name.")
+@click.option(
+    "--format",
+    "export_format",
+    type=click.Choice([e.value for e in ExportFormat], case_sensitive=False),
+    default=ExportFormat.ENV.value,
+    metavar="FORMAT",
+    help=f"Format to print output ({', '.join(e.value for e in ExportFormat)}).",
+)
 @auth_command
 async def export(ctx_obj: ContextObj, provider: str | None, connection: str, export_format: str) -> None:
-    """Export credential material in selected format."""
+    """Export connection credential material in selected format."""
     actx = await ctx_obj.initialize()
     fmt = ExportFormat(export_format)
     output = await actx.runtime_client.export(provider, connection, format=fmt.value)
@@ -657,7 +673,7 @@ async def export(ctx_obj: ContextObj, provider: str | None, connection: str, exp
 @click.argument("command", nargs=-1, required=True)
 @auth_command
 async def run(ctx_obj: ContextObj, command: tuple[str]) -> None:
-    """Run a subprocess behind the local auth proxy."""
+    """Run COMMAND as a subprocess injected with authentication credentials."""
     actx = await ctx_obj.initialize()
     result = await actx.require_local_proxy().run(list(command))
     sys.exit(result.returncode)
@@ -848,8 +864,8 @@ def daemon() -> None:
 
 
 @daemon.command(name="serve")
-@click.option("--host", default="127.0.0.1", show_default=True, help="Host interface to bind.")
-@click.option("--port", default=7998, type=int, show_default=True, help="TCP port to listen on.")
+@click.option("--host", default="127.0.0.1", show_default=True, metavar="HOST", help="Host interface to bind.")
+@click.option("--port", default=7998, type=int, show_default=True, metavar="PORT", help="TCP port to listen on.")
 @click.option("--reload", is_flag=True, help="Enable auto-reload on code changes.")
 def daemon_serve(host: str, port: int, reload: bool) -> None:
     """Run the daemon in the foreground."""
@@ -895,7 +911,7 @@ async def daemon_status_cmd(ctx_obj: ContextObj) -> None:
 
 
 @daemon.command(name="logs")
-@click.option("-n", "--lines", default=80, help="Number of lines to show.")
+@click.option("-n", "--lines", default=80, metavar="COUNT", help="Number of lines to show.")
 @auth_command
 async def daemon_logs(ctx_obj: ContextObj, lines: int) -> None:
     """Show daemon log output."""
