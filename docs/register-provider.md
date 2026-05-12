@@ -41,7 +41,9 @@ Create a `.json` file using one of the templates below.
     "scopes": ["read", "write"],
     "pkce": true,
     "supports_device_flow": false,
-    "supports_dcr": true,
+    "supports_dcr": true
+  },
+  "registration": {
     "registration_endpoint": "{base_url}/oauth/register"
   },
   "export": {
@@ -53,7 +55,7 @@ Create a `.json` file using one of the templates below.
 }
 ```
 
-> **Note:** When DCR is available, set `"flow": "dcr_pkce"` and `"supports_dcr": true` with a `"registration_endpoint"`. For standard OAuth2 (`pkce` or `device_code`), the user will be prompted to provide the `client_id` (and `client_secret` if needed) during the login process via a secure browser bridge. Agents MUST NOT pass these using CLI flags. These will be securely saved to the profile and reused for future logins. Do NOT include them in the provider JSON.
+> **Note:** When DCR is available, set `"flow": "dcr_pkce"` and `"supports_dcr": true` with a `"registration"` config block containing `"registration_endpoint"`. For standard OAuth2 (`pkce` or `device_code`), the user will be prompted to provide the `client_id` (and `client_secret` if needed) during the login process via a secure browser bridge. Agents MUST NOT pass these using CLI flags. These will be securely saved to the profile and reused for future logins. Do NOT include them in the provider JSON.
 
 > OAuth PKCE with a manually registered app: redirect URI must be `http://127.0.0.1:7999/callback`.
 
