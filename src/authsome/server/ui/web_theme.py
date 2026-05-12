@@ -30,7 +30,7 @@ body {
 }
 main {
   width: 100%;
-  max-width: 360px;
+  max-width: 440px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -97,15 +97,11 @@ button {
 button:hover { opacity: 0.9; }
 details {
   margin: 24px 0;
-  padding: 12px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 6px;
 }
 summary {
   font-size: 13px;
   font-weight: 500;
-  color: var(--text);
+  color: var(--muted);
   cursor: pointer;
   user-select: none;
   transition: color 0.15s;
@@ -113,7 +109,7 @@ summary {
 summary:hover {
   color: var(--accent);
 }
-details[open] summary { margin-bottom: 12px; }
+details[open] summary { margin-bottom: 16px; }
 """
 
 BRIDGE_STYLE = """
