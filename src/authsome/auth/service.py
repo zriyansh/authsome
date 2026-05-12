@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import importlib.resources
 import json
-import re
 from datetime import timedelta
 from typing import Any
 from urllib.parse import urlparse
@@ -32,6 +31,7 @@ from authsome.auth.models.enums import AuthType, ConnectionStatus, ExportFormat,
 from authsome.auth.models.profile import ProfileMetadata
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.auth.sessions import AuthSession
+from authsome.auth.utils import export_name_part, normalize_base_url, normalize_scopes
 from authsome.errors import (
     AuthsomeError,
     ConnectionNotFoundError,
@@ -586,35 +586,11 @@ class AuthService:
         scopes: list[str] | None,
         base_url: str | None,
     ) -> bool:
-        if scopes is not None and cls._normalize_scopes(scopes) != cls._normalize_scopes(record.scopes):
+        if scopes is not None and normalize_scopes(scopes) != normalize_scopes(record.scopes):
             return False
-        if base_url is not None and cls._normalize_base_url(base_url) != cls._normalize_base_url(record.base_url):
+        if base_url is not None and normalize_base_url(base_url) != normalize_base_url(record.base_url):
             return False
         return True
-
-    @staticmethod
-    def _normalize_scopes(scopes: list[str] | None) -> set[str]:
-        return {scope.strip() for scope in scopes or [] if scope.strip()}
-
-    @staticmethod
-    def _normalize_base_url(base_url: str | None) -> str | None:
-        if not base_url:
-            return None
-        raw = base_url.strip().rstrip("/")
-        from urllib.parse import urlsplit, urlunsplit
-
-        parsed = urlsplit(raw)
-        if not parsed.scheme or not parsed.netloc:
-            return raw
-        return urlunsplit(
-            (
-                parsed.scheme.lower(),
-                parsed.netloc.lower(),
-                parsed.path,
-                parsed.query,
-                parsed.fragment,
-            )
-        )
 
     @staticmethod
     def _build_docs_hints(definition: ProviderDefinition, flow_type: FlowType) -> list[dict[str, Any]]:
@@ -733,14 +709,14 @@ class AuthService:
 
         if record.auth_type == AuthType.OAUTH2:
             if record.access_token:
-                env_name = export_map.get("access_token", f"{self._export_name_part(provider)}_ACCESS_TOKEN")
+                env_name = export_map.get("access_token", f"{export_name_part(provider)}_ACCESS_TOKEN")
                 values[env_name] = record.access_token
             if record.refresh_token:
-                env_name = export_map.get("refresh_token", f"{self._export_name_part(provider)}_REFRESH_TOKEN")
+                env_name = export_map.get("refresh_token", f"{export_name_part(provider)}_REFRESH_TOKEN")
                 values[env_name] = record.refresh_token
         elif record.auth_type == AuthType.API_KEY:
             if record.api_key:
-                env_name = export_map.get("api_key", f"{self._export_name_part(provider)}_API_KEY")
+                env_name = export_map.get("api_key", f"{export_name_part(provider)}_API_KEY")
                 values[env_name] = record.api_key
 
         return values
@@ -760,8 +736,8 @@ class AuthService:
         suffix = "_".join(
             part
             for part in (
-                self._export_name_part(provider),
-                self._export_name_part(connection),
+                export_name_part(provider),
+                export_name_part(connection),
             )
             if part
         )
@@ -771,9 +747,6 @@ class AuthService:
             candidate = f"{env_name}_{suffix}_{counter}" if suffix else f"{env_name}_{counter}"
             counter += 1
         return candidate
-
-    def _export_name_part(self, value: str) -> str:
-        return re.sub(r"[^A-Z0-9]+", "_", value.upper()).strip("_")
 
     # ── Profile operations ────────────────────────────────────────────────
 
