@@ -11,7 +11,7 @@ import pytest
 from authsome.auth import AuthService as AuthLayer
 from authsome.auth.models.connection import ConnectionRecord
 from authsome.auth.models.enums import AuthType, ConnectionStatus
-from authsome.proxy.router import RouteMatch
+from authsome.proxy.router import RouteMatch, RouteResolution
 from authsome.proxy.server import AuthProxyAddon, ProxyRouter, _build_proxy_options, _route
 from authsome.server.dependencies import create_auth_service
 
@@ -255,6 +255,8 @@ class TestRouting:
         router = await ProxyRouter.create(auth)
 
         assert router.route("https", "api.example.com", 443, "/v1/resources") is None
+        amb = router.resolve("https", "api.example.com", 443, "/v1/resources")
+        assert amb.match is None and amb.miss_reason == "ambiguous"
 
     @pytest.mark.asyncio
     async def test_regex_host_url_matches_multiple_hosts(self) -> None:
@@ -432,6 +434,9 @@ class TestRouting:
         auth = await _make_auth(tmp_path)
 
         assert await _route(auth, "https", "unknown.example.com", 443, "/v1") is None
+        router = await ProxyRouter.create(auth)
+        miss = router.resolve("https", "unknown.example.com", 443, "/v1")
+        assert miss.match is None and miss.miss_reason == "no_match"
 
     @pytest.mark.asyncio
     async def test_no_match_without_connection(self, tmp_path: Path) -> None:
@@ -452,12 +457,13 @@ class TestAuthProxyAddon:
         flow.request.host = host
         flow.request.port = port
         flow.request.path = path
+        flow.request.method = "GET"
         flow.request.headers = headers if headers is not None else {}
         return flow
 
-    def _make_addon(self, auth, match):
+    def _make_addon(self, auth, match, *, miss_reason=None):
         router = mock.Mock()
-        router.route.return_value = match
+        router.resolve.return_value = RouteResolution(match=match, miss_reason=miss_reason)
 
         # Mock the async factory method
         mock_create = mock.AsyncMock(return_value=router)
@@ -474,13 +480,22 @@ class TestAuthProxyAddon:
         flow = self._make_flow()
         auth.resolve_credentials.return_value = {"headers": {"Authorization": "Bearer sk-test"}, "expires_at": None}
 
-        addon, _router, patcher = self._make_addon(auth, RouteMatch(provider="openai", connection="default"))
-        try:
-            await addon.request(flow)
-        finally:
-            patcher.stop()
+        with patch("authsome.proxy.server.audit.log") as log_mock:
+            addon, _router, patcher = self._make_addon(auth, RouteMatch(provider="openai", connection="default"))
+            try:
+                await addon.request(flow)
+            finally:
+                patcher.stop()
 
         assert flow.request.headers["Authorization"] == "Bearer sk-test"
+        log_mock.assert_any_call(
+            "proxy_inject",
+            provider="openai",
+            connection="default",
+            host="api.openai.com",
+            method="GET",
+            path="/v1/responses",
+        )
 
     @pytest.mark.asyncio
     async def test_addon_overwrites_existing_authorization_header(self) -> None:
@@ -501,13 +516,15 @@ class TestAuthProxyAddon:
         auth = mock.AsyncMock()
         flow = self._make_flow(host="example.com", path="/")
 
-        addon, _router, patcher = self._make_addon(auth, None)
-        try:
-            await addon.request(flow)
-        finally:
-            patcher.stop()
+        with patch("authsome.proxy.server.audit.log") as log_mock:
+            addon, _router, patcher = self._make_addon(auth, None, miss_reason="no_match")
+            try:
+                await addon.request(flow)
+            finally:
+                patcher.stop()
 
         auth.resolve_credentials.assert_not_called()
+        log_mock.assert_called_once_with("proxy_miss", host="example.com", reason="no_match")
 
     @pytest.mark.asyncio
     async def test_addon_continues_on_header_retrieval_failure(self) -> None:

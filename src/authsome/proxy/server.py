@@ -17,7 +17,8 @@ from mitmproxy import http
 from mitmproxy.options import Options
 from mitmproxy.tools.dump import DumpMaster
 
-from authsome.proxy.router import RouteMatch
+from authsome import audit
+from authsome.proxy.router import RouteMatch, RouteResolution
 from authsome.utils import utc_now
 
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
@@ -74,14 +75,14 @@ class ProxyRouter:
         routes_by_host, regex_routes = await cls._build_routes(client)
         return cls(routes_by_host, regex_routes)
 
-    def route(self, scheme: str, host: str, port: int, path: str) -> RouteMatch | None:
-        """Return a route for a request, or None when the request should pass through."""
+    def resolve(self, scheme: str, host: str, port: int, path: str) -> RouteResolution:
+        """Resolve a route and classify HTTPS misses for audit logging."""
         if scheme.lower() != "https":
-            return None
+            return RouteResolution(None, None)
 
         normalized_host = _normalize_host(host)
         if normalized_host in _LOOPBACK_HOSTS:
-            return None
+            return RouteResolution(None, None)
 
         request_path = _request_path(path)
         candidate_targets = list(self._routes_by_host.get(normalized_host, ()))
@@ -96,21 +97,25 @@ class ProxyRouter:
         ]
 
         if len(matching_targets) == 0:
-            return None
+            return RouteResolution(None, "no_match")
 
         best_specificity = max(_target_specificity(target) for target in matching_targets)
         best_targets = [target for target in matching_targets if _target_specificity(target) == best_specificity]
 
         if len(best_targets) > 1:
-            logger.warning(
+            logger.error(
                 "Ambiguous proxy match for https://{}:{}{} — matched connections: {}. Forwarding unchanged.",
                 normalized_host,
                 port,
                 path,
                 ", ".join(f"{target.match.provider}/{target.match.connection}" for target in best_targets),
             )
-            return None
-        return best_targets[0].match
+            return RouteResolution(None, "ambiguous")
+        return RouteResolution(best_targets[0].match, None)
+
+    def route(self, scheme: str, host: str, port: int, path: str) -> RouteMatch | None:
+        """Return a route for a request, or None when the request should pass through."""
+        return self.resolve(scheme, host, port, path).match
 
     @staticmethod
     async def _build_routes(
@@ -338,10 +343,21 @@ class AuthProxyAddon:
 
     async def request(self, flow: http.HTTPFlow) -> None:
         router = await self._get_router()
-        match = router.route(flow.request.scheme, flow.request.host, flow.request.port, flow.request.path)
-        if match is None:
+        resolution = router.resolve(flow.request.scheme, flow.request.host, flow.request.port, flow.request.path)
+        if resolution.match is None:
+            if resolution.miss_reason is not None:
+                normalized_host = _normalize_host(flow.request.host)
+                audit.log("proxy_miss", host=normalized_host, reason=resolution.miss_reason)
+                logger.error(
+                    "Proxy miss: host={} reason={} {} {}",
+                    normalized_host,
+                    resolution.miss_reason,
+                    flow.request.method,
+                    flow.request.path,
+                )
             return
 
+        match = resolution.match
         try:
             headers = await self._get_auth_headers(match)
         except Exception:
@@ -354,6 +370,15 @@ class AuthProxyAddon:
 
         for key, value in headers.items():
             flow.request.headers[key] = value
+
+        audit.log(
+            "proxy_inject",
+            provider=match.provider,
+            connection=match.connection,
+            host=_normalize_host(flow.request.host),
+            method=flow.request.method,
+            path=flow.request.path,
+        )
 
     async def _get_auth_headers(self, match: RouteMatch) -> dict[str, str]:
         cache_key = (match.provider, match.connection or "")

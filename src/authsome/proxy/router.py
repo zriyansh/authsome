@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 
 @dataclass(frozen=True)
@@ -11,3 +12,11 @@ class RouteMatch:
 
     provider: str
     connection: str | None = None
+
+
+@dataclass(frozen=True)
+class RouteResolution:
+    """Outcome of routing one proxied HTTPS request to a provider connection."""
+
+    match: RouteMatch | None
+    miss_reason: Literal["no_match", "ambiguous"] | None = None
