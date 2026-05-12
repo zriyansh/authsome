@@ -1,0 +1,114 @@
+---
+title: "Linear"
+sidebarTitle: "Linear"
+description: "Log in to Linear from authsome via OAuth2. Tokens are stored locally and refreshed automatically."
+keywords: ["linear oauth cli", "linear access token broker", "authsome linear", "linear agent credentials"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
+
+Linear is a bundled OAuth2 provider in authsome. Linear teams, projects, issues, comments. Read and write scopes.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `linear` |
+| Display name | Linear |
+| Auth type | OAuth2 |
+| Default flow | `pkce`, PKCE browser flow |
+| PKCE supported | Yes |
+| Device code supported | No |
+| DCR supported | No |
+| Default scopes | `read`, `write` |
+| Proxy host | `regex:.*\.linear\.app` |
+| Env var (`access_token`) | `LINEAR_ACCESS_TOKEN` |
+| Env var (`refresh_token`) | `LINEAR_REFRESH_TOKEN` |
+
+## Prerequisites
+
+You need to register an OAuth app with Linear once. Create an OAuth application in your Linear workspace settings. Set the callback URL to authsome's, and copy the client ID and secret.
+
+The redirect URI must be:
+
+```text
+http://127.0.0.1:7998/auth/callback/oauth
+```
+
+This is the only callback URL authsome's PKCE flow listens on.
+
+Dashboard: [https://linear.app/settings/api/applications/new](https://linear.app/settings/api/applications/new).
+
+## Log in
+
+```bash
+uvx authsome login linear
+```
+
+The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://linear.app/oauth/authorize` for the authorization step.
+
+Verify:
+
+```bash
+uvx authsome get linear --field status
+# → connected
+```
+
+## Custom scopes
+
+The bundled definition requests `read`, `write`. Override at login time:
+
+```bash
+uvx authsome login linear --scopes "<comma-separated>"
+```
+
+The granted scopes are stored on the connection and visible in `uvx authsome get linear`.
+
+## Multiple accounts
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login linear --connection personal
+uvx authsome login linear --connection work
+```
+
+## Use the token
+
+Run the agent under the proxy. The library tab is for embedding authsome inside a larger Python orchestrator.
+
+<CodeGroup>
+
+```bash Proxy (recommended)
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export linear --format env)"
+```
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+token = auth.get_access_token("linear", connection="default")
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `LINEAR_ACCESS_TOKEN=authsome-proxy-managed` in the child's environment and injects the real token into outbound requests to `regex:.*\.linear\.app`. The child process never sees the actual value. Refresh tokens are never exported.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect linear > ~/.authsome/providers/linear.json
+# edit scopes, base_url, or anything else
+uvx authsome list   # source now shows "custom" for linear
+```
+
+User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).
+
+## What's next
+
+<WhatsNextOauth />

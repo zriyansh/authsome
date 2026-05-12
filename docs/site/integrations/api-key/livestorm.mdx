@@ -1,0 +1,104 @@
+---
+title: "Livestorm"
+sidebarTitle: "Livestorm"
+description: "Store and use your Livestorm API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["livestorm api key authsome", "livestorm key broker", "livestorm agent credentials", "authsome livestorm"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Livestorm uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `livestorm` |
+| Display name | Livestorm |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.livestorm.co` |
+| Env var | `LIVESTORM_API_TOKEN` |
+| Where to get a key | [https://app.livestorm.co/#/settings/account/api-tokens](https://app.livestorm.co/#/settings/account/api-tokens) |
+
+## Get a key
+
+Create an API key in the Livestorm dashboard at [https://app.livestorm.co/#/settings/account/api-tokens](https://app.livestorm.co/#/settings/account/api-tokens).
+
+## Log in
+
+```bash
+uvx authsome login livestorm
+```
+
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get livestorm --field status
+# → connected
+```
+
+## Use the key
+
+Run the agent under the proxy. The library tab is for embedding authsome inside a larger Python orchestrator.
+
+<CodeGroup>
+
+```bash Proxy (recommended)
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export livestorm --format env)"
+echo $LIVESTORM_API_TOKEN
+```
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+key = auth.get_access_token("livestorm", connection="default")
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `LIVESTORM_API_TOKEN=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.livestorm.co`. The child process never sees the actual value.
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login livestorm --connection personal
+uvx authsome login livestorm --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login livestorm --force          # rotate
+uvx authsome logout livestorm                  # remove local credential
+uvx authsome remove livestorm                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Livestorm.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect livestorm > ~/.authsome/providers/livestorm.json
+# edit fields
+uvx authsome list   # source now shows "custom" for livestorm
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />
