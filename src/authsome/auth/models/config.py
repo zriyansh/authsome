@@ -28,7 +28,7 @@ class EncryptionConfig(BaseModel):
     Encryption configuration block.
 
     Modes:
-    - "local_key": master key stored at ~/.authsome/master.key
+    - "local_key": master key stored at ~/.authsome/server/master.key
     - "keyring":   master key stored in the OS keyring
     """
 
@@ -36,10 +36,9 @@ class EncryptionConfig(BaseModel):
 
 
 class GlobalConfig(BaseModel):
-    """Global configuration stored in ~/.authsome/config.json."""
+    """Global configuration for the local Authsome install."""
 
     spec_version: int = Field(default_factory=current_spec_version)
-    default_profile: str = "default"
     encryption: EncryptionConfig | None = Field(default_factory=EncryptionConfig)
 
     extra_fields: dict[str, Any] = Field(default_factory=dict, exclude=True)

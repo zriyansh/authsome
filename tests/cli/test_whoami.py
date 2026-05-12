@@ -16,7 +16,9 @@ def _make_whoami(version: str = "1.2.3") -> dict:
     return {
         "version": version,
         "home": "/home/test/.authsome",
-        "active_identity": "default",
+        "identity": "steady-wisely-boldly-0042",
+        "did": "did:key:z6MkTest",
+        "registration_status": "registered",
         "encryption_backend": "local_key",
     }
 

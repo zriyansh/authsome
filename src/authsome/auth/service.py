@@ -73,10 +73,12 @@ class AuthService:
     def __init__(
         self,
         vault: Vault,
-        identity: str | None = None,
+        identity: str,
     ) -> None:
+        if not identity:
+            raise ValueError("AuthService requires an explicit identity handle")
         self._vault = vault
-        self._identity = identity or "default"
+        self._identity = identity
         self._bundled: dict[str, ProviderDefinition] = self._load_bundled_providers()
 
     @property
@@ -793,10 +795,8 @@ class AuthService:
         return ProfileMetadata.model_validate_json(raw)
 
     async def set_default_profile(self, name: str) -> None:
-        await self.get_profile(name)  # validate existence
-        config = await self._vault.get_config()
-        config.default_profile = name
-        await self._vault.save_config(config)
+        _ = name
+        raise AuthsomeError("Implicit default profiles have been removed; use a registered identity handle")
 
     async def create_profile(self, name: str, description: str = "") -> ProfileMetadata:
         if (await self._vault.get(name, collection="profiles")) is not None:

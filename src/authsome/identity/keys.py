@@ -13,8 +13,6 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from pydantic import BaseModel, Field
 
-from authsome.auth.models.config import GlobalConfig
-
 _ED25519_MULTICODEC_PREFIX = b"\xed\x01"
 _DID_KEY_PREFIX = "did:key:z"
 _HANDLE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*[a-z0-9]$")
@@ -186,14 +184,25 @@ def create_identity(home: Path, handle: str | None = None) -> IdentityMetadata:
     return metadata
 
 
-async def ensure_default_identity(home: Path, config: GlobalConfig) -> tuple[GlobalConfig, IdentityMetadata]:
-    """Ensure a local identity exists, replacing incomplete legacy state."""
-    handle = config.default_profile
-    if handle and handle != "default" and identity_exists(home, handle):
-        return config, load_identity(home, handle)
-    metadata = create_identity(home)
-    config.default_profile = metadata.handle
-    return config, metadata
+def remove_legacy_default_identity(home: Path) -> None:
+    """Remove legacy local files for the implicit default identity."""
+    for path in (identity_metadata_path(home, "default"), identity_key_path(home, "default")):
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def ensure_local_identity(home: Path) -> IdentityMetadata:
+    """Ensure a non-default local identity exists."""
+    remove_legacy_default_identity(home)
+    directory = identities_dir(home)
+    if directory.exists():
+        for metadata_path in sorted(directory.glob("*.json")):
+            handle = metadata_path.stem
+            if handle != "default" and identity_exists(home, handle):
+                return load_identity(home, handle)
+    return create_identity(home)
 
 
 def _unique_handle(home: Path) -> str:

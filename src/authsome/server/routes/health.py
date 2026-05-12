@@ -107,7 +107,7 @@ async def whoami(
     config = await auth.vault.get_config()
     enc_mode = config.encryption.mode if config.encryption else "local_key"
     if enc_mode == "local_key":
-        enc_desc = f"Local Key ({auth.vault.home / 'master.key'})"
+        enc_desc = f"Local Key ({auth.vault.home / 'server' / 'master.key'})"
     elif enc_mode == "keyring":
         enc_desc = "OS Keyring"
     else:
@@ -118,7 +118,7 @@ async def whoami(
         "identity": auth.identity,
         "active_identity": auth.identity,
         "did": getattr(request.state, "did", ""),
-        "registration_status": "local",
+        "registration_status": getattr(request.state, "registration_status", "registered"),
         "daemon_url": server_base_url,
         "encryption_backend": enc_desc,
     }

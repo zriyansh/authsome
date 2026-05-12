@@ -40,19 +40,19 @@ class TestGlobalConfig:
     def test_defaults(self) -> None:
         config = GlobalConfig()
         assert config.spec_version == current_spec_version()
-        assert config.default_profile == "default"
         assert config.encryption is not None
         assert config.encryption.mode == "local_key"
 
     def test_json_roundtrip(self) -> None:
-        config = GlobalConfig(spec_version=1, default_profile="work")
+        config = GlobalConfig(spec_version=1)
         json_str = config.model_dump_json()
         restored = GlobalConfig.model_validate_json(json_str)
-        assert restored.default_profile == "work"
+        assert restored.spec_version == 1
 
     def test_extra_fields_preserved(self) -> None:
         config = GlobalConfig.model_validate({"spec_version": 1, "default_profile": "x", "custom": "val"})
         dumped = config.model_dump()
+        assert dumped.get("default_profile") == "x"
         assert dumped.get("custom") == "val"
 
 

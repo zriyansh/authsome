@@ -758,6 +758,32 @@ async def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> No
 
 @cli.command()
 @auth_command
+async def init(ctx_obj: ContextObj) -> None:
+    """Initialize local storage and register a fresh identity."""
+    from authsome.identity import ensure_local_identity
+
+    home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
+    identity = ensure_local_identity(home)
+    actx = await ctx_obj.initialize()
+    await actx.runtime_client.register_identity(identity.handle, identity.did)
+
+    data = {
+        "status": "initialized",
+        "home": str(home),
+        "identity": identity.handle,
+        "did": identity.did,
+        "registration_status": "registered",
+    }
+    if ctx_obj.json_output:
+        ctx_obj.print_json(data)
+    else:
+        ctx_obj.echo(f"Initialized authsome at {home}", color="green")
+        ctx_obj.echo(f"Identity: {identity.handle}")
+        ctx_obj.echo(f"DID: {identity.did}")
+
+
+@cli.command()
+@auth_command
 async def whoami(ctx_obj: ContextObj) -> None:
     """Show basic local context."""
     actx = await ctx_obj.initialize()

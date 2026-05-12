@@ -39,8 +39,16 @@ async def get_protected_auth_service(request: Request) -> AuthService:
         )
     except (ProofValidationError, ValueError) as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    registration = request.app.state.identity_registry.resolve(claims.subject)
+    if registration is None:
+        raise HTTPException(status_code=401, detail="Unknown identity handle")
+    if registration.did != claims.issuer:
+        raise HTTPException(status_code=401, detail="Identity issuer does not match registered DID")
+
     request.state.identity = claims.subject
     request.state.did = claims.issuer
+    request.state.registration_status = "registered"
     return get_auth_service_for_identity(request, claims.subject)
 
 

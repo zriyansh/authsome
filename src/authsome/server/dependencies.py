@@ -19,6 +19,11 @@ def get_authsome_home() -> Path:
     return Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
 
 
+def get_server_home(home: Path | None = None) -> Path:
+    """Return the daemon-owned state directory."""
+    return (home or get_authsome_home()) / "server"
+
+
 def get_server_base_url() -> str:
     """Return the daemon's canonical external base URL."""
     return build_server_base_url()
@@ -38,7 +43,7 @@ async def create_vault(home: Path | None = None) -> Vault:
     return Vault(
         app_store=app_store,
         crypto_mode=crypto_mode,
-        master_key_path=resolved_home / "master.key",
+        master_key_path=get_server_home(resolved_home) / "master.key",
     )
 
 
@@ -46,8 +51,7 @@ async def create_auth_service(home: Path | None = None, identity: str | None = N
     """Create an auth service scoped to an identity handle."""
     from authsome.auth import AuthService
 
+    if not identity:
+        raise ValueError("create_auth_service requires an explicit identity handle")
     vault = await create_vault(home)
-    if identity is None:
-        config = await vault.get_config()
-        identity = config.default_profile
     return AuthService(vault=vault, identity=identity)

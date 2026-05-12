@@ -18,7 +18,7 @@ from authsome.server.dependencies import create_auth_service
 
 async def _make_auth(tmp_path: Path) -> AuthLayer:
     home = tmp_path / ".authsome"
-    return await create_auth_service(home)
+    return await create_auth_service(home, identity="steady-wisely-boldly-0042")
 
 
 async def _save_connection_record(

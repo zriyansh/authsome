@@ -109,3 +109,9 @@ class TestAuthServiceRefreshLogs:
                 entry = json.loads(lines[0])
                 assert entry["event"] == "refresh_failed"
                 assert entry["fallback_available"] is False
+
+
+def test_auth_service_requires_explicit_identity() -> None:
+    mock_vault = mock.AsyncMock()
+    with pytest.raises(ValueError, match="explicit identity"):
+        AuthService(mock_vault, identity="")

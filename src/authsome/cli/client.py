@@ -12,10 +12,10 @@ from urllib.parse import urlparse
 
 import requests
 
-from authsome.identity import ensure_default_identity, load_identity, load_private_key
+from authsome.identity import ensure_local_identity, load_private_key
+from authsome.identity.keys import IdentityMetadata
 from authsome.identity.proof import POP_AUTH_SCHEME, create_proof_jwt
 from authsome.server.urls import DEFAULT_SERVER_BASE_URL
-from authsome.store.local import LocalAppStore
 
 DEFAULT_DAEMON_URL = DEFAULT_SERVER_BASE_URL
 
@@ -109,15 +109,7 @@ class AuthsomeApiClient:
         return response.json()
 
     async def _proof_headers(self, method: str, path: str, body: bytes) -> dict[str, str]:
-        store = LocalAppStore(self._home)
-        await store.ensure_initialized()
-        config = await store.get_config()
-        original_default = config.default_profile
-        config, identity = await ensure_default_identity(self._home, config)
-        if config.default_profile != original_default:
-            await store.save_config(config)
-        else:
-            identity = load_identity(self._home, config.default_profile)
+        identity = await self.ensure_identity_registered()
         private_key = load_private_key(self._home, identity.handle)
         token = create_proof_jwt(
             private_key=private_key,
@@ -128,6 +120,16 @@ class AuthsomeApiClient:
             body=body,
         )
         return {"Authorization": f"{POP_AUTH_SCHEME} {token}"}
+
+    async def ensure_identity_registered(self) -> IdentityMetadata:
+        """Bootstrap a local identity and register it with the daemon."""
+        identity = ensure_local_identity(self._home)
+        await self._post(
+            "/identities/register",
+            {"handle": identity.handle, "did": identity.did},
+            protected=False,
+        )
+        return identity
 
     async def _get(self, path: str, *, protected: bool = True) -> dict[str, Any]:
         return await self._request("GET", path, timeout=10, protected=protected)
@@ -173,6 +175,9 @@ class AuthsomeApiClient:
 
     async def register_provider(self, definition_dict: dict[str, Any], force: bool = False) -> None:
         await self._post("/providers", {"definition": definition_dict, "force": force})
+
+    async def register_identity(self, handle: str, did: str) -> dict[str, Any]:
+        return await self._post("/identities/register", {"handle": handle, "did": did}, protected=False)
 
     async def remove(self, provider: str) -> None:
         await self._delete(f"/providers/{provider}")

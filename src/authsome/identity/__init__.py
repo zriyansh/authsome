@@ -8,7 +8,7 @@ from pathlib import Path
 from authsome.identity.keys import (
     IdentityMetadata,
     create_identity,
-    ensure_default_identity,
+    ensure_local_identity,
     identities_dir,
     identity_exists,
     identity_key_path,
@@ -17,6 +17,7 @@ from authsome.identity.keys import (
     load_private_key,
     public_key_from_did_key,
     public_key_to_did_key,
+    remove_legacy_default_identity,
 )
 
 DEFAULT_IDENTITY = "default"
@@ -41,11 +42,8 @@ async def current_from_home(home: Path) -> IdentityMetadata:
     store = LocalAppStore(home)
     await store.ensure_initialized()
     config = await store.get_config()
-    original_default = config.default_profile
-    config, identity = await ensure_default_identity(home, config)
-    if config.default_profile != original_default:
-        await store.save_config(config)
-    return identity
+    await store.save_config(config)
+    return ensure_local_identity(home)
 
 
 __all__ = [
@@ -55,7 +53,7 @@ __all__ = [
     "create_identity",
     "current",
     "current_from_home",
-    "ensure_default_identity",
+    "ensure_local_identity",
     "identities_dir",
     "identity_exists",
     "identity_key_path",
@@ -64,4 +62,5 @@ __all__ = [
     "load_private_key",
     "public_key_from_did_key",
     "public_key_to_did_key",
+    "remove_legacy_default_identity",
 ]
