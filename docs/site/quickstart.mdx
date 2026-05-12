@@ -10,18 +10,14 @@ This walkthrough takes you from a fresh install to running an agent with valid G
 - Python 3.13 or newer
 - A graphical browser on the same machine (for the initial login). For SSH or CI, see [Headless setup](/guides/headless-device-code).
 
-## Quick Start
-
-Authsome is designed to be run directly with `uvx`, so no installation is required.
-
-Verify you can run it:
+## Verify the install
 
 ```bash
 uvx authsome --version
 uvx authsome doctor
 ```
 
-`doctor` runs health checks on the home directory layout, encryption availability, and provider parsing. All checks should pass.
+`doctor` runs health checks on the home directory layout, encryption availability, and provider parsing. All checks should pass. For other install paths, see [Installation](/installation).
 
 ## Log in to your first provider
 
@@ -31,7 +27,7 @@ uvx authsome doctor
     uvx authsome login github
     ```
 
-    A browser window opens to GitHub's authorization page. Authsome runs the PKCE flow with a callback on `http://127.0.0.1:7999/callback`.
+    A browser window opens to GitHub's authorization page. Authsome runs the PKCE flow with a callback on `http://127.0.0.1:7998/auth/callback/oauth`.
   </Step>
   <Step title="Approve access">
     Click **Authorize** in the browser. The terminal prints `Successfully logged in to github (default).`
@@ -79,7 +75,7 @@ uvx authsome export github --format env
 python my_agent.py
 ```
 
-`export` prints valid `KEY=value` lines and writes them into the calling shell when sourced.
+`export` prints valid `KEY=value` lines on stdout. Use `eval "$(uvx authsome export <provider> --format env)"` to load them into the current shell.
 
 ### Option 2: Run behind the auth proxy
 

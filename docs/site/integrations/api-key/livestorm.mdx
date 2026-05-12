@@ -5,6 +5,7 @@ description: "Store and use your Livestorm API key with authsome. Local encrypte
 keywords: ["livestorm api key authsome", "livestorm key broker", "livestorm agent credentials", "authsome livestorm"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -21,11 +22,11 @@ Livestorm uses a long-lived API key. Authsome stores the key encrypted in the lo
 | Header | `Authorization: Bearer <key>` |
 | Proxy host | `api.livestorm.co` |
 | Env var | `LIVESTORM_API_TOKEN` |
-| Where to get a key | [https://app.livestorm.co/#/settings/account](https://app.livestorm.co/#/settings/account) |
+| Where to get a key | [https://app.livestorm.co/#/settings/account/api-tokens](https://app.livestorm.co/#/settings/account/api-tokens) |
 
 ## Get a key
 
-Create an API key in the Livestorm dashboard at [https://app.livestorm.co/#/settings/account](https://app.livestorm.co/#/settings/account).
+Create an API key in the Livestorm dashboard at [https://app.livestorm.co/#/settings/account/api-tokens](https://app.livestorm.co/#/settings/account/api-tokens).
 
 ## Log in
 
@@ -33,7 +34,7 @@ Create an API key in the Livestorm dashboard at [https://app.livestorm.co/#/sett
 uvx authsome login livestorm
 ```
 
-A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
 
 <MaskedInputNote />
 
@@ -49,10 +50,10 @@ uvx authsome get livestorm --field status
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("livestorm", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("livestorm", connection="default")
 ```
 
 ```bash Proxy

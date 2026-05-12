@@ -5,6 +5,7 @@ description: "Store and use your Zapier API key with authsome. Local encrypted v
 keywords: ["zapier api key authsome", "zapier key broker", "zapier agent credentials", "authsome zapier"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -21,11 +22,11 @@ Zapier uses a long-lived API key. Authsome stores the key encrypted in the local
 | Header | `Authorization: Bearer <key>` |
 | Proxy host | `api.zapier.com` |
 | Env var | `ZAPIER_API_KEY` |
-| Where to get a key | [https://zapier.com/app/developer/api-keys](https://zapier.com/app/developer/api-keys) |
+| Where to get a key | [https://developer.zapier.com/api-keys](https://developer.zapier.com/api-keys) |
 
 ## Get a key
 
-Create an API key in the Zapier dashboard at [https://zapier.com/app/developer/api-keys](https://zapier.com/app/developer/api-keys).
+Create an API key in the Zapier dashboard at [https://developer.zapier.com/api-keys](https://developer.zapier.com/api-keys).
 
 ## Log in
 
@@ -33,7 +34,7 @@ Create an API key in the Zapier dashboard at [https://zapier.com/app/developer/a
 uvx authsome login zapier
 ```
 
-A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
 
 <MaskedInputNote />
 
@@ -49,10 +50,10 @@ uvx authsome get zapier --field status
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("zapier", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("zapier", connection="default")
 ```
 
 ```bash Proxy

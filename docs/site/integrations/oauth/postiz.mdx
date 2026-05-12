@@ -5,6 +5,7 @@ description: "Log in to Postiz from authsome via OAuth2. Tokens are stored local
 keywords: ["postiz oauth cli", "postiz access token broker", "authsome postiz", "postiz agent credentials"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
 
@@ -59,10 +60,10 @@ uvx authsome login postiz --connection work
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-token = ctx.auth.get_access_token("postiz", connection="default")
+auth = create_auth_service()
+token = auth.get_access_token("postiz", connection="default")
 ```
 
 ```bash Proxy
@@ -89,4 +90,11 @@ User-registered files always win over bundled definitions. See [Provider schema]
 
 ## What's next
 
-<WhatsNextOauth />
+<Columns cols={2}>
+  <Card title="Headless setup" icon="server" href="/guides/headless-device-code">
+    Postiz is the only bundled provider that defaults to the device code flow.
+  </Card>
+  <Card title="Run agents with the proxy" icon="shield-halved" href="/guides/run-agents-with-proxy">
+    Inject the access token into outbound requests without exposing it.
+  </Card>
+</Columns>

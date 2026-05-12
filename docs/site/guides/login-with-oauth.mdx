@@ -19,7 +19,7 @@ If you are on a remote SSH session, in CI, or on a server without a browser, use
 For services that don't support Dynamic Client Registration, you need to register an OAuth app with the provider once. The redirect URI must be:
 
 ```text
-http://127.0.0.1:7999/callback
+http://127.0.0.1:7998/auth/callback/oauth
 ```
 
 This is the only redirect URI authsome listens on for PKCE flows.
@@ -31,7 +31,7 @@ GitHub example:
     Visit [github.com/settings/developers](https://github.com/settings/developers) and click **New OAuth App**.
   </Step>
   <Step title="Set the redirect URI">
-    Set **Authorization callback URL** to `http://127.0.0.1:7999/callback`.
+    Set **Authorization callback URL** to `http://127.0.0.1:7998/auth/callback/oauth`.
   </Step>
   <Step title="Save the client ID and secret">
     Keep the **Client ID** and **Client Secret** at hand. Authsome will prompt for them on first login through a secure local browser form. You will not paste them into a terminal.
@@ -52,13 +52,13 @@ This is what happens:
 
 <Steps>
   <Step title="Client credential collection (first time only)">
-    Authsome opens a local form at `http://127.0.0.1:7999`. Paste your `client_id` and `client_secret`. They are encrypted and stored under your profile, then reused on every subsequent login.
+    Authsome opens a local form at `http://127.0.0.1:7998`. Paste your `client_id` and `client_secret`. They are encrypted and stored under your profile, then reused on every subsequent login.
   </Step>
   <Step title="Authorization redirect">
     A second browser window opens to the provider's authorization page. Approve the requested scopes.
   </Step>
   <Step title="Token exchange">
-    The provider redirects back to `http://127.0.0.1:7999/callback` with an authorization code. Authsome exchanges it for an access token (and a refresh token, if the provider supports them) and stores the encrypted record.
+    The provider redirects back to `http://127.0.0.1:7998/auth/callback/oauth` with an authorization code. Authsome exchanges it for an access token (and a refresh token, if the provider supports them) and stores the encrypted record.
   </Step>
   <Step title="Confirmation">
     The terminal prints `Successfully logged in to github (default).`

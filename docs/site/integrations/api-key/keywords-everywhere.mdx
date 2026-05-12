@@ -5,6 +5,7 @@ description: "Store and use your Keywords Everywhere API key with authsome. Loca
 keywords: ["keywords everywhere api key authsome", "keywords everywhere key broker", "keywords-everywhere agent credentials", "authsome keywords-everywhere"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -33,7 +34,7 @@ Create an API key in the Keywords Everywhere dashboard at [https://keywordsevery
 uvx authsome login keywords-everywhere
 ```
 
-A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
 
 <MaskedInputNote />
 
@@ -49,10 +50,10 @@ uvx authsome get keywords-everywhere --field status
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("keywords-everywhere", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("keywords-everywhere", connection="default")
 ```
 
 ```bash Proxy

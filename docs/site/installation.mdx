@@ -118,28 +118,27 @@ Re-run `uvx authsome doctor` to confirm the backend is reachable. The trade-offs
 
 ## Optional: trust the proxy CA
 
-`uvx authsome run` injects auth headers through a local mitmproxy. HTTPS interception requires the mitmproxy CA to be trusted on the machine. You can defer this until you actually use `run`, or install it now:
+`uvx authsome run` injects auth headers through a local mitmproxy. HTTPS interception requires the mitmproxy CA to be trusted on the machine. You can defer this until you actually use `run`. When you're ready, the per-OS install steps are in [Proxy networking](/troubleshooting/proxy-networking#tls-verification-fails).
 
-<Tabs>
-  <Tab title="macOS">
-    ```bash
-    sudo security add-trusted-cert -d -r trustRoot \
-      -k /Library/Keychains/System.keychain \
-      ~/.mitmproxy/mitmproxy-ca-cert.pem
-    ```
-  </Tab>
-  <Tab title="Linux (Debian/Ubuntu)">
-    ```bash
-    sudo cp ~/.mitmproxy/mitmproxy-ca-cert.pem \
-      /usr/local/share/ca-certificates/mitmproxy.crt
-    sudo update-ca-certificates
-    ```
-  </Tab>
-</Tabs>
+## Uninstall
 
-The CA is written the first time `authsome run` starts the proxy. If `~/.mitmproxy/` doesn't exist yet, run any `authsome run` command once to generate it.
+Remove the package:
 
-For full proxy networking details, see [Proxy networking](/troubleshooting/proxy-networking).
+```bash
+uv tool uninstall authsome     # if installed via `uv tool install`
+pip uninstall authsome         # if installed via pip
+# uvx leaves nothing to uninstall; clear the cache with `uv cache clean` if desired
+```
+
+Remove stored credentials and configuration:
+
+```bash
+rm -rf ~/.authsome
+```
+
+This destroys every stored connection and the master key. If you're on `keyring` encryption mode, also delete the `authsome` entry from your OS keychain.
+
+To revoke remote sessions for any provider before uninstalling, run `uvx authsome revoke <provider>` for each one first.
 
 ## Next steps
 

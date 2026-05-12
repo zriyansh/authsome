@@ -5,6 +5,7 @@ description: "Store and use your Optimizely API key with authsome. Local encrypt
 keywords: ["optimizely api key authsome", "optimizely key broker", "optimizely agent credentials", "authsome optimizely"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -21,11 +22,11 @@ Optimizely uses a long-lived API key. Authsome stores the key encrypted in the l
 | Header | `Authorization: Bearer <key>` |
 | Proxy host | `api.optimizely.com` |
 | Env var | `OPTIMIZELY_API_KEY` |
-| Where to get a key | [https://app.optimizely.com/v2/profile/api](https://app.optimizely.com/v2/profile/api) |
+| Where to get a key | [https://app.optimizely.com/v2/profile/api-access](https://app.optimizely.com/v2/profile/api-access) |
 
 ## Get a key
 
-Create an API key in the Optimizely dashboard at [https://app.optimizely.com/v2/profile/api](https://app.optimizely.com/v2/profile/api).
+Create an API key in the Optimizely dashboard at [https://app.optimizely.com/v2/profile/api-access](https://app.optimizely.com/v2/profile/api-access).
 
 ## Log in
 
@@ -33,7 +34,7 @@ Create an API key in the Optimizely dashboard at [https://app.optimizely.com/v2/
 uvx authsome login optimizely
 ```
 
-A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
 
 <MaskedInputNote />
 
@@ -49,10 +50,10 @@ uvx authsome get optimizely --field status
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("optimizely", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("optimizely", connection="default")
 ```
 
 ```bash Proxy

@@ -27,7 +27,7 @@ The daemon owns those concerns. The CLI becomes a thin client.
 | `/providers/...` | List, inspect, register, and remove provider definitions. |
 | `/proxy/...` | Per-request credential resolution for the local HTTP proxy started by `authsome run`. |
 | `/health` | Liveness and readiness probes. |
-| `/overview`, `/connections`, `/app/...` | The interactive dashboard UI. |
+| `/ui/`, `/ui/connections`, `/ui/apps/...` | The interactive dashboard UI. |
 
 The daemon binds to `127.0.0.1` only. It is not reachable from other machines on the network.
 
@@ -46,8 +46,6 @@ agent / CLI / dashboard
 ```
 
 In-memory state is lost on restart. A login that is mid-flight when the daemon restarts must be re-started.
-
-## When the daemon is reused
 
 `uvx authsome run` shares the daemon with the rest of the CLI. The local HTTP proxy started by `run` calls back to the daemon's `/proxy/...` routes to resolve fresh credentials on every intercepted request. This keeps decryption logic in one place and avoids handing the proxy direct vault access.
 
@@ -85,7 +83,7 @@ See [Hosted deployment model](/security/hosted-deployment) for the trust caveats
 The daemon serves a small interactive dashboard at:
 
 ```text
-http://127.0.0.1:7998/overview
+http://127.0.0.1:7998/ui/
 ```
 
 It surfaces:

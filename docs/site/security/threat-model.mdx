@@ -89,14 +89,7 @@ Hosted mode (a shared daemon on a private network) widens the network boundary. 
 
 ## Known v1 limitations
 
-The local daemon model has known gaps. They are not bugs; they are explicit tradeoffs for the v1 release.
-
-- No bearer token between the CLI, proxy, and daemon yet. Loopback binding is the only access control.
-- Browser-rendered input forms do not include per-session CSRF tokens yet.
-- Active auth sessions are held in daemon memory and are lost on restart.
-- The proxy caches resolved credentials in memory for the lifetime of `authsome run`.
-
-These are tracked in the v1 design doc and on the roadmap. See [Daemon trust boundary](/security/daemon-trust-boundary).
+The local daemon model has known gaps that are explicit tradeoffs for v1. See [Daemon trust boundary](/security/daemon-trust-boundary) for the full list with reasoning.
 
 ## Responsible disclosure
 

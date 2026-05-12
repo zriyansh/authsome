@@ -41,14 +41,15 @@ Each event type may add typed fields. `None` values are stripped before write, s
 
 | Event | Written from | Common fields | Notes |
 |-------|--------------|---------------|-------|
-| `login` | CLI / daemon | `provider`, `connection`, `status` (only on failure) | `status: "failure"` indicates the login flow did not complete. Successful logins have no `status` field. |
+| `login` | CLI | `provider`, `connection`, `profile`, `identity`. On failure also `status: "failure"`. | Successful logins have no `status` field. |
 | `logout` | CLI | `provider`, `connection` | Logical removal of a connection record from the local store. The provider is not contacted. |
 | `revoke` | CLI | `provider`, `connection: "all"` | The provider's revocation endpoint was called (where supported). All connections + client credentials for the provider are cleared. |
 | `remove` | CLI | `provider`, `connection: "all"` | Provider definition is uninstalled (custom) or reset (bundled). All local state for the provider is cleared. |
 | `get` | CLI | `provider`, `connection`, `field` | `field` is the specific field requested, or `"all"` if the user dumped the whole record. The value itself is never logged. |
 | `export` | CLI | `provider`, `connection`, `format` (`env` or `json`) | Logged whenever a secret leaves the vault for use. Secret values are never logged. |
 | `register` | CLI | `provider`, `endpoints` | A custom provider was registered. `endpoints` is a summary of the URLs declared in the JSON. |
-| `refresh` (auth) | AuthLayer | `provider`, `connection`, `outcome` | Token refresh attempt outcomes. Emitted by the auth service rather than the CLI. |
+| `scan` | CLI | `provider`, `connection`, `source`, `env_var` | One entry per credential imported via `authsome scan --import`. `source` is `env` or a `.env` file path. |
+| `refresh_failed` | AuthService | `provider`, `connection`, `profile`, `error`, `fallback_available` | Emitted when token refresh fails. Successful refresh is silent. `fallback_available: true` means the still-unexpired cached token was returned. |
 
 The set of events grows over time. Parse defensively: treat unknown `event` values as opaque and skip them rather than failing.
 

@@ -5,6 +5,7 @@ description: "Store and use your Clearbit API key with authsome. Local encrypted
 keywords: ["clearbit api key authsome", "clearbit key broker", "clearbit agent credentials", "authsome clearbit"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -21,11 +22,13 @@ Clearbit uses a long-lived API key. Authsome stores the key encrypted in the loc
 | Header | `Authorization: Bearer <key>` |
 | Proxy host | `api.clearbit.com` |
 | Env var | `CLEARBIT_API_KEY` |
-| Where to get a key | [https://dashboard.clearbit.com/api](https://dashboard.clearbit.com/api) |
+| Provider docs | [https://clearbit.com/docs](https://clearbit.com/docs) |
 
 ## Get a key
 
-Create an API key in the Clearbit dashboard at [https://dashboard.clearbit.com/api](https://dashboard.clearbit.com/api).
+See the Clearbit API documentation at [https://clearbit.com/docs](https://clearbit.com/docs) for how to obtain a key.
+
+Clearbit was acquired by HubSpot; new keys are issued through HubSpot. The legacy dashboard at dashboard.clearbit.com is deprecated.
 
 ## Log in
 
@@ -33,7 +36,7 @@ Create an API key in the Clearbit dashboard at [https://dashboard.clearbit.com/a
 uvx authsome login clearbit
 ```
 
-A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
 
 <MaskedInputNote />
 
@@ -49,10 +52,10 @@ uvx authsome get clearbit --field status
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("clearbit", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("clearbit", connection="default")
 ```
 
 ```bash Proxy

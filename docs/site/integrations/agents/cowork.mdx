@@ -6,7 +6,7 @@ icon: "users"
 keywords: ["cowork authsome", "multi-agent credentials", "per-agent profile", "cowork github oauth"]
 ---
 
-[Cowork](https://github.com/cowork-ai) runs multiple agents concurrently. Authsome pairs naturally: give each agent its own profile so credentials never bleed between roles.
+Cowork is a multi-agent runtime that supervises several agents running concurrently. Authsome pairs naturally: give each agent its own profile so credentials never bleed between roles.
 
 ## Per-agent profiles
 
@@ -22,11 +22,11 @@ Each profile has its own vault file, own audit log, own master-key access. An ag
 To create named profiles inside a single `AUTHSOME_HOME`:
 
 ```python
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-ctx.auth.create_profile("pr-bot", description="Auto-PR agent")
-ctx.auth.create_profile("reviewer", description="Code review agent")
+auth = create_auth_service()
+auth.create_profile("pr-bot", description="Auto-PR agent")
+auth.create_profile("reviewer", description="Code review agent")
 ```
 
 See [Profiles](/guides/profiles) and [Profiles vs connections](/concepts/profiles-vs-connections).

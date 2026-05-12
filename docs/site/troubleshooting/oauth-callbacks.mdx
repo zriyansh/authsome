@@ -3,7 +3,7 @@ title: "OAuth callback errors"
 description: "Diagnose `redirect_uri_mismatch`, port-in-use, browser-not-opening, and timeout errors during PKCE login."
 ---
 
-The PKCE flow runs a temporary HTTP server on `127.0.0.1:7999` to receive the OAuth callback. Most login failures fall into one of the categories below.
+The PKCE flow uses the local daemon on `127.0.0.1:7998` to receive the OAuth callback at `/auth/callback/oauth`. Most login failures fall into one of the categories below.
 
 <AccordionGroup>
   <Accordion title="redirect_uri_mismatch" icon="link-slash">
@@ -16,7 +16,7 @@ The PKCE flow runs a temporary HTTP server on `127.0.0.1:7999` to receive the OA
     Authsome listens on a single redirect URI:
 
     ```text
-    http://127.0.0.1:7999/callback
+    http://127.0.0.1:7998/auth/callback/oauth
     ```
 
     Fix it at the provider:
@@ -26,7 +26,7 @@ The PKCE flow runs a temporary HTTP server on `127.0.0.1:7999` to receive the OA
         For GitHub: [github.com/settings/developers](https://github.com/settings/developers). For other providers, find the equivalent OAuth app management page.
       </Step>
       <Step title="Edit the callback URL">
-        Set **Authorization callback URL** (or the equivalent field) to `http://127.0.0.1:7999/callback`. The path matters, it must be `/callback`, not `/`.
+        Set **Authorization callback URL** (or the equivalent field) to `http://127.0.0.1:7998/auth/callback/oauth`. The full path matters, it must be `/auth/callback/oauth`.
       </Step>
       <Step title="Save and retry login">
         ```bash
@@ -40,20 +40,20 @@ The PKCE flow runs a temporary HTTP server on `127.0.0.1:7999` to receive the OA
     </Tip>
   </Accordion>
 
-  <Accordion title="Port 7999 already in use" icon="plug-circle-exclamation">
+  <Accordion title="Port 7998 already in use" icon="plug-circle-exclamation">
     ```text
-    Error: address already in use: 127.0.0.1:7999
+    Error: address already in use: 127.0.0.1:7998
     ```
 
-    Another process is bound to the port. Find and stop it:
+    Another process is bound to the daemon port. The CLI reuses an existing `authsome` daemon if one is already running; you only see this error when something *else* holds 7998. Find and stop it:
 
     ```bash
     # macOS / Linux
-    lsof -nP -iTCP:7999 -sTCP:LISTEN
+    lsof -nP -iTCP:7998 -sTCP:LISTEN
     kill <PID>
     ```
 
-    A common cause is a previous authsome run that did not exit cleanly. Restart your terminal if `lsof` shows nothing yet the bind still fails.
+    If a stale `authsome` daemon won't release the port, `pkill -f authsome` then re-run any CLI command. See [Daemon issues](/troubleshooting/daemon-issues).
   </Accordion>
 
   <Accordion title="Browser does not open" icon="browser">
@@ -65,7 +65,7 @@ The PKCE flow runs a temporary HTTP server on `127.0.0.1:7999` to receive the OA
     | `webbrowser` Python module can't find a default browser | Set `BROWSER` env var: `export BROWSER=$(which firefox)`. |
     | Headless Linux without `DISPLAY` | Same as SSH, use the device code flow. |
 
-    You can also copy the URL printed in the terminal and open it manually on any device. As long as the redirect lands on `http://127.0.0.1:7999/callback` on the same machine where authsome is waiting, the flow completes.
+    You can also copy the URL printed in the terminal and open it manually on any device. As long as the redirect lands on `http://127.0.0.1:7998/auth/callback/oauth` on the same machine where authsome is waiting, the flow completes.
   </Accordion>
 
   <Accordion title="Browser opens but never returns to authsome" icon="clock">
@@ -73,7 +73,7 @@ The PKCE flow runs a temporary HTTP server on `127.0.0.1:7999` to receive the OA
 
     | Cause | Fix |
     |-------|-----|
-    | The browser landed on `http://127.0.0.1:7999/callback` but authsome timed out | Re-run `uvx authsome login --force`. |
+    | The browser landed on `http://127.0.0.1:7998/auth/callback/oauth` but authsome timed out | Re-run `uvx authsome login --force`. |
     | A corporate proxy is intercepting `127.0.0.1` traffic | Add `127.0.0.1` and `localhost` to your `NO_PROXY` env var. |
     | You authorized in a different browser profile that can't reach localhost | Use the same browser profile as your authsome shell. |
   </Accordion>

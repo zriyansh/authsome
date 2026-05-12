@@ -43,12 +43,12 @@ No authsome import in the script. The proxy does the work.
 When you want fine-grained control, per-connection selection, or programmatic access to connection metadata:
 
 ```python
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
+auth = create_auth_service()
 
-openai_key = ctx.auth.get_access_token("openai", connection="default")
-github_token = ctx.auth.get_access_token("github", connection="work")
+openai_key = auth.get_access_token("openai", connection="default")
+github_token = auth.get_access_token("github", connection="work")
 
 import httpx
 r = httpx.get(
@@ -73,8 +73,8 @@ See [Python library](/reference/python-library) for the full surface.
 ## Multi-account
 
 ```python
-ctx.auth.get_access_token("github", connection="personal")
-ctx.auth.get_access_token("github", connection="work")
+auth.get_access_token("github", connection="personal")
+auth.get_access_token("github", connection="work")
 ```
 
 See [Multiple connections per provider](/guides/multiple-connections).

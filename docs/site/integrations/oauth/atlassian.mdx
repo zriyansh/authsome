@@ -6,6 +6,7 @@ icon: "atlassian"
 keywords: ["atlassian oauth cli", "atlassian access token broker", "authsome atlassian", "atlassian agent credentials"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
 
@@ -34,7 +35,7 @@ You need to register an OAuth app with Atlassian once. Atlassian's OAuth model i
 The redirect URI must be:
 
 ```text
-http://127.0.0.1:7999/callback
+http://127.0.0.1:7998/auth/callback/oauth
 ```
 
 This is the only callback URL authsome's PKCE flow listens on.
@@ -47,7 +48,7 @@ Dashboard: [https://developer.atlassian.com/console/myapps/](https://developer.a
 uvx authsome login atlassian
 ```
 
-The first time, authsome opens a local form at `http://127.0.0.1:7999` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://auth.atlassian.com/authorize` for the authorization step.
+The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://auth.atlassian.com/authorize` for the authorization step.
 
 Verify:
 
@@ -80,10 +81,10 @@ uvx authsome login atlassian --connection work
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-token = ctx.auth.get_access_token("atlassian", connection="default")
+auth = create_auth_service()
+token = auth.get_access_token("atlassian", connection="default")
 ```
 
 ```bash Proxy

@@ -73,32 +73,9 @@ For the regex form (`"host_url": "regex:^api[0-9]+\\.github\\.com$"`), see [Prov
   HTTPS interception requires the mitmproxy CA certificate to be trusted on your machine. Without it, the child sees TLS verification errors on every HTTPS call.
 </Warning>
 
-On macOS:
+Per-OS install instructions, including the Python-tooling `REQUESTS_CA_BUNDLE` / `SSL_CERT_FILE` overrides, are in [Proxy networking](/troubleshooting/proxy-networking#tls-verification-fails).
 
-```bash
-# Install the cert into the system trust store
-sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/.mitmproxy/mitmproxy-ca-cert.pem
-```
-
-On Linux (Debian/Ubuntu):
-
-```bash
-sudo cp ~/.mitmproxy/mitmproxy-ca-cert.pem /usr/local/share/ca-certificates/mitmproxy.crt
-sudo update-ca-certificates
-```
-
-For Python tooling that uses its own CA bundle (`requests`, `httpx`), you may also need:
-
-```bash
-export REQUESTS_CA_BUNDLE=~/.mitmproxy/mitmproxy-ca-cert.pem
-export SSL_CERT_FILE=~/.mitmproxy/mitmproxy-ca-cert.pem
-```
-
-See [Proxy networking](/troubleshooting/proxy-networking) for more.
-
-## Limitations
-
-The proxy is HTTP(S)-only and uses each provider's default connection. The full routing contract and the list of known limitations is on [Proxy injection](/concepts/proxy-injection).
+The proxy is HTTP(S)-only and uses each provider's default connection. Full routing contract and limitations: [Proxy injection](/concepts/proxy-injection).
 
 ## When to choose `run` over `export`
 

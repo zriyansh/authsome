@@ -57,11 +57,11 @@ The `AuthLayer` exposes profile operations directly. From a Python session:
 
 ```python
 from pathlib import Path
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
+auth = create_auth_service()
 
-ctx.auth.create_profile("work", description="Work GitHub + Linear")
+auth.create_profile("work", description="Work GitHub + Linear")
 ```
 
 Switch the global default by editing `~/.authsome/config.json`:

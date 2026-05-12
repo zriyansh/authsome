@@ -17,11 +17,11 @@ Authsome ships with 14 bundled OAuth2 providers. Each has a default flow (PKCE, 
 | [gitlab](/integrations/oauth/gitlab) | `pkce` | `gitlab.com` | Self-hosted via `--base-url`. |
 | [google](/integrations/oauth/google) | `pkce` | `regex:.*googleapis.*` | Covers Gmail, Drive, Calendar, etc. |
 | [hubspot](/integrations/oauth/hubspot) | `pkce` | `api.hubapi.com` | |
-| [klaviyo-oauth](/integrations/oauth/klaviyo) | `pkce` | `a.klaviyo.com` | OAuth variant. The API-key variant is `klaviyo`. |
-| [linear](/integrations/oauth/linear) | `dcr_pkce` | `api.linear.app` | DCR; no OAuth app to register. |
+| [klaviyo-oauth](/integrations/oauth/klaviyo-oauth) | `pkce` | `a.klaviyo.com` | OAuth variant. The API-key variant is `klaviyo`. |
+| [linear](/integrations/oauth/linear) | `pkce` | `regex:.*\.linear\.app` | Standard OAuth app. |
 | [microsoft](/integrations/oauth/microsoft) | `pkce` | `graph.microsoft.com` | Microsoft Graph. |
 | [notion](/integrations/oauth/notion) | `pkce` | `api.notion.com` | Standard OAuth app. |
-| [notion_dcr](/integrations/oauth/notion-dcr) | `dcr_pkce` | `api.notion.com` | DCR variant of Notion. |
+| [notion_dcr](/integrations/oauth/notion-dcr) | `dcr_pkce` | `mcp.notion.com` | DCR variant of Notion via the MCP endpoint. |
 | [postiz](/integrations/oauth/postiz) | `device_code` | `api.postiz.com` | Headless-friendly. |
 | [slack](/integrations/oauth/slack) | `pkce` | `slack.com` | Workspace-scoped. |
 | [x](/integrations/oauth/x) | `pkce` | `api.twitter.com` | X (formerly Twitter). |

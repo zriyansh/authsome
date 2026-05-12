@@ -87,18 +87,6 @@ A healthy machine prints `OK` for each check and exits with code `0`.
   </Accordion>
 </AccordionGroup>
 
-## Inspect specific state
-
-For more detail than `doctor` shows, use these:
-
-```bash
-uvx authsome whoami                              # home directory + encryption mode
-uvx authsome list --json                         # all providers + connection states
-uvx authsome get <provider> --json               # connection record metadata
-uvx authsome inspect <provider>                  # provider definition
-uvx authsome log -n 100                          # recent audit events
-```
-
 ## Verbose logging
 
 For deeper inspection of any command, enable verbose logging:

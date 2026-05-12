@@ -118,15 +118,15 @@ These routes back the local HTTP proxy started by `uvx authsome run`. The proxy 
 
 ## Dashboard UI
 
-These routes serve HTML. They are the dashboard mounted at the daemon root, not a separate process.
+These routes serve HTML. The dashboard is mounted under the `/ui` prefix.
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/` | Dashboard overview. |
-| `GET` | `/connections` | All connections, by provider. |
-| `GET` | `/apps/{provider_name}` | Detail pane for one provider. |
-| `POST` | `/apps/{provider_name}/{connection_name}/disconnect` | Log out from the dashboard UI. |
-| `POST` | `/apps/{provider_name}/connect` | Start a flow from the dashboard UI. |
+| `GET` | `/ui/` | Dashboard overview. |
+| `GET` | `/ui/connections` | All connections, by provider. |
+| `GET` | `/ui/apps/{provider_name}` | Detail pane for one provider. |
+| `POST` | `/ui/apps/{provider_name}/{connection_name}/disconnect` | Log out from the dashboard UI. |
+| `POST` | `/ui/apps/{provider_name}/connect` | Start a flow from the dashboard UI. |
 
 ## Auth
 

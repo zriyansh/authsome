@@ -11,7 +11,7 @@ API-key providers like OpenAI, Anthropic, and SendGrid don't run an OAuth flow, 
 uvx authsome login openai
 ```
 
-A browser window opens to a local form at `http://127.0.0.1:7999`. Paste the API key into the masked input and submit. The terminal prints `Successfully logged in to openai (default).`
+A browser window opens to a local form at `http://127.0.0.1:7998`. Paste the API key into the masked input and submit. The terminal prints `Successfully logged in to openai (default).`
 
 <Warning>
   API keys are never accepted as command-line arguments and never read from shell prompts. The browser bridge form is the only path. On a headless machine (no `DISPLAY`), authsome falls back to masked terminal input via `getpass`.

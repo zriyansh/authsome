@@ -5,6 +5,7 @@ description: "Store and use your SEMrush API key with authsome. Local encrypted 
 keywords: ["semrush api key authsome", "semrush key broker", "semrush agent credentials", "authsome semrush"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -21,11 +22,11 @@ SEMrush uses a long-lived API key. Authsome stores the key encrypted in the loca
 | Header | `Authorization: Bearer <key>` |
 | Proxy host | `api.semrush.com` |
 | Env var | `SEMRUSH_API_KEY` |
-| Where to get a key | [https://www.semrush.com/accounts/subscription-info/api-units/](https://www.semrush.com/accounts/subscription-info/api-units/) |
+| Where to get a key | [https://www.semrush.com/accounts/profile/api-units](https://www.semrush.com/accounts/profile/api-units) |
 
 ## Get a key
 
-Create an API key in the SEMrush dashboard at [https://www.semrush.com/accounts/subscription-info/api-units/](https://www.semrush.com/accounts/subscription-info/api-units/).
+Create an API key in the SEMrush dashboard at [https://www.semrush.com/accounts/profile/api-units](https://www.semrush.com/accounts/profile/api-units).
 
 ## Log in
 
@@ -33,7 +34,7 @@ Create an API key in the SEMrush dashboard at [https://www.semrush.com/accounts/
 uvx authsome login semrush
 ```
 
-A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
 
 <MaskedInputNote />
 
@@ -49,10 +50,10 @@ uvx authsome get semrush --field status
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("semrush", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("semrush", connection="default")
 ```
 
 ```bash Proxy

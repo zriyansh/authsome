@@ -14,7 +14,7 @@ Authsome has two layers of credential namespacing. People confuse them, then end
 profile:<profile_name>:<provider_name>:connection:<connection_name>
 ```
 
-- **Profile** scopes the entire credential set. Different vault file, different lock, different audit log.
+- **Profile** scopes the entire credential set. Different vault file, different lock. Audit events from all profiles are written to the same `~/.authsome/audit.log` and tagged with the profile name.
 - **Connection** scopes a credential record within one provider. Same vault, different key.
 
 ## At a glance

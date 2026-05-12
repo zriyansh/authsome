@@ -6,6 +6,7 @@ icon: "mailchimp"
 keywords: ["mailchimp api key authsome", "mailchimp key broker", "mailchimp agent credentials", "authsome mailchimp"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -22,11 +23,13 @@ Mailchimp uses a long-lived API key. Authsome stores the key encrypted in the lo
 | Header | `Authorization: Bearer <key>` |
 | Proxy host | `api.mailchimp.com` |
 | Env var | `MAILCHIMP_API_KEY` |
-| Where to get a key | [https://us1.admin.mailchimp.com/account/api/](https://us1.admin.mailchimp.com/account/api/) |
+| Provider docs | [https://mailchimp.com/developer/marketing/guides/quick-start/#create-an-api-key](https://mailchimp.com/developer/marketing/guides/quick-start/#create-an-api-key) |
 
 ## Get a key
 
-Create an API key in the Mailchimp dashboard at [https://us1.admin.mailchimp.com/account/api/](https://us1.admin.mailchimp.com/account/api/).
+See the Mailchimp API documentation at [https://mailchimp.com/developer/marketing/guides/quick-start/#create-an-api-key](https://mailchimp.com/developer/marketing/guides/quick-start/#create-an-api-key) for how to obtain a key.
+
+Mailchimp's dashboard subdomain (`us1`, `us20`, etc.) varies per account. Navigate from `mailchimp.com` → Account → Extras → API keys.
 
 ## Log in
 
@@ -34,7 +37,7 @@ Create an API key in the Mailchimp dashboard at [https://us1.admin.mailchimp.com
 uvx authsome login mailchimp
 ```
 
-A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
 
 <MaskedInputNote />
 
@@ -50,10 +53,10 @@ uvx authsome get mailchimp --field status
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("mailchimp", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("mailchimp", connection="default")
 ```
 
 ```bash Proxy

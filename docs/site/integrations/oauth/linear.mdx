@@ -5,6 +5,7 @@ description: "Log in to Linear from authsome via OAuth2. Tokens are stored local
 keywords: ["linear oauth cli", "linear access token broker", "authsome linear", "linear agent credentials"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
 
@@ -28,15 +29,17 @@ Linear is a bundled OAuth2 provider in authsome. Linear teams, projects, issues,
 
 ## Prerequisites
 
-You need to register an OAuth app with Linear once. Linear supports Dynamic Client Registration (DCR). You do **not** need to register an OAuth app. Authsome registers an ephemeral client on every login.
+You need to register an OAuth app with Linear once. Create an OAuth application in your Linear workspace settings. Set the callback URL to authsome's, and copy the client ID and secret.
 
 The redirect URI must be:
 
 ```text
-http://127.0.0.1:7999/callback
+http://127.0.0.1:7998/auth/callback/oauth
 ```
 
 This is the only callback URL authsome's PKCE flow listens on.
+
+Dashboard: [https://linear.app/settings/api/applications/new](https://linear.app/settings/api/applications/new).
 
 ## Log in
 
@@ -44,7 +47,7 @@ This is the only callback URL authsome's PKCE flow listens on.
 uvx authsome login linear
 ```
 
-The first time, authsome opens a local form at `http://127.0.0.1:7999` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://linear.app/oauth/authorize` for the authorization step.
+The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://linear.app/oauth/authorize` for the authorization step.
 
 Verify:
 
@@ -77,10 +80,10 @@ uvx authsome login linear --connection work
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-token = ctx.auth.get_access_token("linear", connection="default")
+auth = create_auth_service()
+token = auth.get_access_token("linear", connection="default")
 ```
 
 ```bash Proxy

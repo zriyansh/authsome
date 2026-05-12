@@ -5,6 +5,7 @@ description: "Store and use your Mention Me API key with authsome. Local encrypt
 keywords: ["mention me api key authsome", "mention me key broker", "mention-me agent credentials", "authsome mention-me"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -21,11 +22,13 @@ Mention Me uses a long-lived API key. Authsome stores the key encrypted in the l
 | Header | `Authorization: Bearer <key>` |
 | Proxy host | `mention-me.com` |
 | Env var | `MENTIONME_API_KEY` |
-| Where to get a key | [https://app.mention-me.com/api](https://app.mention-me.com/api) |
+| Provider docs | [https://mention-me.com/api](https://mention-me.com/api) |
 
 ## Get a key
 
-Create an API key in the Mention Me dashboard at [https://app.mention-me.com/api](https://app.mention-me.com/api).
+See the Mention Me API documentation at [https://mention-me.com/api](https://mention-me.com/api) for how to obtain a key.
+
+Mention Me API keys are account-managed; contact your account manager to enable API access.
 
 ## Log in
 
@@ -33,7 +36,7 @@ Create an API key in the Mention Me dashboard at [https://app.mention-me.com/api
 uvx authsome login mention-me
 ```
 
-A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
 
 <MaskedInputNote />
 
@@ -49,10 +52,10 @@ uvx authsome get mention-me --field status
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("mention-me", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("mention-me", connection="default")
 ```
 
 ```bash Proxy

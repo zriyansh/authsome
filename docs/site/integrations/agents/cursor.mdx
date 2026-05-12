@@ -6,44 +6,33 @@ icon: "code"
 keywords: ["cursor authsome", "cursor credentials", "cursor mcp authsome", "cursor github token", "cursor openai key"]
 ---
 
-[Cursor](https://cursor.sh) is an AI-first code editor. Its agent surface includes inline AI calls, MCP servers, and shell tool execution. Authsome plugs in at the shell layer: any tool the Cursor agent runs through `uvx authsome run --` gets fresh credentials injected automatically.
+[Cursor](https://cursor.com) is an AI-first code editor. Its agent surface includes inline AI calls, MCP servers, and shell-tool execution. Authsome plugs in at the MCP layer: register your MCP servers with authsome wrappers, and the proxy injects fresh credentials whenever a tool calls an external service.
 
 <Prompt
-  description="**Wire Cursor's terminal tool to authsome.** Open this prompt directly in Cursor to apply it."
+  description="**Wrap your MCP servers with authsome.** Open this prompt in Cursor to apply it."
   icon="terminal"
   iconType="solid"
   actions={["copy", "cursor"]}
 >
-Update my Cursor terminal tool so every shell command the agent runs goes through authsome's proxy.
+Update my Cursor MCP server config so every command goes through authsome's auth proxy.
 
-1. Open Cursor settings → tools → Terminal.
-2. Change the terminal command to: `uvx authsome run -- /bin/zsh -i` (or `/bin/bash -i` on Linux/WSL).
-3. Confirm `uvx authsome list` from the agent's terminal shows my connected providers.
-4. If `authsome` isn't installed, install it with `pip install authsome` first, then log me into GitHub and OpenAI.
+1. Open Cursor settings → MCP.
+2. For each MCP server entry, change the `command` to `uvx` and prepend `authsome run --` to its `args`. Example: a server originally launched as `python /path/to/server.py` becomes `command: "uvx", args: ["authsome", "run", "--", "python", "/path/to/server.py"]`.
+3. If `authsome` isn't installed, install it with `pip install authsome` first, then log me into GitHub and OpenAI.
+4. Restart Cursor so the new MCP config is loaded.
 
-Verify by asking the agent to run `uvx authsome run -- env | grep -E "PROXY|TOKEN|API_KEY"` and confirm the placeholder values are present.
+Verify by asking a Cursor agent to call one of the MCP servers and confirm the call succeeds without an `OPENAI_API_KEY` or `GITHUB_TOKEN` being set in Cursor's own environment.
 </Prompt>
 
 ## What you get
 
-- Cursor's agent shells out without ever seeing raw secrets.
+- MCP servers wrapped by `authsome run` get tokens injected into outbound HTTP requests automatically. The server process never sees the raw secret.
 - One credential vault shared with the regular CLI, with Claude Code, and with anything else on the machine.
-- MCP servers wrapped by `authsome run` inherit the same credential model.
 - Multi-account flows work the same as on the CLI.
 
-## Recommended pattern: wrap shell tools
+## Recommended pattern: wrap MCP servers
 
-Open Cursor's settings → tools → Terminal, and prefix the shell command Cursor uses with `uvx authsome run --`. For example:
-
-```text
-uvx authsome run -- /bin/zsh -i
-```
-
-Every command the agent runs in that terminal inherits `HTTP_PROXY` / `HTTPS_PROXY` and placeholder env vars. Outbound API calls to matched provider hosts are authenticated at the proxy layer.
-
-## Wrap an MCP server
-
-When you add an MCP server in Cursor's settings, prefix its launch command with `authsome run --`:
+Cursor reads MCP server definitions from `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` in a workspace. Wrap each server's launch command with `authsome run --`:
 
 ```json
 {
@@ -63,10 +52,10 @@ The MCP server runs behind the proxy. Any third-party API calls it makes use aut
 Cursor agents that run Python directly can use the library:
 
 ```python
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-token = ctx.auth.get_access_token("github", connection="default")
+auth = create_auth_service()
+token = auth.get_access_token("github", connection="default")
 ```
 
 See [Python library](/reference/python-library).

@@ -23,10 +23,10 @@ OpenCode sees placeholder env vars (`OPENAI_API_KEY=authsome-proxy-managed`) but
 For OpenCode workflows that include Python tools or scripts, pull credentials directly:
 
 ```python
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("openai", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("openai", connection="default")
 ```
 
 See [Python library](/reference/python-library).

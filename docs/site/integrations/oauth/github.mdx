@@ -39,7 +39,7 @@ GitHub does not support Dynamic Client Registration, so you need to register an 
     Set **Authorization callback URL** to:
 
     ```text
-    http://127.0.0.1:7999/callback
+    http://127.0.0.1:7998/auth/callback/oauth
     ```
 
     This is the only callback URL authsome's PKCE flow listens on.
@@ -59,13 +59,13 @@ What happens:
 
 <Steps>
   <Step title="Client credential collection (first time only)">
-    Authsome opens a local form at `http://127.0.0.1:7999`. Paste the `client_id` and `client_secret`. They are encrypted and stored under your profile, then reused on every subsequent login.
+    Authsome opens a local form at `http://127.0.0.1:7998`. Paste the `client_id` and `client_secret`. They are encrypted and stored under your profile, then reused on every subsequent login.
   </Step>
   <Step title="Authorization redirect">
     A second browser window opens to `https://github.com/login/oauth/authorize`. Approve the requested scopes.
   </Step>
   <Step title="Token exchange">
-    GitHub redirects to `http://127.0.0.1:7999/callback` with an authorization code. Authsome exchanges it for an access token and stores the encrypted record.
+    GitHub redirects to `http://127.0.0.1:7998/auth/callback/oauth` with an authorization code. Authsome exchanges it for an access token and stores the encrypted record.
   </Step>
   <Step title="Confirmation">
     The terminal prints `Successfully logged in to github (default).`
@@ -136,11 +136,11 @@ uvx authsome export github --connection personal --format env
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 import httpx
 
-ctx = AuthsomeContext.create()
-token = ctx.auth.get_access_token("github", connection="default")
+auth = create_auth_service()
+token = auth.get_access_token("github", connection="default")
 
 r = httpx.get(
     "https://api.github.com/user",
@@ -178,7 +178,7 @@ The schema is documented in [Provider schema](/reference/provider-schema).
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `redirect_uri_mismatch` at github.com | OAuth app callback URL is wrong | Set it to `http://127.0.0.1:7999/callback` exactly. |
+| `redirect_uri_mismatch` at github.com | OAuth app callback URL is wrong | Set it to `http://127.0.0.1:7998/auth/callback/oauth` exactly. |
 | Browser opens but the form is blank | Daemon not running or port held | `uvx authsome doctor` and check that port 7998 is free. |
 | `Bad credentials` after a successful login | Token revoked at GitHub | `uvx authsome login github --force` to re-authenticate. |
 | Refresh fails after long idle | GitHub access tokens do not expire by default; refresh is rarely needed | If the connection shows `expired`, run `uvx authsome login github --force`. |

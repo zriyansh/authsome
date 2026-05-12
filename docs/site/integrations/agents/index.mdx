@@ -8,7 +8,7 @@ keywords: ["agent credential management", "agent oauth", "agent api keys", "auth
 Authsome is provider-side, not framework-side. It manages credentials for the services your agents call. Any agent that makes HTTP requests can use authsome through one of two patterns:
 
 - **Run under the proxy.** `uvx authsome run -- <your agent>`. Headers are injected at request time. The agent's environment never contains real secrets.
-- **Use the Python library.** `ctx.auth.get_access_token("provider")` to fetch a fresh token, then pass it to your client of choice.
+- **Use the Python library.** `auth.get_access_token("provider")` to fetch a fresh token, then pass it to your client of choice.
 
 This section has a page per agent framework with the install path, the recommended pattern, and any framework-specific notes.
 
@@ -63,10 +63,10 @@ The agent runs as a subprocess of authsome. A local HTTP proxy intercepts outbou
 ### Library (recommended when you need control)
 
 ```python
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-token = ctx.auth.get_access_token("github", connection="default")
+auth = create_auth_service()
+token = auth.get_access_token("github", connection="default")
 ```
 
 Direct call into authsome's auth layer. Returns a usable token. Refresh is silent. See [Python library](/reference/python-library).

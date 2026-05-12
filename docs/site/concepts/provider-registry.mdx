@@ -22,7 +22,7 @@ This means you can override any bundled provider, for example, to point GitHub a
 
 ```text
 $ uvx authsome list
-Providers: 35 total, 2 connected
+Providers: 45 total, 2 connected
 
 Provider                     Source    Auth      Connection  Status
 GitHub [github]              bundled   oauth2    default     connected
@@ -73,14 +73,4 @@ Two ways:
 1. **Drop a file at `~/.authsome/providers/<name>.json`.** Authsome picks it up on the next CLI invocation.
 2. **Register through the CLI.** `uvx authsome register ./acmecrm.json` validates the JSON, copies it into `~/.authsome/providers/`, and confirms the new provider appears in `uvx authsome list`.
 
-See [Custom providers](/guides/custom-providers) for a full walkthrough.
-
-## Override a bundled provider
-
-To override a bundled provider, for example, to add a scope to GitHub, copy the bundled JSON, edit it, and place it under `~/.authsome/providers/github.json`. Authsome resolves your file first.
-
-```bash
-uvx authsome inspect github > ~/.authsome/providers/github.json
-# edit the file
-uvx authsome list   # source now shows "custom" for github
-```
+See [Custom providers](/guides/custom-providers#override-a-bundled-provider) for the override walkthrough and full add-a-provider guide.

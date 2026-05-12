@@ -6,6 +6,7 @@ icon: "intercom"
 keywords: ["intercom api key authsome", "intercom key broker", "intercom agent credentials", "authsome intercom"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -22,11 +23,13 @@ Intercom uses a long-lived API key. Authsome stores the key encrypted in the loc
 | Header | `Authorization: Bearer <key>` |
 | Proxy host | `api.intercom.io` |
 | Env var | `INTERCOM_API_KEY` |
-| Where to get a key | [https://app.intercom.com/a/apps/_/developer-hub/access-tokens](https://app.intercom.com/a/apps/_/developer-hub/access-tokens) |
+| Where to get a key | [https://app.intercom.com/a/developer-hub](https://app.intercom.com/a/developer-hub) |
 
 ## Get a key
 
-Create an API key in the Intercom dashboard at [https://app.intercom.com/a/apps/_/developer-hub/access-tokens](https://app.intercom.com/a/apps/_/developer-hub/access-tokens).
+Create an API key in the Intercom dashboard at [https://app.intercom.com/a/developer-hub](https://app.intercom.com/a/developer-hub).
+
+Intercom access tokens live under your workspace's developer hub. Replace `_` placeholders in the URL with your real workspace.
 
 ## Log in
 
@@ -34,7 +37,7 @@ Create an API key in the Intercom dashboard at [https://app.intercom.com/a/apps/
 uvx authsome login intercom
 ```
 
-A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
 
 <MaskedInputNote />
 
@@ -50,10 +53,10 @@ uvx authsome get intercom --field status
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("intercom", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("intercom", connection="default")
 ```
 
 ```bash Proxy

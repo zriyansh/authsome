@@ -11,17 +11,17 @@ keywords: ["llamaindex authsome", "llamaindex credentials", "llamaindex oauth", 
 ## Pattern 1: pass tokens to constructors
 
 ```python
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 from llama_index.core import Settings
 from llama_index.llms.openai import OpenAI
 from llama_index.readers.github import GithubRepositoryReader, GithubClient
 
-ctx = AuthsomeContext.create()
+auth = create_auth_service()
 
-Settings.llm = OpenAI(api_key=ctx.auth.get_access_token("openai"))
+Settings.llm = OpenAI(api_key=auth.get_access_token("openai"))
 
 reader = GithubRepositoryReader(
-    github_client=GithubClient(ctx.auth.get_access_token("github")),
+    github_client=GithubClient(auth.get_access_token("github")),
     owner="agentrhq",
     repo="authsome",
 )
@@ -46,7 +46,7 @@ LlamaIndex's data readers cover dozens of services (Notion, Confluence, Slack, G
 
 - Check `uvx authsome list` for the matching provider name.
 - If bundled, log in: `uvx authsome login <provider>`.
-- Pass `ctx.auth.get_access_token("<provider>")` to the reader's constructor.
+- Pass `auth.get_access_token("<provider>")` to the reader's constructor.
 
 For services not bundled, see [Custom providers](/guides/custom-providers).
 
@@ -60,8 +60,8 @@ docs_work = reader_work.load_data()
 with:
 
 ```python
-ctx.auth.get_access_token("github", connection="personal")
-ctx.auth.get_access_token("github", connection="work")
+auth.get_access_token("github", connection="personal")
+auth.get_access_token("github", connection="work")
 ```
 
 See [Multiple connections per provider](/guides/multiple-connections).
@@ -70,7 +70,7 @@ See [Multiple connections per provider](/guides/multiple-connections).
 
 <Columns cols={2}>
   <Card title="Python library" icon="code" href="/reference/python-library">
-    `AuthsomeContext` and the auth-layer API.
+    `AuthService` and the auth-layer API.
   </Card>
   <Card title="Custom providers" icon="puzzle-piece" href="/guides/custom-providers">
     Add a data-source provider authsome doesn't ship.

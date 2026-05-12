@@ -5,6 +5,7 @@ description: "Store and use your G2 API key with authsome. Local encrypted vault
 keywords: ["g2 api key authsome", "g2 key broker", "g2 agent credentials", "authsome g2"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -21,11 +22,13 @@ G2 uses a long-lived API key. Authsome stores the key encrypted in the local vau
 | Header | `Authorization: Token <key>` |
 | Proxy host | `api.g2.com` |
 | Env var | `G2_API_TOKEN` |
-| Where to get a key | [https://www.g2.com/api/v2/docs](https://www.g2.com/api/v2/docs) |
+| Provider docs | [https://api.g2.com/](https://api.g2.com/) |
 
 ## Get a key
 
-Create an API key in the G2 dashboard at [https://www.g2.com/api/v2/docs](https://www.g2.com/api/v2/docs).
+See the G2 API documentation at [https://api.g2.com/](https://api.g2.com/) for how to obtain a key.
+
+G2 API access is negotiated with G2's team; there is no self-serve key dashboard.
 
 ## Log in
 
@@ -33,7 +36,7 @@ Create an API key in the G2 dashboard at [https://www.g2.com/api/v2/docs](https:
 uvx authsome login g2
 ```
 
-A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
 
 <MaskedInputNote />
 
@@ -49,10 +52,10 @@ uvx authsome get g2 --field status
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("g2", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("g2", connection="default")
 ```
 
 ```bash Proxy

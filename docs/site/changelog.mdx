@@ -9,7 +9,7 @@ keywords: ["authsome changelog", "authsome release notes", "authsome version his
 A curated summary of authsome releases. For the full per-commit log, see [CHANGELOG.md](https://github.com/agentrhq/authsome/blob/main/CHANGELOG.md) in the repository.
 
 <Update label="0.2.4" description="2026-05-08">
-  **Interactive dashboard.** The local daemon now serves an interactive dashboard at `/overview`. Lime-themed UI matching the marketing site palette. Per-provider detail panes for OAuth and API-key connections.
+  **Interactive dashboard.** The local daemon now serves an interactive dashboard at `/ui/`. Lime-themed UI matching the marketing site palette. Per-provider detail panes for OAuth and API-key connections.
 
   **Hosted daemon deployment.** Added `AUTHSOME_DAEMON_URL` (client-side) and `AUTHSOME_SERVER_BASE_URL` (server-side) for shared internal deployments. See [Hosted deployment model](/security/hosted-deployment).
 
@@ -43,7 +43,7 @@ A curated summary of authsome releases. For the full per-commit log, see [CHANGE
 </Update>
 
 <Update label="0.2.0" description="2026-04-28">
-  **Architectural restructure.** Vault and AuthLayer split into separate layers with a documented protocol boundary. Public Python API moved (`AuthClient` → `AuthsomeContext`). CLI commands and flags are unchanged. See [Architecture](/concepts/architecture).
+  **Architectural restructure.** Vault and AuthLayer split into separate layers with a documented protocol boundary. Public Python API consolidated around `AuthService` and `AuthLayer` (re-exported from the top-level `authsome` package). CLI commands and flags are unchanged. See [Architecture](/concepts/architecture).
 
   **Browser bridge for sensitive input.** OAuth `client_secret` and API keys are now collected through a local browser form (or `getpass` fallback). Sensitive values are no longer accepted as command-line arguments.
 
@@ -53,7 +53,7 @@ A curated summary of authsome releases. For the full per-commit log, see [CHANGE
 
   **mitmproxy CA injection.** Subprocesses started by `authsome run` get a combined system + mitmproxy CA bundle so SDKs trust the proxy by default.
 
-  ⚠ **Breaking:** `AuthClient` is replaced by `AuthsomeContext`. Library users should switch to `from authsome.context import AuthsomeContext`. See [Python library](/reference/python-library).
+  ⚠ **Breaking:** the older `AuthClient` entry point is gone. Library users should switch to `from authsome.server.dependencies import create_auth_service`. See [Python library](/reference/python-library).
 </Update>
 
 <Update label="0.1.x" description="up to 2026-04-24">

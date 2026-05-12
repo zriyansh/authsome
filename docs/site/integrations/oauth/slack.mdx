@@ -6,6 +6,7 @@ icon: "slack"
 keywords: ["slack oauth cli", "slack access token broker", "authsome slack", "slack agent credentials"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
 
@@ -29,12 +30,12 @@ Slack is a bundled OAuth2 provider in authsome. Workspace channels and chat writ
 
 ## Prerequisites
 
-You need to register an OAuth app with Slack once. Create a Slack app in the API portal. Under OAuth & Permissions, add `http://127.0.0.1:7999/callback` as a redirect URL.
+You need to register an OAuth app with Slack once. Create a Slack app in the API portal. Under OAuth & Permissions, add `http://127.0.0.1:7998/auth/callback/oauth` as a redirect URL.
 
 The redirect URI must be:
 
 ```text
-http://127.0.0.1:7999/callback
+http://127.0.0.1:7998/auth/callback/oauth
 ```
 
 This is the only callback URL authsome's PKCE flow listens on.
@@ -51,7 +52,7 @@ Dashboard: [https://api.slack.com/apps](https://api.slack.com/apps).
 uvx authsome login slack
 ```
 
-The first time, authsome opens a local form at `http://127.0.0.1:7999` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://slack.com/oauth/v2/authorize` for the authorization step.
+The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://slack.com/oauth/v2/authorize` for the authorization step.
 
 Verify:
 
@@ -84,10 +85,10 @@ uvx authsome login slack --connection work
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-token = ctx.auth.get_access_token("slack", connection="default")
+auth = create_auth_service()
+token = auth.get_access_token("slack", connection="default")
 ```
 
 ```bash Proxy

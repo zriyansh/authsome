@@ -11,19 +11,19 @@ keywords: ["langchain authsome", "langchain credentials", "langchain oauth", "la
 ## Pattern 1: pass tokens at construction
 
 ```python
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 from langchain_openai import ChatOpenAI
 from langchain_community.tools.github.tool import GitHubAction
 
-ctx = AuthsomeContext.create()
+auth = create_auth_service()
 
 llm = ChatOpenAI(
-    api_key=ctx.auth.get_access_token("openai"),
+    api_key=auth.get_access_token("openai"),
     model="gpt-4o-mini",
 )
 
 github = GitHubAction(
-    github_access_token=ctx.auth.get_access_token("github"),
+    github_access_token=auth.get_access_token("github"),
 )
 ```
 
@@ -47,7 +47,7 @@ Many LangChain tools (`GitHubToolkit`, `SerpAPIWrapper`, `BraveSearch`, etc.) re
 from langchain_community.utilities import SerpAPIWrapper
 
 # pattern 1: pass directly
-search = SerpAPIWrapper(serpapi_api_key=ctx.auth.get_access_token("serpapi"))
+search = SerpAPIWrapper(serpapi_api_key=auth.get_access_token("serpapi"))
 
 # pattern 2: rely on env-var injection from the proxy
 import os
@@ -63,8 +63,8 @@ For tools that authsome doesn't bundle, add a [custom provider](/guides/custom-p
 ## Multi-account workflows
 
 ```python
-work = ctx.auth.get_access_token("github", connection="work")
-personal = ctx.auth.get_access_token("github", connection="personal")
+work = auth.get_access_token("github", connection="work")
+personal = auth.get_access_token("github", connection="personal")
 ```
 
 See [Multiple connections per provider](/guides/multiple-connections).

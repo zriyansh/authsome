@@ -6,14 +6,14 @@ icon: "microchip"
 keywords: ["nanoclaw authsome", "openclaw authsome", "hermesagent authsome", "lightweight agent credentials"]
 ---
 
-NanoClaw, OpenClaw, and HermesAgent are small Python agent runners. They don't bundle credential management. Authsome fills that gap with two interchangeable patterns.
+NanoClaw, OpenClaw, and HermesAgent are lightweight Python agent runners in the agentr ecosystem. They don't bundle credential management. Authsome fills that gap with two interchangeable patterns. The same patterns work for any Python-native agent runner.
 
 ## Pattern 1: run under the proxy
 
 ```bash
 uvx authsome login github
 uvx authsome login openai
-uvx authsome run -- python -m nanoclaw    # or openclaw, hermesagent
+uvx authsome run -- python -m <your_runner>
 ```
 
 The runner sees placeholder env vars. Outbound HTTPS to matched providers is authenticated at the proxy layer.
@@ -23,16 +23,15 @@ The runner sees placeholder env vars. Outbound HTTPS to matched providers is aut
 These runners are Python-native. Skip the proxy and call authsome directly from your agent code:
 
 ```python
-from authsome.context import AuthsomeContext
-from nanoclaw import Agent
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
+auth = create_auth_service()
 
-agent = Agent(
-    github_token=ctx.auth.get_access_token("github"),
-    openai_key=ctx.auth.get_access_token("openai"),
-)
-agent.run()
+github_token = auth.get_access_token("github")
+openai_key = auth.get_access_token("openai")
+
+# Pass to your runner's agent constructor however it expects credentials
+# (env vars, kwargs, config object: runner-specific).
 ```
 
 Refresh is silent. The agent never holds an expired token long enough to matter.
@@ -54,6 +53,6 @@ See [Python library](/reference/python-library) for the full surface.
     The proxy injection model.
   </Card>
   <Card title="Python library" icon="code" href="/reference/python-library">
-    `AuthsomeContext` and the auth-layer API.
+    `AuthService` and the auth-layer API.
   </Card>
 </Columns>

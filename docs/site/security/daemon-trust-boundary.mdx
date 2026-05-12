@@ -25,7 +25,7 @@ This is sufficient for a single-developer laptop. It is not sufficient for share
 | Network attackers on the LAN | Cannot connect. Daemon binds to 127.0.0.1 only. |
 | Internet attackers | Cannot connect. Same reason. |
 | Other users' shell sessions on the same host (Unix) | Can connect, but cannot decrypt records they don't have the master key for. Encryption is still doing work. |
-| Tampering with an in-flight OAuth callback | Limited. The callback URL is `127.0.0.1:7999/callback`. Only same-host traffic can reach it. |
+| Tampering with an in-flight OAuth callback | Limited. The callback URL is `127.0.0.1:7998/auth/callback/oauth`. Only same-host traffic can reach it. |
 
 ## What the boundary does not protect against
 

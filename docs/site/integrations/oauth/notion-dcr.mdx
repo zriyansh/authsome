@@ -6,6 +6,7 @@ icon: "notion"
 keywords: ["notion (dcr) oauth cli", "notion (dcr) access token broker", "authsome notion_dcr", "notion_dcr agent credentials"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
 
@@ -37,7 +38,7 @@ Notion's MCP endpoint (`mcp.notion.com`) supports Dynamic Client Registration. Y
 uvx authsome login notion_dcr
 ```
 
-The first time, authsome opens a local form at `http://127.0.0.1:7999` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://mcp.notion.com/authorize` for the authorization step.
+The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://mcp.notion.com/authorize` for the authorization step.
 
 Verify:
 
@@ -60,10 +61,10 @@ uvx authsome login notion_dcr --connection work
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-token = ctx.auth.get_access_token("notion_dcr", connection="default")
+auth = create_auth_service()
+token = auth.get_access_token("notion_dcr", connection="default")
 ```
 
 ```bash Proxy

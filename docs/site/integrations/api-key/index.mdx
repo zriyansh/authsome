@@ -60,7 +60,7 @@ There is no OAuth dance. The flow is:
     ```
   </Step>
   <Step title="Paste the key into the browser form">
-    Authsome opens `http://127.0.0.1:7999` with a masked input. The key never goes through the shell.
+    Authsome opens `http://127.0.0.1:7998` with a masked input. The key never goes through the shell.
   </Step>
   <Step title="Pattern validation (where applicable)">
     Some providers ship a regex (`key_pattern`). If your input doesn't match, authsome rejects it with a hint.
@@ -93,10 +93,10 @@ eval "$(uvx authsome export openai --format env)"
 ### From Python
 
 ```python
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("openai", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("openai", connection="default")
 ```
 
 The function `get_access_token` is shared with the OAuth path. For API-key providers it returns the stored key.

@@ -5,6 +5,7 @@ description: "Store and use your Apollo API key with authsome. Local encrypted v
 keywords: ["apollo api key authsome", "apollo key broker", "apollo agent credentials", "authsome apollo"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -21,11 +22,11 @@ Apollo uses a long-lived API key. Authsome stores the key encrypted in the local
 | Header | `Authorization: Bearer <key>` |
 | Proxy host | `api.apollo.io` |
 | Env var | `APOLLO_API_KEY` |
-| Where to get a key | [https://app.apollo.io/#/settings/integrations/api](https://app.apollo.io/#/settings/integrations/api) |
+| Where to get a key | [https://app.apollo.io/#/settings/api](https://app.apollo.io/#/settings/api) |
 
 ## Get a key
 
-Create an API key in the Apollo dashboard at [https://app.apollo.io/#/settings/integrations/api](https://app.apollo.io/#/settings/integrations/api).
+Create an API key in the Apollo dashboard at [https://app.apollo.io/#/settings/api](https://app.apollo.io/#/settings/api).
 
 ## Log in
 
@@ -33,7 +34,7 @@ Create an API key in the Apollo dashboard at [https://app.apollo.io/#/settings/i
 uvx authsome login apollo
 ```
 
-A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
 
 <MaskedInputNote />
 
@@ -49,10 +50,10 @@ uvx authsome get apollo --field status
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("apollo", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("apollo", connection="default")
 ```
 
 ```bash Proxy

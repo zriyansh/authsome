@@ -20,12 +20,12 @@ The Agents SDK initializes with `OPENAI_API_KEY=authsome-proxy-managed`. Outboun
 ## Alternative: pass the key explicitly
 
 ```python
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 from openai import AsyncOpenAI
 from agents import Agent, Runner, set_default_openai_client
 
-ctx = AuthsomeContext.create()
-client = AsyncOpenAI(api_key=ctx.auth.get_access_token("openai"))
+auth = create_auth_service()
+client = AsyncOpenAI(api_key=auth.get_access_token("openai"))
 set_default_openai_client(client)
 
 agent = Agent(name="my-agent", instructions="...")
@@ -44,7 +44,7 @@ uvx authsome login openai --connection team
 Through the proxy, set the default with `--force`. In code, pass `connection=`:
 
 ```python
-key = ctx.auth.get_access_token("openai", connection="team")
+key = auth.get_access_token("openai", connection="team")
 client = AsyncOpenAI(api_key=key)
 ```
 

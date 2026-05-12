@@ -5,6 +5,7 @@ description: "Store and use your Rewardful API key with authsome. Local encrypte
 keywords: ["rewardful api key authsome", "rewardful key broker", "rewardful agent credentials", "authsome rewardful"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -33,7 +34,7 @@ Create an API key in the Rewardful dashboard at [https://app.getrewardful.com/co
 uvx authsome login rewardful
 ```
 
-A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
 
 <MaskedInputNote />
 
@@ -49,10 +50,10 @@ uvx authsome get rewardful --field status
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("rewardful", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("rewardful", connection="default")
 ```
 
 ```bash Proxy

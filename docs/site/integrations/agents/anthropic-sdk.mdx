@@ -52,14 +52,14 @@ The SDK initializes with `ANTHROPIC_API_KEY=authsome-proxy-managed`. Outbound re
 ## Alternative: pass the key explicitly
 
 ```python
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 from anthropic import Anthropic
 
-ctx = AuthsomeContext.create()
-client = Anthropic(api_key=ctx.auth.get_access_token("anthropic"))
+auth = create_auth_service()
+client = Anthropic(api_key=auth.get_access_token("anthropic"))
 
 resp = client.messages.create(
-    model="claude-sonnet-4-6",
+    model="claude-sonnet-4-5",
     max_tokens=1024,
     messages=[{"role": "user", "content": "ping"}],
 )
@@ -76,7 +76,7 @@ uvx authsome login anthropic --connection team
 In code:
 
 ```python
-key = ctx.auth.get_access_token("anthropic", connection="team")
+key = auth.get_access_token("anthropic", connection="team")
 client = Anthropic(api_key=key)
 ```
 

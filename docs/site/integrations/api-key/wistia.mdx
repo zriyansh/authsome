@@ -5,6 +5,7 @@ description: "Store and use your Wistia API key with authsome. Local encrypted v
 keywords: ["wistia api key authsome", "wistia key broker", "wistia agent credentials", "authsome wistia"]
 ---
 
+import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -21,11 +22,13 @@ Wistia uses a long-lived API key. Authsome stores the key encrypted in the local
 | Header | `Authorization: Bearer <key>` |
 | Proxy host | `api.wistia.com` |
 | Env var | `WISTIA_API_KEY` |
-| Where to get a key | [https://account.wistia.com/account/api](https://account.wistia.com/account/api) |
+| Provider docs | [https://wistia.com/support/developers/data-api](https://wistia.com/support/developers/data-api) |
 
 ## Get a key
 
-Create an API key in the Wistia dashboard at [https://account.wistia.com/account/api](https://account.wistia.com/account/api).
+See the Wistia API documentation at [https://wistia.com/support/developers/data-api](https://wistia.com/support/developers/data-api) for how to obtain a key.
+
+Wistia's API keys live at `<your-subdomain>.wistia.com/account/api`.
 
 ## Log in
 
@@ -33,7 +36,7 @@ Create an API key in the Wistia dashboard at [https://account.wistia.com/account
 uvx authsome login wistia
 ```
 
-A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
 
 <MaskedInputNote />
 
@@ -49,10 +52,10 @@ uvx authsome get wistia --field status
 <CodeGroup>
 
 ```python Python library
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-key = ctx.auth.get_access_token("wistia", connection="default")
+auth = create_auth_service()
+key = auth.get_access_token("wistia", connection="default")
 ```
 
 ```bash Proxy
