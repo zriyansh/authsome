@@ -105,8 +105,6 @@ summary {
   cursor: pointer;
   user-select: none;
   transition: color 0.15s;
-  display: inline-flex;
-  align-items: center;
 }
 summary:hover {
   color: var(--accent);
