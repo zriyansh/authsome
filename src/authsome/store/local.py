@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from key_value.aio.protocols.key_value import AsyncKeyValue
-from key_value.aio.stores.filetree import FileTreeStore
+from key_value.aio.stores.disk import DiskStore
 from loguru import logger
 
 from authsome.auth.models.config import GlobalConfig
@@ -23,7 +23,7 @@ class LocalAppStore(AppStore):
     def __init__(self, home_dir: Path) -> None:
         self._home = home_dir
         self._home.mkdir(parents=True, exist_ok=True)
-        self._store = FileTreeStore(data_directory=str(self._home / "kv_store"))
+        self._store = DiskStore(directory=str(self._home / "kv_store"))
 
     @property
     def home(self) -> Path:
