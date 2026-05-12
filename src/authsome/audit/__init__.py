@@ -1,14 +1,4 @@
-"""Audit logging for Authsome operations.
-
-Structured JSON lines are appended via ``log()``. Besides CLI/daemon events
-(``login``, ``logout``, ``export``, ``register``, etc.), the proxy writes:
-
-- **proxy_inject** — Injected credentials for a matched HTTPS request. Typical
-  fields: ``provider``, ``connection`` (if named), ``host``, ``method``, ``path``.
-- **proxy_miss** — No injection because routing found no unique match for an
-  external HTTPS request. Fields: ``host``, ``reason`` (``no_match`` or
-  ``ambiguous``).
-"""
+"""Audit logging for Authsome operations."""
 
 import json
 from pathlib import Path
