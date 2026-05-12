@@ -10,7 +10,8 @@ Two deployment modes share the same layered architecture:
 - **Sidecar mode**. `authsome run -- python agent.py`. Transparent credential injection through an HTTP proxy. No auth code in the agent.
 - **Library mode**. `from authsome.server.dependencies import create_auth_service`. A direct programmatic API.
 
-<Frame caption="Sidecar-mode call graph. Identity and policy gate the vault; the auth layer refreshes when needed; the sidecar writes back, injects the Authorization header, and audits at every step.">
+Sidecar-mode call graph. Identity and policy gate the vault; the auth layer refreshes when needed; the sidecar writes back, injects the Authorization header, and audits at every step.
+
 ```text
 agent
   ↓  HTTP request via HTTP_PROXY=localhost:<port>
@@ -32,7 +33,6 @@ external API
   ↓
 audit        ←  append-only log entry at every step
 ```
-</Frame>
 
 ## The five layers
 
