@@ -5,7 +5,6 @@ description: "Store and use your SavvyCal API key with authsome. Local encrypted
 keywords: ["savvycal api key authsome", "savvycal key broker", "savvycal agent credentials", "authsome savvycal"]
 ---
 
-import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -47,23 +46,27 @@ uvx authsome get savvycal --field status
 
 ## Use the key
 
-<ProxyInjection envVar="SAVVYCAL_API_KEY" secretLabel="key" host="api.savvycal.com" />
+<CodeGroup>
 
-### From a Python agent
-
-```python
+```python Python library
 from authsome.context import AuthsomeContext
 
 ctx = AuthsomeContext.create()
 key = ctx.auth.get_access_token("savvycal", connection="default")
 ```
 
-### As an environment variable
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
 
-```bash
+```bash Environment
 eval "$(uvx authsome export savvycal --format env)"
 echo $SAVVYCAL_API_KEY
 ```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `SAVVYCAL_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.savvycal.com`. The child process never sees the actual value.
 
 ## Multiple keys
 

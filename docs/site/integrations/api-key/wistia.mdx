@@ -5,7 +5,6 @@ description: "Store and use your Wistia API key with authsome. Local encrypted v
 keywords: ["wistia api key authsome", "wistia key broker", "wistia agent credentials", "authsome wistia"]
 ---
 
-import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -47,23 +46,27 @@ uvx authsome get wistia --field status
 
 ## Use the key
 
-<ProxyInjection envVar="WISTIA_API_KEY" secretLabel="key" host="api.wistia.com" />
+<CodeGroup>
 
-### From a Python agent
-
-```python
+```python Python library
 from authsome.context import AuthsomeContext
 
 ctx = AuthsomeContext.create()
 key = ctx.auth.get_access_token("wistia", connection="default")
 ```
 
-### As an environment variable
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
 
-```bash
+```bash Environment
 eval "$(uvx authsome export wistia --format env)"
 echo $WISTIA_API_KEY
 ```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `WISTIA_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.wistia.com`. The child process never sees the actual value.
 
 ## Multiple keys
 

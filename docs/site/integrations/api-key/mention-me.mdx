@@ -5,7 +5,6 @@ description: "Store and use your Mention Me API key with authsome. Local encrypt
 keywords: ["mention me api key authsome", "mention me key broker", "mention-me agent credentials", "authsome mention-me"]
 ---
 
-import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -47,23 +46,27 @@ uvx authsome get mention-me --field status
 
 ## Use the key
 
-<ProxyInjection envVar="MENTIONME_API_KEY" secretLabel="key" host="mention-me.com" />
+<CodeGroup>
 
-### From a Python agent
-
-```python
+```python Python library
 from authsome.context import AuthsomeContext
 
 ctx = AuthsomeContext.create()
 key = ctx.auth.get_access_token("mention-me", connection="default")
 ```
 
-### As an environment variable
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
 
-```bash
+```bash Environment
 eval "$(uvx authsome export mention-me --format env)"
 echo $MENTIONME_API_KEY
 ```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `MENTIONME_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `mention-me.com`. The child process never sees the actual value.
 
 ## Multiple keys
 

@@ -6,7 +6,6 @@ icon: "discord"
 keywords: ["discord oauth cli", "discord access token broker", "authsome discord", "discord agent credentials"]
 ---
 
-import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
 
@@ -82,24 +81,26 @@ uvx authsome login discord --connection work
 
 ## Use the token
 
-### From a Python agent
+<CodeGroup>
 
-```python
+```python Python library
 from authsome.context import AuthsomeContext
 
 ctx = AuthsomeContext.create()
 token = ctx.auth.get_access_token("discord", connection="default")
 ```
 
-<ProxyInjection envVar="DISCORD_ACCESS_TOKEN" secretLabel="token" host="discord.com" />
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
 
-### As an environment variable
-
-```bash
+```bash Environment
 eval "$(uvx authsome export discord --format env)"
 ```
 
-Refresh tokens are never exported. Authsome refreshes silently.
+</CodeGroup>
+
+Under the proxy, authsome sets `DISCORD_ACCESS_TOKEN=authsome-proxy-managed` in the child's environment and injects the real token into outbound requests to `discord.com`. The child process never sees the actual value. Refresh tokens are never exported.
 
 ## Override the bundled definition
 

@@ -245,7 +245,7 @@
       {
         "header": "Product",
         "items": [
-          { "label": "Marketing site", "href": "https://authsome.agentr.dev" },
+          { "label": "Home", "href": "https://authsome.agentr.dev" },
           { "label": "GitHub", "href": "https://github.com/agentrhq/authsome" },
           { "label": "PyPI", "href": "https://pypi.org/project/authsome/" }
         ]

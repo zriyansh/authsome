@@ -6,7 +6,6 @@ icon: "github"
 keywords: ["github oauth cli", "github access token broker", "authsome github", "github pkce flow", "github device code authsome", "github token agent", "github oauth python agent"]
 ---
 
-import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
 
@@ -134,15 +133,15 @@ uvx authsome export github --connection personal --format env
 
 ## Use the token
 
-### From a Python agent
+<CodeGroup>
 
-```python
+```python Python library
 from authsome.context import AuthsomeContext
+import httpx
 
 ctx = AuthsomeContext.create()
 token = ctx.auth.get_access_token("github", connection="default")
 
-import httpx
 r = httpx.get(
     "https://api.github.com/user",
     headers={"Authorization": f"Bearer {token}"},
@@ -150,16 +149,18 @@ r = httpx.get(
 print(r.json())
 ```
 
-<ProxyInjection envVar="GITHUB_ACCESS_TOKEN" secretLabel="token" host="api.github.com" />
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
 
-### As an environment variable
-
-```bash
+```bash Environment
 eval "$(uvx authsome export github --format env)"
 echo $GITHUB_ACCESS_TOKEN
 ```
 
-Refresh tokens are never exported. Authsome refreshes silently.
+</CodeGroup>
+
+Under the proxy, authsome sets `GITHUB_ACCESS_TOKEN=authsome-proxy-managed` in the child's environment and injects the real token into outbound requests to `api.github.com`. The child process never sees the actual value. Refresh tokens are never exported.
 
 ## Override the bundled definition
 

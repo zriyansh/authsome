@@ -1,7 +1,0 @@
-### Through the proxy (recommended)
-
-```bash
-uvx authsome run -- python my_agent.py
-```
-
-Authsome sets `{envVar}=authsome-proxy-managed` in the child's environment so SDKs initialize. The real {secretLabel} is added to outbound requests to `{host}` at the proxy layer. The child process never sees the actual value.

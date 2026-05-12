@@ -6,7 +6,6 @@ icon: "intercom"
 keywords: ["intercom api key authsome", "intercom key broker", "intercom agent credentials", "authsome intercom"]
 ---
 
-import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -48,23 +47,27 @@ uvx authsome get intercom --field status
 
 ## Use the key
 
-<ProxyInjection envVar="INTERCOM_API_KEY" secretLabel="key" host="api.intercom.io" />
+<CodeGroup>
 
-### From a Python agent
-
-```python
+```python Python library
 from authsome.context import AuthsomeContext
 
 ctx = AuthsomeContext.create()
 key = ctx.auth.get_access_token("intercom", connection="default")
 ```
 
-### As an environment variable
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
 
-```bash
+```bash Environment
 eval "$(uvx authsome export intercom --format env)"
 echo $INTERCOM_API_KEY
 ```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `INTERCOM_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.intercom.io`. The child process never sees the actual value.
 
 ## Multiple keys
 

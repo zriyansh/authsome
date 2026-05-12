@@ -6,7 +6,6 @@ icon: "notion"
 keywords: ["notion (dcr) oauth cli", "notion (dcr) access token broker", "authsome notion_dcr", "notion_dcr agent credentials"]
 ---
 
-import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
 
@@ -58,24 +57,26 @@ uvx authsome login notion_dcr --connection work
 
 ## Use the token
 
-### From a Python agent
+<CodeGroup>
 
-```python
+```python Python library
 from authsome.context import AuthsomeContext
 
 ctx = AuthsomeContext.create()
 token = ctx.auth.get_access_token("notion_dcr", connection="default")
 ```
 
-<ProxyInjection envVar="NOTION_ACCESS_TOKEN" secretLabel="token" host="mcp.notion.com" />
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
 
-### As an environment variable
-
-```bash
+```bash Environment
 eval "$(uvx authsome export notion_dcr --format env)"
 ```
 
-Refresh tokens are never exported. Authsome refreshes silently.
+</CodeGroup>
+
+Under the proxy, authsome sets `NOTION_ACCESS_TOKEN=authsome-proxy-managed` in the child's environment and injects the real token into outbound requests to `mcp.notion.com`. The child process never sees the actual value. Refresh tokens are never exported.
 
 ## Override the bundled definition
 

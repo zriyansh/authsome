@@ -5,7 +5,6 @@ description: "Store and use your Postmark API key with authsome. Local encrypted
 keywords: ["postmark api key authsome", "postmark key broker", "postmark agent credentials", "authsome postmark"]
 ---
 
-import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -47,23 +46,27 @@ uvx authsome get postmark --field status
 
 ## Use the key
 
-<ProxyInjection envVar="POSTMARK_API_KEY" secretLabel="key" host="api.postmarkapp.com" />
+<CodeGroup>
 
-### From a Python agent
-
-```python
+```python Python library
 from authsome.context import AuthsomeContext
 
 ctx = AuthsomeContext.create()
 key = ctx.auth.get_access_token("postmark", connection="default")
 ```
 
-### As an environment variable
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
 
-```bash
+```bash Environment
 eval "$(uvx authsome export postmark --format env)"
 echo $POSTMARK_API_KEY
 ```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `POSTMARK_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.postmarkapp.com`. The child process never sees the actual value.
 
 ## Multiple keys
 

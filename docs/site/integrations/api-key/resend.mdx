@@ -5,7 +5,6 @@ description: "Store and use your Resend API key with authsome. Local encrypted v
 keywords: ["resend api key authsome", "resend key broker", "resend agent credentials", "authsome resend"]
 ---
 
-import ProxyInjection from "/snippets/proxy-injection.mdx";
 import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
 import MaskedInputNote from "/snippets/masked-input-note.mdx";
 import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
@@ -47,23 +46,27 @@ uvx authsome get resend --field status
 
 ## Use the key
 
-<ProxyInjection envVar="RESEND_API_KEY" secretLabel="key" host="api.resend.com" />
+<CodeGroup>
 
-### From a Python agent
-
-```python
+```python Python library
 from authsome.context import AuthsomeContext
 
 ctx = AuthsomeContext.create()
 key = ctx.auth.get_access_token("resend", connection="default")
 ```
 
-### As an environment variable
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
 
-```bash
+```bash Environment
 eval "$(uvx authsome export resend --format env)"
 echo $RESEND_API_KEY
 ```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `RESEND_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.resend.com`. The child process never sees the actual value.
 
 ## Multiple keys
 
