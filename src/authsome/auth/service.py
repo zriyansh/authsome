@@ -131,18 +131,78 @@ class AuthService:
         custom_list = sorted(custom_providers.values(), key=lambda p: p.name)
         return {"bundled": bundled_list, "custom": custom_list}
 
-    async def get_provider(self, name: str) -> ProviderDefinition:
-        raw = await self._vault.get(name, collection="providers")
+    async def get_provider(self, provider: str) -> ProviderDefinition:
+        raw = await self._vault.get(provider, collection="providers")
         if raw:
             return ProviderDefinition.model_validate_json(raw)
-        if name in self._bundled:
-            return self._bundled[name]
-        raise ProviderNotFoundError(name)
+        if provider in self._bundled:
+            return self._bundled[provider]
+        raise ProviderNotFoundError(provider)
 
-    async def is_local_provider(self, name: str) -> bool:
+    async def is_local_provider(self, provider: str) -> bool:
         """Check if a provider is a custom/local provider."""
-        val = await self._vault.get(name, collection="providers")
+        val = await self._vault.get(provider, collection="providers")
         return val is not None
+
+    async def proxy_routes(self) -> dict[str, Any]:
+        """Build the list of routes for proxy routing."""
+        from urllib.parse import urlparse
+
+        routes = []
+        for provider_group in await self.list_connections():
+            provider_name = provider_group["name"]
+            selected_connections = provider_group["connections"]
+
+            try:
+                definition = await self.get_provider(provider_name)
+            except Exception:
+                continue
+            if not definition.host_url:
+                continue
+
+            # Find the default connection
+            default_conn = next((c for c in selected_connections if c.get("is_default")), None)
+            if not default_conn:
+                continue
+
+            paths: set[str] = set()
+            if definition.oauth:
+                for raw_url in [
+                    definition.oauth.authorization_url,
+                    definition.oauth.token_url,
+                    definition.oauth.revocation_url,
+                    definition.oauth.device_authorization_url,
+                    (definition.registration.registration_endpoint if definition.registration else None),
+                ]:
+                    if not raw_url:
+                        continue
+                    parsed = urlparse(raw_url)
+                    paths.add(parsed.path or "/")
+
+            routes.append(
+                {
+                    "provider": provider_name,
+                    "connection": default_conn.get("connection_name", "default"),
+                    "host_url": definition.host_url,
+                    "auth_endpoint_paths": sorted(list(paths)),
+                }
+            )
+        routes.sort(key=lambda r: (r["host_url"].startswith("regex:"), r["provider"]))
+        return {"routes": routes}
+
+    async def resolve_credentials(self, **kwargs: Any) -> dict[str, Any]:
+        """Resolve credentials for a provider/connection pair."""
+        provider = kwargs["provider"]
+        connection = kwargs.get("connection")
+        resolved_connection = await self.resolve_connection_name(provider, connection)
+        record = await self.get_connection(provider, resolved_connection)
+        headers = await self.get_auth_headers(provider, resolved_connection)
+        return {
+            "provider": provider,
+            "connection": resolved_connection,
+            "headers": headers,
+            "expires_at": record.expires_at.isoformat() if record.expires_at else None,
+        }
 
     async def register_provider(self, definition: ProviderDefinition, *, force: bool = False) -> None:
         self._validate_provider(definition)

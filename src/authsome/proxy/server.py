@@ -8,7 +8,7 @@ import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 from urllib.parse import urlparse
 
 from loguru import logger
@@ -28,13 +28,13 @@ _HOST_SPECIFICITY_EXACT = 1
 
 
 class ProxyClient(Protocol):
-    async def list_connections(self) -> dict: ...
+    async def list_connections(self) -> Any: ...
 
-    async def get_provider(self, provider: str) -> dict: ...
+    async def get_provider(self, provider: str) -> Any: ...
 
-    async def resolve_credentials(self, **kwargs) -> dict: ...
+    async def resolve_credentials(self, **kwargs: Any) -> Any: ...
 
-    async def proxy_routes(self) -> dict: ...
+    async def proxy_routes(self) -> Any: ...
 
 
 @dataclass(frozen=True)

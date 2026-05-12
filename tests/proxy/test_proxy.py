@@ -652,8 +652,8 @@ class TestProxyCLI:
 
         from authsome.cli.main import cli
 
-        with patch("authsome.cli.context.resolve_runtime_client") as mock_resolve:
-            mock_resolve.return_value = mock.Mock()
+        with patch("authsome.cli.context.resolve_runtime_client", new_callable=mock.AsyncMock) as mock_resolve:
+            mock_resolve.return_value = mock.AsyncMock()
             runner = CliRunner()
             result = runner.invoke(cli, ["run"])
 
@@ -664,8 +664,8 @@ class TestProxyCLI:
 
         from authsome.cli.main import cli
 
-        with patch("authsome.cli.context.resolve_runtime_client") as mock_resolve:
-            mock_resolve.return_value = mock.Mock()
+        with patch("authsome.cli.context.resolve_runtime_client", new_callable=mock.AsyncMock) as mock_resolve:
+            mock_resolve.return_value = mock.AsyncMock()
             with patch("authsome.proxy.runner.ProxyRunner.run", new_callable=mock.AsyncMock) as run_mock:
                 run_mock.return_value = mock.Mock(returncode=0)
 

@@ -60,14 +60,16 @@ def _patch_runtime(mock_client: AsyncMock, monkeypatch: pytest.MonkeyPatch, tmp_
     """
     monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
 
+    from unittest import mock
+
     import authsome.cli.daemon_control as dc
 
-    monkeypatch.setattr(dc, "resolve_runtime_client", lambda: mock_client)
+    monkeypatch.setattr(dc, "resolve_runtime_client", mock.AsyncMock(return_value=mock_client))
 
     import authsome.cli.context as context_mod
     import authsome.cli.main as main_mod
 
-    monkeypatch.setattr(context_mod, "resolve_runtime_client", lambda: mock_client)
+    monkeypatch.setattr(context_mod, "resolve_runtime_client", mock.AsyncMock(return_value=mock_client))
     monkeypatch.setattr(main_mod.audit, "setup", lambda *a, **kw: None)
     monkeypatch.setattr(main_mod.audit, "log", lambda *a, **kw: None)
 
