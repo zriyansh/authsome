@@ -12,13 +12,13 @@ The provider must support the device authorization grant. In a provider definiti
 ```json
 {
   "oauth": {
-    "supports_device_flow": true,
+    "supports_device_code": true,
     "device_authorization_url": "https://github.com/login/device/code"
   }
 }
 ```
 
-GitHub, Google, Microsoft, and many others support it. Check `uvx authsome inspect <provider>` for `supports_device_flow: true`. [Postiz](/integrations/oauth/postiz) is the only bundled provider that defaults to the device code flow.
+GitHub, Google, Microsoft, and many others support it. Check `uvx authsome inspect <provider>` for `supports_device_code: true`. [Postiz](/integrations/oauth/postiz) is the only bundled provider that defaults to the device code flow.
 
 ## Run the login
 

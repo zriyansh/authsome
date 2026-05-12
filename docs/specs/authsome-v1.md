@@ -394,7 +394,7 @@ profile:<profile_name>:<provider_name>:client
     "device_authorization_url": null,
     "scopes": ["repo", "read:user"],
     "pkce": true,
-    "supports_device_flow": false,
+    "supports_device_code": false,
     "supports_dcr": false
   },
   "client": {

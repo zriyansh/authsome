@@ -19,7 +19,7 @@
       "crm.objects.owners.read"
     ],
     "pkce": false,
-    "supports_device_flow": false,
+    "supports_device_code": false,
     "supports_dcr": false
   },
   "export": {
