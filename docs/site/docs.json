@@ -52,19 +52,6 @@
             ]
           },
           {
-            "group": "Guides",
-            "icon": "book",
-            "pages": [
-              "guides/login-with-oauth",
-              "guides/use-api-keys",
-              "guides/run-agents-with-proxy",
-              "guides/headless-device-code",
-              "guides/multiple-connections",
-              "guides/profiles",
-              "guides/custom-providers"
-            ]
-          },
-          {
             "group": "Concepts",
             "icon": "lightbulb",
             "pages": [
@@ -88,17 +75,31 @@
             ]
           },
           {
-            "group": "Reference",
-            "icon": "code",
+            "group": "Project",
+            "icon": "compass",
             "pages": [
-              "reference/cli",
-              "reference/provider-schema",
-              "reference/environment-variables",
-              "reference/bundled-providers",
-              "reference/file-layout",
-              "reference/python-library",
-              "reference/daemon-api",
-              "reference/audit-log"
+              "roadmap",
+              "changelog",
+              "compared"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Guides",
+        "icon": "book",
+        "groups": [
+          {
+            "group": "Guides",
+            "icon": "book",
+            "pages": [
+              "guides/login-with-oauth",
+              "guides/use-api-keys",
+              "guides/run-agents-with-proxy",
+              "guides/headless-device-code",
+              "guides/multiple-connections",
+              "guides/profiles",
+              "guides/custom-providers"
             ]
           },
           {
@@ -111,14 +112,25 @@
               "troubleshooting/proxy-networking",
               "troubleshooting/daemon-issues"
             ]
-          },
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "icon": "code",
+        "groups": [
           {
-            "group": "Project",
-            "icon": "compass",
+            "group": "Reference",
+            "icon": "code",
             "pages": [
-              "roadmap",
-              "changelog",
-              "compared"
+              "reference/cli",
+              "reference/provider-schema",
+              "reference/environment-variables",
+              "reference/bundled-providers",
+              "reference/file-layout",
+              "reference/python-library",
+              "reference/daemon-api",
+              "reference/audit-log"
             ]
           }
         ]
