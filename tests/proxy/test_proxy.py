@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -729,10 +729,11 @@ class TestProxyRunner:
         assert "delete-certificate" in cmd
         assert "mitmproxy" in cmd
 
-    def test_runner_adds_keychain_cert_on_macos_and_removes_after_run(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_runner_adds_keychain_cert_on_macos_and_removes_after_run(self, tmp_path: Path) -> None:
         from authsome.proxy.runner import ProxyRunner
 
-        auth = _make_auth(tmp_path)
+        auth = await _make_auth(tmp_path)
         runner = ProxyRunner(auth)
         fake_ca = tmp_path / "fake-ca.pem"
         fake_ca.write_text("fake")
@@ -745,7 +746,7 @@ class TestProxyRunner:
             patch.object(ProxyRunner, "_remove_ca_from_macos_keychain") as remove_mock,
         ):
             run_mock.return_value = Mock(returncode=0)
-            runner.run(["echo", "hello"])
+            await runner.run(["echo", "hello"])
 
         add_mock.assert_called_once()
         remove_mock.assert_called_once()
