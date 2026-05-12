@@ -12,7 +12,6 @@ import re
 from datetime import timedelta
 from typing import Any
 
-import requests as http_client
 from loguru import logger
 
 from authsome import audit
@@ -797,57 +796,38 @@ class AuthService:
 
     def _refresh_token(self, record: ConnectionRecord, provider_name: str) -> ConnectionRecord:
         definition = self.get_provider(provider_name)
-        if definition.oauth is None:
-            raise RefreshFailedError("No OAuth config", provider=provider_name)
-        if record.refresh_token is None:
-            raise RefreshFailedError("No refresh token available", provider=provider_name)
+        state_record = self._get_or_create_provider_state(provider_name)
 
         client_record = self._get_provider_client_credentials(provider_name)
         client_id = client_record.client_id if client_record else None
         client_secret = client_record.client_secret if client_record else None
 
-        if not client_id:
-            raise RefreshFailedError("No client_id available for refresh", provider=provider_name)
-
-        state_record = self._get_or_create_provider_state(provider_name)
-        payload: dict[str, str] = {
-            "grant_type": "refresh_token",
-            "refresh_token": record.refresh_token,
-            "client_id": client_id,
-        }
-        if client_secret:
-            payload["client_secret"] = client_secret
-
         base_url = record.base_url or (client_record.base_url if client_record else None)
         resolved_definition = definition.resolve_urls(base_url)
-        if not resolved_definition.oauth:
-            raise RefreshFailedError("Resolved provider missing OAuth configuration", provider=provider_name)
 
+        handler_cls = _FLOW_HANDLERS.get(definition.flow)
+        if handler_cls is None:
+            raise RefreshFailedError(f"Unsupported flow type: {definition.flow}", provider=provider_name)
+
+        handler = handler_cls()
         try:
-            resp = http_client.post(
-                resolved_definition.oauth.token_url,
-                data=payload,
-                headers={"Accept": "application/json"},
-                timeout=30,
+            record = handler.refresh(
+                provider=resolved_definition,
+                record=record,
+                client_id=client_id,
+                client_secret=client_secret,
             )
-            resp.raise_for_status()
-            token = resp.json()
         except Exception as exc:
             state_record.last_refresh_at = utc_now()
             state_record.last_refresh_error = str(exc)
             self._save_provider_state(state_record)
+            if isinstance(exc, RefreshFailedError):
+                raise
             raise RefreshFailedError(str(exc), provider=provider_name) from exc
 
-        now = utc_now()
-        record.access_token = token["access_token"]
-        if "refresh_token" in token:
-            record.refresh_token = token["refresh_token"]
-        if "expires_in" in token:
-            record.expires_at = now + timedelta(seconds=int(token["expires_in"]))
-        record.obtained_at = now
-        record.status = ConnectionStatus.CONNECTED
         self._save_connection(record)
 
+        now = utc_now()
         state_record.last_refresh_at = now
         state_record.last_refresh_error = None
         self._save_provider_state(state_record)
