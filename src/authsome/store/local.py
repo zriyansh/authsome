@@ -43,7 +43,7 @@ class LocalAppStore(AppStore):
     def ensure_initialized(self) -> None:
         if self._run(self._store.get("version", collection="config")) is not None:
             return
-        self._run(self._store.put("version", {"data": "2"}, collection="config"))
+        self._run(self._store.put("version", {"data": "1"}, collection="config"))
         self.save_config(GlobalConfig())
 
     def is_healthy(self) -> bool:

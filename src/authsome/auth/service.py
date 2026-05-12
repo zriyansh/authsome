@@ -961,7 +961,7 @@ class AuthService:
 
     def _save_provider_state(self, state: ProviderStateRecord) -> None:
         key = build_store_key(profile=self._identity, provider=state.provider, record_type="state")
-        self._vault.put(key, state.model_dump_json(), profile=self._identity)
+        self._vault.put(key, state.model_dump_json(), collection=self._coll)
 
     def _get_access_token_from_record(self, record: ConnectionRecord) -> str:
         if record.auth_type == AuthType.API_KEY:
