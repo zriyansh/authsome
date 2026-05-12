@@ -102,9 +102,9 @@ Without authsome, agents inside Claude Code typically read tokens from environme
 
 `authsome run` is the recommended pattern for any Claude Code agent that calls third-party APIs. The child process never sees the real secret because the proxy injects headers at request time.
 
-## Use authsome from a Python agent
+## Embedding the library
 
-If the skill is doing too much for your use case, drop down to the library. Inside any Python file Claude writes:
+If you're orchestrating Claude Code from a larger Python program and want to inject credentials before launching Claude, you can drop below the skill into the library:
 
 ```python
 from authsome.server.dependencies import create_auth_service

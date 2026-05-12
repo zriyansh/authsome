@@ -5,10 +5,9 @@ description: "Five layers · identity, policy, vault, auth, audit · composed by
 
 Authsome is layered. Each layer has one bounded responsibility. Layers do not reach sideways into other layers. Explicit orchestrators compose them. This makes every layer independently testable and independently swappable.
 
-Two deployment modes share the same layered architecture:
+The supported integration mode is the **sidecar**: `authsome run -- python agent.py` spawns the agent as a subprocess of authsome with an HTTP proxy injecting credentials at request time. No auth code in the agent.
 
-- **Sidecar mode**. `authsome run -- python agent.py`. Transparent credential injection through an HTTP proxy. No auth code in the agent.
-- **Library mode**. `from authsome.server.dependencies import create_auth_service`. A direct programmatic API.
+The same layered architecture is also exposed as a Python library (`from authsome.server.dependencies import create_auth_service`) for embedding inside a larger orchestrator. The two modes share the same layers below.
 
 Sidecar-mode call graph. Identity and policy gate the vault; the auth layer refreshes when needed; the sidecar writes back, injects the Authorization header, and audits at every step.
 

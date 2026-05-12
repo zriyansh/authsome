@@ -47,9 +47,9 @@ Cursor reads MCP server definitions from `~/.cursor/mcp.json` (global) or `.curs
 
 The MCP server runs behind the proxy. Any third-party API calls it makes use authsome-managed credentials.
 
-## Inline Python calls
+## Embedding the library
 
-Cursor agents that run Python directly can use the library:
+If you're driving Cursor from a Python orchestrator, or running inline Python tasks that need explicit credential control, drop below the proxy:
 
 ```python
 from authsome.server.dependencies import create_auth_service

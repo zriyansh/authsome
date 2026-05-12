@@ -1,16 +1,16 @@
 ---
 title: "Generic Python agent"
 sidebarTitle: "Generic Python agent"
-description: "Any Python script that calls third-party APIs. Two patterns, both with authsome managing the credentials."
+description: "Any Python script that calls third-party APIs. Run it under the proxy; drop to the library only when embedding."
 icon: "python"
 keywords: ["python agent credentials", "authsome python script", "python api key broker", "python oauth broker"]
 ---
 
 The general pattern for any Python script that calls external APIs. No framework required.
 
-## Pattern 1: run under the proxy
+## Run under the proxy
 
-Cleanest. The script reads env vars normally; authsome injects the real values at the proxy layer.
+The script reads env vars normally; authsome injects the real values at the proxy layer.
 
 ```bash
 uvx authsome login openai
@@ -36,11 +36,11 @@ r = httpx.get("https://api.github.com/user", headers={"Authorization": f"Bearer 
 print(r.json())
 ```
 
-No authsome import in the script. The proxy does the work.
+No authsome import in the script. The proxy does the work. This is the recommended path for almost every script.
 
-## Pattern 2: use the library
+## Embedding the library
 
-When you want fine-grained control, per-connection selection, or programmatic access to connection metadata:
+When you're wiring authsome into a larger Python orchestrator and want per-call connection selection or programmatic access to connection metadata:
 
 ```python
 from authsome.server.dependencies import create_auth_service
@@ -57,18 +57,18 @@ r = httpx.get(
 )
 ```
 
-Refresh is silent. Re-call `get_access_token` if your process outlives a token TTL.
+Refresh is silent. Re-call `get_access_token` if your process outlives a token TTL. See [Python library](/reference/python-library) for the full surface.
 
-See [Python library](/reference/python-library) for the full surface.
+## When the proxy isn't enough
 
-## When to choose which
+The library is the right tool when:
 
-| Use the proxy | Use the library |
-|----------------|-----------------|
-| The script reads env vars and you don't want to change it. | You need per-call connection selection. |
-| You're running multiple subprocesses that all need credentials. | You're in a single process and want explicit control. |
-| You can install the mitmproxy CA on the machine. | You can't, or you're hitting TLS-pinned SDKs. |
-| You want secrets out of the env entirely. | You're fine with the library handling decryption inline. |
+- The SDK pins TLS certificates and refuses to trust the mitmproxy CA.
+- You're using non-HTTP protocols (WebSockets, gRPC over HTTP/2, raw TCP) that the proxy can't intercept.
+- You need to pick a different connection per call within the same process.
+- You're embedding authsome inside a larger orchestrator with its own subprocess management.
+
+Otherwise, the proxy is simpler.
 
 ## Multi-account
 

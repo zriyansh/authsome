@@ -66,9 +66,9 @@ uvx authsome run -- codex
 
 The proxy uses each provider's default connection. To target a non-default connection in a single Codex session, set it as the default with `--force` first. See [Multiple connections per provider](/guides/multiple-connections).
 
-## Use authsome inside the agent
+## Embedding the library
 
-Codex agents that write Python can pull credentials directly from authsome:
+If you're orchestrating Codex from a larger Python program and need explicit per-call control, drop below the proxy into the library:
 
 ```python
 from authsome.server.dependencies import create_auth_service

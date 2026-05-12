@@ -133,7 +133,18 @@ uvx authsome export github --connection personal --format env
 
 ## Use the token
 
+Run the agent under the proxy. The library tab is for embedding authsome inside a larger Python orchestrator.
+
 <CodeGroup>
+
+```bash Proxy (recommended)
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export github --format env)"
+echo $GITHUB_ACCESS_TOKEN
+```
 
 ```python Python library
 from authsome.server.dependencies import create_auth_service
@@ -147,15 +158,6 @@ r = httpx.get(
     headers={"Authorization": f"Bearer {token}"},
 )
 print(r.json())
-```
-
-```bash Proxy
-uvx authsome run -- python my_agent.py
-```
-
-```bash Environment
-eval "$(uvx authsome export github --format env)"
-echo $GITHUB_ACCESS_TOKEN
 ```
 
 </CodeGroup>
