@@ -7,17 +7,9 @@ import urllib.parse
 from typing import TYPE_CHECKING, Any
 
 import requests as http_client
-from authlib.common.security import generate_token
-from authlib.integrations.base_client.errors import OAuthError
-from authlib.integrations.requests_client import OAuth2Session
 
-from authsome.auth.flows.base import (
-    DEFAULT_CALLBACK_URL,
-    AuthFlow,
-    FlowResult,
-    build_authorization_response,
-    token_to_connection_record,
-)
+from authsome.auth.flows.base import DEFAULT_CALLBACK_URL, FlowResult
+from authsome.auth.flows.pkce import PkceFlow
 from authsome.auth.models.connection import ProviderClientRecord
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.errors import AuthenticationFailedError, DiscoveryError
@@ -26,10 +18,8 @@ if TYPE_CHECKING:
     from authsome.auth.sessions import AuthSession
 
 
-class DcrPkceFlow(AuthFlow):
+class DcrPkceFlow(PkceFlow):
     """Dynamic Client Registration + PKCE authorization code flow."""
-
-    callback_port: int = 7999
 
     def begin(
         self,
@@ -54,27 +44,16 @@ class DcrPkceFlow(AuthFlow):
 
         assert client_id is not None  # either passed in or registered above
 
-        code_verifier = generate_token(48)
-
-        client = OAuth2Session(
-            token_endpoint_auth_method="client_secret_post" if client_secret else "none",
+        super().begin(
+            provider=provider,
+            profile=profile,
+            connection_name=connection_name,
+            runtime_session=runtime_session,
+            scopes=effective_scopes,
             client_id=client_id,
             client_secret=client_secret,
-            scope=" ".join(effective_scopes) if effective_scopes else None,
-            redirect_uri=redirect_uri,
-            code_challenge_method="S256",
+            base_url=base_url,
         )
-        auth_url, state = client.create_authorization_url(
-            provider.oauth.authorization_url,
-            code_verifier=code_verifier,
-        )
-
-        runtime_session.state = "waiting_for_user"
-        runtime_session.payload["auth_url"] = auth_url
-        runtime_session.payload["callback_url"] = redirect_uri
-        runtime_session.payload["internal_code_verifier"] = code_verifier
-        runtime_session.payload["internal_state"] = state
-        runtime_session.payload["internal_scopes"] = json.dumps(effective_scopes)
         if registered_new_client:
             runtime_session.payload["internal_client_id"] = client_id
             if client_secret:
@@ -90,11 +69,6 @@ class DcrPkceFlow(AuthFlow):
         client_id: str | None = None,
         client_secret: str | None = None,
     ) -> FlowResult:
-        if provider.oauth is None:
-            raise AuthenticationFailedError("Provider missing 'oauth' configuration", provider=provider.name)
-
-        expected_state = runtime_session.payload.get("internal_state")
-
         if "internal_client_id" in runtime_session.payload:
             client_id = runtime_session.payload["internal_client_id"]
             client_secret = runtime_session.payload.get("internal_client_secret")
@@ -105,33 +79,15 @@ class DcrPkceFlow(AuthFlow):
         if not client_id:
             raise AuthenticationFailedError("DCR PKCE flow requires a client_id.", provider=provider.name)
 
-        code_verifier = runtime_session.payload.get("internal_code_verifier", "")
-        redirect_uri = runtime_session.payload.get("callback_url", "")
-        effective_scopes = json.loads(runtime_session.payload.get("internal_scopes", "[]"))
-        authorization_response = build_authorization_response(callback_data, redirect_uri)
-
-        client = OAuth2Session(
-            token_endpoint_auth_method="client_secret_post" if client_secret else "none",
+        result = super().resume(
+            provider=provider,
+            profile=profile,
+            connection_name=connection_name,
+            runtime_session=runtime_session,
+            callback_data=callback_data,
             client_id=client_id,
             client_secret=client_secret,
-            redirect_uri=redirect_uri,
         )
-        try:
-            token = client.fetch_token(
-                provider.oauth.token_url,
-                authorization_response=authorization_response,
-                state=expected_state,
-                code_verifier=code_verifier,
-            )
-        except OAuthError as exc:
-            raise AuthenticationFailedError(
-                f"Token exchange error: {exc.error} — {exc.description or 'Unknown error'}",
-                provider=provider.name,
-            ) from exc
-        except http_client.RequestException as exc:
-            raise AuthenticationFailedError(f"Token exchange failed: {exc}", provider=provider.name) from exc
-
-        runtime_session.state = "processing"
 
         dcr_client = (
             ProviderClientRecord(
@@ -144,16 +100,7 @@ class DcrPkceFlow(AuthFlow):
             if registered_new_client
             else None
         )
-        return FlowResult(
-            connection=token_to_connection_record(
-                dict(token),
-                provider=provider.name,
-                profile=profile,
-                connection_name=connection_name,
-                scopes=effective_scopes,
-            ),
-            client_record=dcr_client,
-        )
+        return FlowResult(connection=result.connection, client_record=dcr_client)
 
     def _discover_registration_endpoint(self, provider: ProviderDefinition) -> str:
         if provider.oauth is None:
