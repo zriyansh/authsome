@@ -1,0 +1,153 @@
+---
+title: "OpenAI"
+sidebarTitle: "OpenAI"
+description: "Store and use your OpenAI API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+icon: "openai"
+keywords: ["openai api key authsome", "openai key broker", "openai key cli", "openai api key python agent", "openai key vault", "openai proxy injection"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+OpenAI uses a long-lived API key for every endpoint (`api.openai.com`). Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `openai` |
+| Display name | OpenAI |
+| Auth type | API key |
+| Flow | `api_key` |
+| Header | `Authorization: Bearer <key>` |
+| Key pattern | `^sk-[A-Za-z0-9_-]{20,}$` |
+| Proxy host | `api.openai.com` |
+| Env var | `OPENAI_API_KEY` |
+| Where to get a key | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+
+## Get a key
+
+Create a key in the OpenAI dashboard at [platform.openai.com/api-keys](https://platform.openai.com/api-keys). Keys start with `sk-` followed by at least 20 letters, digits, underscores, or hyphens.
+
+Authsome validates the format on input and rejects pastes that obviously aren't keys:
+
+```text
+Error: This does not look like a valid OpenAI API key.
+Hint: OpenAI API keys start with 'sk-' followed by at least 20 letters, digits, '_' or '-'.
+```
+
+## Log in
+
+```bash
+uvx authsome login openai
+```
+
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit. The terminal prints `Successfully logged in to openai (default).`
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get openai --field status
+# → connected
+```
+
+## Use the key
+
+<CodeGroup>
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+from openai import OpenAI
+
+auth = create_auth_service()
+key = auth.get_access_token("openai", connection="default")
+
+client = OpenAI(api_key=key)
+resp = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "ping"}],
+)
+print(resp.choices[0].message.content)
+```
+
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export openai --format env)"
+echo $OPENAI_API_KEY     # sk-...
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `OPENAI_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.openai.com`. The child process never sees the actual value. With the OpenAI Python SDK, no code change is required: it reads the env var, makes the request, and the proxy substitutes the header on the way out.
+
+## Multiple keys
+
+A personal key and a team key on the same machine:
+
+```bash
+uvx authsome login openai --connection personal
+uvx authsome login openai --connection team
+```
+
+Read either side:
+
+```bash
+uvx authsome get openai --connection team --field api_key --show-secret
+uvx authsome export openai --connection personal --format env
+```
+
+<MultiConnectionsCta />
+
+## Rotate the key
+
+To replace the stored key with a new one:
+
+```bash
+uvx authsome login openai --force
+```
+
+`--force` overwrites the existing connection without removing it first. Pass `--connection <name>` to target a non-default connection.
+
+To invalidate the old key at OpenAI as well, delete it in the OpenAI dashboard before running `--force`.
+
+## Remove the key
+
+```bash
+uvx authsome logout openai             # remove local credential
+uvx authsome remove openai             # remove local provider state entirely
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for OpenAI.
+
+## Override the bundled definition
+
+To change the header shape, the proxy host, or the validation regex, drop a custom JSON at `~/.authsome/providers/openai.json`:
+
+```bash
+uvx authsome inspect openai > ~/.authsome/providers/openai.json
+# edit the file
+uvx authsome list   # openai now shows source=custom
+```
+
+User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema) for every field.
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---------|--------------|-----|
+| `Incorrect API key provided` from OpenAI | Key was revoked at OpenAI | Generate a fresh key and run `uvx authsome login openai --force`. |
+| Key pattern rejected at login | Pasted something other than a key, or pasted with whitespace | Re-copy the key from the OpenAI dashboard. Authsome trims trailing whitespace but not embedded whitespace. |
+| SDK sees `authsome-proxy-managed` and fails | Running outside `uvx authsome run` | Use `authsome run` or fall back to `eval "$(uvx authsome export openai --format env)"`. |
+| TLS error against `api.openai.com` under the proxy | mitmproxy CA not trusted | See [Proxy networking](/troubleshooting/proxy-networking). |
+
+For deeper diagnostics, see [Token refresh](/troubleshooting/token-refresh) (API keys don't have refresh, but the page covers when a stored secret is rejected at runtime).
+
+## What's next
+
+<WhatsNextApiKey />

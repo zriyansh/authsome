@@ -1,0 +1,106 @@
+---
+title: "Cursor"
+sidebarTitle: "Cursor"
+description: "Wire Cursor's IDE agent into authsome. MCP servers, shell commands, and inline Python all share one credential vault."
+icon: "code"
+keywords: ["cursor authsome", "cursor credentials", "cursor mcp authsome", "cursor github token", "cursor openai key"]
+---
+
+[Cursor](https://cursor.com) is an AI-first code editor. Its agent surface includes inline AI calls, MCP servers, and shell-tool execution. Authsome plugs in at the MCP layer: register your MCP servers with authsome wrappers, and the proxy injects fresh credentials whenever a tool calls an external service.
+
+<Prompt
+  description="**Wrap your MCP servers with authsome.** Open this prompt in Cursor to apply it."
+  icon="terminal"
+  iconType="solid"
+  actions={["copy", "cursor"]}
+>
+Update my Cursor MCP server config so every command goes through authsome's auth proxy.
+
+1. Open Cursor settings → MCP.
+2. For each MCP server entry, change the `command` to `uvx` and prepend `authsome run --` to its `args`. Example: a server originally launched as `python /path/to/server.py` becomes `command: "uvx", args: ["authsome", "run", "--", "python", "/path/to/server.py"]`.
+3. If `authsome` isn't installed, install it with `pip install authsome` first, then log me into GitHub and OpenAI.
+4. Restart Cursor so the new MCP config is loaded.
+
+Verify by asking a Cursor agent to call one of the MCP servers and confirm the call succeeds without an `OPENAI_API_KEY` or `GITHUB_TOKEN` being set in Cursor's own environment.
+</Prompt>
+
+## What you get
+
+- MCP servers wrapped by `authsome run` get tokens injected into outbound HTTP requests automatically. The server process never sees the raw secret.
+- One credential vault shared with the regular CLI, with Claude Code, and with anything else on the machine.
+- Multi-account flows work the same as on the CLI.
+
+## Recommended pattern: wrap MCP servers
+
+Cursor reads MCP server definitions from `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` in a workspace. Wrap each server's launch command with `authsome run --`:
+
+```json
+{
+  "mcpServers": {
+    "my-mcp": {
+      "command": "uvx",
+      "args": ["authsome", "run", "--", "node", "/path/to/server.js"]
+    }
+  }
+}
+```
+
+The MCP server runs behind the proxy. Any third-party API calls it makes use authsome-managed credentials.
+
+## Inline Python calls
+
+Cursor agents that run Python directly can use the library:
+
+```python
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+token = auth.get_access_token("github", connection="default")
+```
+
+See [Python library](/reference/python-library).
+
+## Multiple accounts per provider
+
+```bash
+uvx authsome login github --connection work
+uvx authsome login github --connection personal
+```
+
+The proxy uses each provider's default connection. To run Cursor against a specific connection, set it as the default with `--force`:
+
+```bash
+uvx authsome login github --connection work --force
+```
+
+Per-request connection selection inside Cursor is not yet supported. See [Multiple connections per provider](/guides/multiple-connections).
+
+## TLS interception
+
+Cursor's built-in HTTP clients honor `HTTP_PROXY`. Third-party MCP servers sometimes use TLS pinning or their own CA bundle. If you see TLS errors from a specific MCP server, point its environment at the mitmproxy CA:
+
+```bash
+export REQUESTS_CA_BUNDLE=~/.mitmproxy/mitmproxy-ca-cert.pem
+export SSL_CERT_FILE=~/.mitmproxy/mitmproxy-ca-cert.pem
+```
+
+The general guidance is in [Proxy networking](/troubleshooting/proxy-networking).
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| Cursor agent runs commands but they don't see the proxy | Verify the terminal command is prefixed with `uvx authsome run --`. |
+| MCP server crashes on launch | Run the same command outside Cursor with `--verbose` to see the real error. |
+| Tokens look stale | `uvx authsome get <provider> --field status` from a terminal Cursor wraps. |
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Run agents with the proxy" icon="shield-halved" href="/guides/run-agents-with-proxy">
+    The proxy injection model.
+  </Card>
+  <Card title="Multiple connections per provider" icon="users" href="/guides/multiple-connections">
+    Per-account workflows.
+  </Card>
+</Columns>

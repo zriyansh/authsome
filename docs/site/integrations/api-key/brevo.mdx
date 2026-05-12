@@ -1,0 +1,102 @@
+---
+title: "Brevo"
+sidebarTitle: "Brevo"
+description: "Store and use your Brevo API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["brevo api key authsome", "brevo key broker", "brevo agent credentials", "authsome brevo"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Brevo uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `brevo` |
+| Display name | Brevo |
+| Auth type | API key |
+| Header | `api-key: <key>` |
+| Proxy host | `api.brevo.com` |
+| Env var | `BREVO_API_KEY` |
+| Where to get a key | [https://app.brevo.com/settings/keys/api](https://app.brevo.com/settings/keys/api) |
+
+## Get a key
+
+Create an API key in the Brevo dashboard at [https://app.brevo.com/settings/keys/api](https://app.brevo.com/settings/keys/api).
+
+## Log in
+
+```bash
+uvx authsome login brevo
+```
+
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get brevo --field status
+# → connected
+```
+
+## Use the key
+
+<CodeGroup>
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+key = auth.get_access_token("brevo", connection="default")
+```
+
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export brevo --format env)"
+echo $BREVO_API_KEY
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `BREVO_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.brevo.com`. The child process never sees the actual value.
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login brevo --connection personal
+uvx authsome login brevo --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login brevo --force          # rotate
+uvx authsome logout brevo                  # remove local credential
+uvx authsome remove brevo                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Brevo.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect brevo > ~/.authsome/providers/brevo.json
+# edit fields
+uvx authsome list   # source now shows "custom" for brevo
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

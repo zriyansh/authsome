@@ -14,63 +14,65 @@ When refresh fails, the connection moves into one of two states.
 
 ## Common failure modes
 
-### `refresh token has been revoked`
+<AccordionGroup>
+  <Accordion title="refresh token has been revoked" icon="ban">
+    ```text
+    Error: refresh failed for github (default): invalid_grant
+    ```
 
-```text
-Error: refresh failed for github (default): invalid_grant
-```
+    Causes:
 
-Causes:
+    - You revoked the OAuth app's authorization at the provider.
+    - The provider rotated refresh tokens and your stored token is stale.
+    - Long inactivity expired the refresh token (some providers have a sliding window).
 
-- You revoked the OAuth app's authorization at the provider.
-- The provider rotated refresh tokens and your stored token is stale.
-- Long inactivity expired the refresh token (some providers have a sliding window).
+    Recover:
 
-Recover:
+    ```bash
+    uvx authsome revoke <provider>     # clear local state + remote (if supported)
+    uvx authsome login <provider>      # re-run the flow
+    ```
+  </Accordion>
 
-```bash
-uvx authsome revoke <provider>     # clear local state + remote (if supported)
-uvx authsome login <provider>      # re-run the flow
-```
+  <Accordion title="client authentication failed" icon="id-card">
+    ```text
+    Error: refresh failed for <provider>: invalid_client
+    ```
 
-### `client authentication failed`
+    The OAuth client credentials stored under your profile no longer match the provider. This usually means the OAuth app's client secret was rotated.
 
-```text
-Error: refresh failed for <provider>: invalid_client
-```
+    ```bash
+    uvx authsome revoke <provider>
+    uvx authsome login <provider>      # re-collect client_id and client_secret via browser bridge
+    ```
+  </Accordion>
 
-The OAuth client credentials stored under your profile no longer match the provider. This usually means the OAuth app's client secret was rotated.
+  <Accordion title="expired_token after long downtime" icon="hourglass-end">
+    ```text
+    Error: refresh failed for <provider>: expired_token
+    ```
 
-```bash
-uvx authsome revoke <provider>
-uvx authsome login <provider>      # re-collect client_id and client_secret via browser bridge
-```
+    Some providers expire refresh tokens after extended inactivity (Google for free-tier OAuth apps, for example). Re-run the full login:
 
-### `expired_token` after long downtime
+    ```bash
+    uvx authsome login <provider> --force
+    ```
+  </Accordion>
 
-```text
-Error: refresh failed for <provider>: expired_token
-```
+  <Accordion title="Network errors during refresh" icon="signal-bars-slash">
+    ```text
+    Error: refresh failed for <provider>: connection timed out
+    ```
 
-Some providers expire refresh tokens after extended inactivity (Google for free-tier OAuth apps, for example). Re-run the full login:
+    The provider's token endpoint was unreachable. The connection stays at `expired`, it's recoverable. Retry once your network is back:
 
-```bash
-uvx authsome login <provider> --force
-```
+    ```bash
+    uvx authsome get <provider> --field status
+    ```
 
-### Network errors during refresh
-
-```text
-Error: refresh failed for <provider>: connection timed out
-```
-
-The provider's token endpoint was unreachable. The connection stays at `expired` — it's recoverable. Retry once your network is back:
-
-```bash
-uvx authsome get <provider> --field status
-```
-
-If the next access call succeeds, authsome refreshes and the status returns to `connected`.
+    If the next access call succeeds, authsome refreshes and the status returns to `connected`.
+  </Accordion>
+</AccordionGroup>
 
 ## Inspect refresh state
 
@@ -103,7 +105,7 @@ DEBUG logs go to `~/.authsome/logs/authsome.log` and include the token endpoint 
 
 ## API keys never refresh
 
-API-key providers don't have a refresh mechanism — there's nothing to refresh. If the stored key is rejected at runtime, the provider invalidated it externally (the user rotated it, the team revoked it, etc.). Replace it:
+API-key providers don't have a refresh mechanism, there's nothing to refresh. If the stored key is rejected at runtime, the provider invalidated it externally (the user rotated it, the team revoked it, etc.). Replace it:
 
 ```bash
 uvx authsome login <provider> --force      # paste the new key

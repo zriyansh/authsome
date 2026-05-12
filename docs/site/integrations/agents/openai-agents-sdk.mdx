@@ -1,0 +1,66 @@
+---
+title: "OpenAI Agents SDK"
+sidebarTitle: "OpenAI Agents SDK"
+description: "Replace OPENAI_API_KEY env-var management with authsome. The Agents SDK works unchanged."
+icon: "rocket"
+keywords: ["openai agents sdk authsome", "openai sdk credentials", "openai agents broker"]
+---
+
+The [OpenAI Agents SDK](https://github.com/openai/openai-agents-python) reads `OPENAI_API_KEY` from the environment by default. Authsome supplies it either through the proxy (recommended) or through `export`.
+
+## Recommended: run the agent under the proxy
+
+```bash
+uvx authsome login openai
+uvx authsome run -- python my_agent.py
+```
+
+The Agents SDK initializes with `OPENAI_API_KEY=authsome-proxy-managed`. Outbound requests to `api.openai.com` are intercepted and authenticated at the proxy layer. The agent's process never sees the real key.
+
+## Alternative: pass the key explicitly
+
+```python
+from authsome.server.dependencies import create_auth_service
+from openai import AsyncOpenAI
+from agents import Agent, Runner, set_default_openai_client
+
+auth = create_auth_service()
+client = AsyncOpenAI(api_key=auth.get_access_token("openai"))
+set_default_openai_client(client)
+
+agent = Agent(name="my-agent", instructions="...")
+result = await Runner.run(agent, "do the thing")
+```
+
+Use this when you need to control which connection the SDK uses, or when the proxy isn't an option.
+
+## Multi-account workflows
+
+```bash
+uvx authsome login openai --connection personal
+uvx authsome login openai --connection team
+```
+
+Through the proxy, set the default with `--force`. In code, pass `connection=`:
+
+```python
+key = auth.get_access_token("openai", connection="team")
+client = AsyncOpenAI(api_key=key)
+```
+
+## Tools that hit other providers
+
+The Agents SDK supports tools that call external APIs. Each tool typically reads its own credential. Authsome covers both bundled (OpenAI, GitHub, etc.) and custom (see [Custom providers](/guides/custom-providers)).
+
+For an MCP-style tool that calls `api.github.com`, just log in once: `uvx authsome login github`. The proxy will inject the GitHub token automatically when the tool makes its request.
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="OpenAI integration" icon="key" href="/integrations/api-key/openai">
+    Set up the underlying OpenAI key.
+  </Card>
+  <Card title="Run agents with the proxy" icon="shield-halved" href="/guides/run-agents-with-proxy">
+    The injection model in detail.
+  </Card>
+</Columns>

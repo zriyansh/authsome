@@ -1,0 +1,99 @@
+---
+title: "Postiz"
+sidebarTitle: "Postiz"
+description: "Log in to Postiz from authsome via OAuth2. Tokens are stored locally and refreshed automatically."
+keywords: ["postiz oauth cli", "postiz access token broker", "authsome postiz", "postiz agent credentials"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
+
+Postiz is a bundled OAuth2 provider in authsome. Postiz social posting and scheduling APIs.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `postiz` |
+| Display name | Postiz |
+| Auth type | OAuth2 |
+| Default flow | `device_code`, headless |
+| PKCE supported | Yes |
+| Device code supported | Yes |
+| DCR supported | No |
+| Default scopes | (none) |
+| Proxy host | `api.postiz.com` |
+| Env var (`access_token`) | `POSTIZ_ACCESS_TOKEN` |
+| Provider docs | [Link](https://docs.postiz.com/public-api/oauth) |
+
+## Prerequisites
+
+Postiz uses the device authorization grant. No callback URL is registered. You enter a short code on a separate device after running `authsome login`.
+
+## Log in
+
+```bash
+uvx authsome login postiz
+```
+
+Authsome prints a verification URL and a short user code. Open the URL on any device, enter the code, approve the app, and authsome's poll completes.
+
+Verify:
+
+```bash
+uvx authsome get postiz --field status
+# → connected
+```
+
+## Multiple accounts
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login postiz --connection personal
+uvx authsome login postiz --connection work
+```
+
+## Use the token
+
+<CodeGroup>
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+token = auth.get_access_token("postiz", connection="default")
+```
+
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export postiz --format env)"
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `POSTIZ_ACCESS_TOKEN=authsome-proxy-managed` in the child's environment and injects the real token into outbound requests to `api.postiz.com`. The child process never sees the actual value. Refresh tokens are never exported.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect postiz > ~/.authsome/providers/postiz.json
+# edit scopes, base_url, or anything else
+uvx authsome list   # source now shows "custom" for postiz
+```
+
+User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Headless setup" icon="server" href="/guides/headless-device-code">
+    Postiz is the only bundled provider that defaults to the device code flow.
+  </Card>
+  <Card title="Run agents with the proxy" icon="shield-halved" href="/guides/run-agents-with-proxy">
+    Inject the access token into outbound requests without exposing it.
+  </Card>
+</Columns>

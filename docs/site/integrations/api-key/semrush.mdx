@@ -1,0 +1,102 @@
+---
+title: "SEMrush"
+sidebarTitle: "SEMrush"
+description: "Store and use your SEMrush API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["semrush api key authsome", "semrush key broker", "semrush agent credentials", "authsome semrush"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+SEMrush uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `semrush` |
+| Display name | SEMrush |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.semrush.com` |
+| Env var | `SEMRUSH_API_KEY` |
+| Where to get a key | [https://www.semrush.com/accounts/profile/api-units](https://www.semrush.com/accounts/profile/api-units) |
+
+## Get a key
+
+Create an API key in the SEMrush dashboard at [https://www.semrush.com/accounts/profile/api-units](https://www.semrush.com/accounts/profile/api-units).
+
+## Log in
+
+```bash
+uvx authsome login semrush
+```
+
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get semrush --field status
+# → connected
+```
+
+## Use the key
+
+<CodeGroup>
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+key = auth.get_access_token("semrush", connection="default")
+```
+
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export semrush --format env)"
+echo $SEMRUSH_API_KEY
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `SEMRUSH_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.semrush.com`. The child process never sees the actual value.
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login semrush --connection personal
+uvx authsome login semrush --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login semrush --force          # rotate
+uvx authsome logout semrush                  # remove local credential
+uvx authsome remove semrush                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for SEMrush.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect semrush > ~/.authsome/providers/semrush.json
+# edit fields
+uvx authsome list   # source now shows "custom" for semrush
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

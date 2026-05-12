@@ -1,0 +1,169 @@
+---
+title: "HTTP daemon API"
+sidebarTitle: "HTTP daemon API"
+description: "Every route the local authsome daemon exposes on 127.0.0.1:7998. Health, auth sessions, connections, providers, proxy resolution, dashboard UI."
+icon: "server"
+keywords: ["authsome daemon api", "authsome http routes", "authsome 7998", "authsome rest api"]
+---
+
+The authsome daemon serves a small FastAPI HTTP surface on `127.0.0.1:7998` by default. The CLI, the proxy, and the dashboard UI all call it through these routes. This page documents every prefix so you can build tooling on top of authsome without going through the CLI.
+
+For the lifecycle, trust model, and `AUTHSOME_DAEMON_URL` / `AUTHSOME_SERVER_BASE_URL` overrides, see [The local daemon](/concepts/the-daemon).
+
+## Health and readiness
+
+### `GET /health`
+
+Liveness probe. Returns when the daemon process is up and responding, regardless of subsystem state.
+
+<ResponseField name="status" type="string" required>
+  Always `"ok"` for a 200 response.
+</ResponseField>
+<ResponseField name="version" type="string" required>
+  The installed `authsome` package version.
+</ResponseField>
+
+### `GET /ready`
+
+Readiness probe. Verifies vault, schema version, and provider parsing.
+
+<ResponseField name="status" type="string" required>
+  Overall readiness: `"ok"`, `"degraded"`, or `"unhealthy"`.
+</ResponseField>
+<ResponseField name="checks" type="object" required>
+  Per-component status.
+
+  <Expandable title="checks fields">
+    <ResponseField name="config" type="string" required>
+      `"ok"` if `~/.authsome/config.json` loaded and the schema version matches. Failures: `"missing"`, `"invalid_json"`, `"schema_version_mismatch"`.
+    </ResponseField>
+    <ResponseField name="schema" type="string" required>
+      `"ok"` if every stored record passes its Pydantic v2 model. Failures: `"version_mismatch"`, `"corrupt"`.
+    </ResponseField>
+    <ResponseField name="vault" type="string" required>
+      `"ok"` if the SQLite store for the active profile opens, the master key is reachable, and a no-op write succeeds. Failures: `"unreachable"`, `"locked"`, `"keyring_unavailable"`.
+    </ResponseField>
+    <ResponseField name="providers" type="string" required>
+      `"ok"` if every bundled and user-registered provider JSON parses. Failures name the offending provider.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+<ResponseField name="warnings" type="string[]">
+  Non-fatal observations that do not block readiness. Examples: a custom provider override of a bundled name, a master.key with mode 0644 instead of 0600.
+</ResponseField>
+<ResponseField name="issues" type="string[]">
+  Fatal problems. When non-empty, `status` is `"unhealthy"`. Each entry is a human-readable string suitable for surfacing in a monitoring alert.
+</ResponseField>
+
+### `GET /whoami`
+
+Returns the same payload as `uvx authsome whoami`.
+
+<ResponseField name="home" type="string" required>
+  Absolute path to the authsome home directory.
+</ResponseField>
+<ResponseField name="encryption" type="object" required>
+  Encryption mode (`local_key` or `keyring`) and backend status.
+</ResponseField>
+<ResponseField name="profile" type="string" required>
+  Active profile name.
+</ResponseField>
+
+## Auth sessions
+
+These routes drive browser bridges and OAuth callbacks. The CLI starts a session, opens a browser at one of the page routes, waits for completion, and finalizes the connection.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/auth/sessions` | Start a new auth session for a provider. |
+| `GET` | `/auth/sessions/{session_id}` | Get session status. |
+| `POST` | `/auth/sessions/{session_id}/resume` | Continue a paused or partial flow. |
+| `GET` | `/auth/callback/oauth` | OAuth2 callback target (PKCE / DCR). |
+| `GET` | `/auth/sessions/{session_id}/input` | Browser form for API-key or OAuth client credential entry. |
+| `GET` | `/auth/sessions/{session_id}/device` | Device-code verification page. |
+| `POST` | `/auth/sessions/{session_id}/input` | Submit values from the input form. |
+
+Session state is held in daemon memory. A daemon restart loses any session that is mid-flight.
+
+## Connections
+
+CRUD for connection records. Behind the scenes, every route goes through the AuthLayer, which manages decryption, refresh, and vault writes.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/connections` | List every connection across all bundled and custom providers. |
+| `GET` | `/connections/{provider}/{connection}` | Fetch one connection record. Secrets are redacted unless explicitly requested. |
+| `POST` | `/connections/{provider}/{connection}/logout` | Remove a single connection record from the local store. |
+| `POST` | `/connections/{provider}/revoke` | Call the provider's revocation endpoint (where supported) and clear all connections for the provider. |
+| `POST` | `/connections/{provider}/{connection}/default` | Set this connection as the provider's default. |
+| `POST` | `/credentials/export` | Return `KEY=value` lines or JSON for a provider's connection, mirroring `uvx authsome export`. |
+
+## Providers
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/providers` | List every bundled and custom provider with auth type, flow, and source. |
+| `GET` | `/providers/{provider}` | Full provider definition. |
+| `POST` | `/providers` | Register a custom provider definition (the body is the JSON in [Provider schema](/reference/provider-schema)). |
+| `DELETE` | `/providers/{provider}` | Remove a custom provider or reset a bundled one to its shipped form. |
+
+## Proxy resolution
+
+These routes back the local HTTP proxy started by `uvx authsome run`. The proxy never holds decryption keys itself; it asks the daemon for fresh credentials per request.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/proxy/routes` | Return the provider-to-host routing table the proxy uses to decide which provider matches an outbound request. |
+| `POST` | `/credentials/resolve` | Resolve a credential for a host. Returns the value the proxy injects into the `Authorization` header (or whatever header the provider's `api_key.header_name` declares). |
+
+## Dashboard UI
+
+These routes serve HTML. The dashboard is mounted under the `/ui` prefix.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/ui/` | Dashboard overview. |
+| `GET` | `/ui/connections` | All connections, by provider. |
+| `GET` | `/ui/apps/{provider_name}` | Detail pane for one provider. |
+| `POST` | `/ui/apps/{provider_name}/{connection_name}/disconnect` | Log out from the dashboard UI. |
+| `POST` | `/ui/apps/{provider_name}/connect` | Start a flow from the dashboard UI. |
+
+## Auth
+
+There is **no** bearer token between the CLI, the proxy, and the daemon in v1. Loopback binding (`127.0.0.1`) is the only access control. See [Daemon trust boundary](/security/daemon-trust-boundary) for the trust model and known limitations.
+
+## Calling the API directly
+
+```bash
+curl -s http://127.0.0.1:7998/health
+curl -s http://127.0.0.1:7998/providers | jq '.[].name'
+curl -s http://127.0.0.1:7998/connections | jq
+curl -s http://127.0.0.1:7998/proxy/routes | jq
+```
+
+When `AUTHSOME_DAEMON_URL` is set to a hosted daemon URL, replace `http://127.0.0.1:7998` with that URL.
+
+## Building on top
+
+The schemas backing every route live in `src/authsome/server/schemas.py` in the source tree. The OpenAPI spec is served at `/docs` (Swagger UI) and `/openapi.json` by FastAPI's defaults.
+
+```bash
+curl -s http://127.0.0.1:7998/openapi.json | jq '.paths | keys'
+```
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="The local daemon" icon="server" href="/concepts/the-daemon">
+    Lifecycle, routes, and v1 limitations.
+  </Card>
+  <Card title="Daemon trust boundary" icon="shield" href="/security/daemon-trust-boundary">
+    What loopback-only access control protects against.
+  </Card>
+  <Card title="Daemon issues" icon="wrench" href="/troubleshooting/daemon-issues">
+    Port conflicts, lost sessions, and restart behavior.
+  </Card>
+  <Card title="Environment variables" icon="terminal" href="/reference/environment-variables">
+    `AUTHSOME_DAEMON_URL` and `AUTHSOME_SERVER_BASE_URL`.
+  </Card>
+</Columns>

@@ -1,0 +1,78 @@
+---
+title: "LlamaIndex"
+sidebarTitle: "LlamaIndex"
+description: "Use authsome with LlamaIndex data loaders, LLM clients, and retrievers."
+icon: "layer-group"
+keywords: ["llamaindex authsome", "llamaindex credentials", "llamaindex oauth", "llamaindex api key"]
+---
+
+[LlamaIndex](https://www.llamaindex.ai) connects LLMs to your data through loaders, indexes, and retrievers. Each of those typically needs a credential (LLM API key, data-source token). Authsome provides them.
+
+## Pattern 1: pass tokens to constructors
+
+```python
+from authsome.server.dependencies import create_auth_service
+from llama_index.core import Settings
+from llama_index.llms.openai import OpenAI
+from llama_index.readers.github import GithubRepositoryReader, GithubClient
+
+auth = create_auth_service()
+
+Settings.llm = OpenAI(api_key=auth.get_access_token("openai"))
+
+reader = GithubRepositoryReader(
+    github_client=GithubClient(auth.get_access_token("github")),
+    owner="agentrhq",
+    repo="authsome",
+)
+docs = reader.load_data(branch="main")
+```
+
+Refresh is silent. Re-call `get_access_token` if your process lives long enough to outlast a token's TTL.
+
+## Pattern 2: run the whole script under the proxy
+
+```bash
+uvx authsome login openai
+uvx authsome login github
+uvx authsome run -- python my_index.py
+```
+
+LlamaIndex's HTTP clients see `OPENAI_API_KEY=authsome-proxy-managed` and similar placeholders. The proxy injects the real value for outbound requests to matched provider hosts.
+
+## Data-loader credentials
+
+LlamaIndex's data readers cover dozens of services (Notion, Confluence, Slack, Google Drive, etc.). For each one:
+
+- Check `uvx authsome list` for the matching provider name.
+- If bundled, log in: `uvx authsome login <provider>`.
+- Pass `auth.get_access_token("<provider>")` to the reader's constructor.
+
+For services not bundled, see [Custom providers](/guides/custom-providers).
+
+## Multi-account
+
+```python
+docs_personal = reader_personal.load_data()
+docs_work = reader_work.load_data()
+```
+
+with:
+
+```python
+auth.get_access_token("github", connection="personal")
+auth.get_access_token("github", connection="work")
+```
+
+See [Multiple connections per provider](/guides/multiple-connections).
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Python library" icon="code" href="/reference/python-library">
+    `AuthService` and the auth-layer API.
+  </Card>
+  <Card title="Custom providers" icon="puzzle-piece" href="/guides/custom-providers">
+    Add a data-source provider authsome doesn't ship.
+  </Card>
+</Columns>

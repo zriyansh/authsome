@@ -1,0 +1,102 @@
+---
+title: "Hunter"
+sidebarTitle: "Hunter"
+description: "Store and use your Hunter API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["hunter api key authsome", "hunter key broker", "hunter agent credentials", "authsome hunter"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Hunter uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `hunter` |
+| Display name | Hunter |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.hunter.io` |
+| Env var | `HUNTER_API_KEY` |
+| Where to get a key | [https://hunter.io/api_keys](https://hunter.io/api_keys) |
+
+## Get a key
+
+Create an API key in the Hunter dashboard at [https://hunter.io/api_keys](https://hunter.io/api_keys).
+
+## Log in
+
+```bash
+uvx authsome login hunter
+```
+
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get hunter --field status
+# → connected
+```
+
+## Use the key
+
+<CodeGroup>
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+key = auth.get_access_token("hunter", connection="default")
+```
+
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export hunter --format env)"
+echo $HUNTER_API_KEY
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `HUNTER_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.hunter.io`. The child process never sees the actual value.
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login hunter --connection personal
+uvx authsome login hunter --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login hunter --force          # rotate
+uvx authsome logout hunter                  # remove local credential
+uvx authsome remove hunter                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Hunter.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect hunter > ~/.authsome/providers/hunter.json
+# edit fields
+uvx authsome list   # source now shows "custom" for hunter
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

@@ -1,0 +1,117 @@
+---
+title: "Slack"
+sidebarTitle: "Slack"
+description: "Log in to Slack from authsome via OAuth2. Tokens are stored locally and refreshed automatically."
+icon: "slack"
+keywords: ["slack oauth cli", "slack access token broker", "authsome slack", "slack agent credentials"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
+
+Slack is a bundled OAuth2 provider in authsome. Workspace channels and chat write. Add more scopes through `--scopes`.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `slack` |
+| Display name | Slack |
+| Auth type | OAuth2 |
+| Default flow | `pkce`, PKCE browser flow |
+| PKCE supported | No |
+| Device code supported | No |
+| DCR supported | No |
+| Default scopes | `channels:read`, `chat:write` |
+| Proxy host | `slack.com` |
+| Env var (`access_token`) | `SLACK_ACCESS_TOKEN` |
+| Env var (`refresh_token`) | `SLACK_REFRESH_TOKEN` |
+
+## Prerequisites
+
+You need to register an OAuth app with Slack once. Create a Slack app in the API portal. Under OAuth & Permissions, add `http://127.0.0.1:7998/auth/callback/oauth` as a redirect URL.
+
+The redirect URI must be:
+
+```text
+http://127.0.0.1:7998/auth/callback/oauth
+```
+
+This is the only callback URL authsome's PKCE flow listens on.
+
+Dashboard: [https://api.slack.com/apps](https://api.slack.com/apps).
+
+<Note>
+  Slack's OAuth v2 endpoint does not require PKCE. Authsome runs the standard authorization-code flow.
+</Note>
+
+## Log in
+
+```bash
+uvx authsome login slack
+```
+
+The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://slack.com/oauth/v2/authorize` for the authorization step.
+
+Verify:
+
+```bash
+uvx authsome get slack --field status
+# → connected
+```
+
+## Custom scopes
+
+The bundled definition requests `channels:read`, `chat:write`. Override at login time:
+
+```bash
+uvx authsome login slack --scopes "<comma-separated>"
+```
+
+The granted scopes are stored on the connection and visible in `uvx authsome get slack`.
+
+## Multiple accounts
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login slack --connection personal
+uvx authsome login slack --connection work
+```
+
+## Use the token
+
+<CodeGroup>
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+token = auth.get_access_token("slack", connection="default")
+```
+
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export slack --format env)"
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `SLACK_ACCESS_TOKEN=authsome-proxy-managed` in the child's environment and injects the real token into outbound requests to `slack.com`. The child process never sees the actual value. Refresh tokens are never exported.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect slack > ~/.authsome/providers/slack.json
+# edit scopes, base_url, or anything else
+uvx authsome list   # source now shows "custom" for slack
+```
+
+User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).
+
+## What's next
+
+<WhatsNextOauth />

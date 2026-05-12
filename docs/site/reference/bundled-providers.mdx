@@ -1,11 +1,11 @@
 ---
 title: "Bundled providers"
-description: "Every provider that ships with authsome out of the box."
+description: "Every provider authsome ships out of the box. 14 OAuth2 and 31 API-key providers, 45 total."
 ---
 
-Authsome ships with definitions for the providers below. They are loaded lazily from JSON files inside the package and can be overridden by dropping a file with the same name into `~/.authsome/providers/`.
+Authsome ships with 45 bundled providers: 14 OAuth2 and 31 API-key. They are loaded lazily from JSON files inside the package and can be overridden by dropping a file with the same name into `~/.authsome/providers/`.
 
-For anything not listed here, see [Custom providers](/guides/custom-providers).
+For per-provider setup pages with login walkthroughs and code samples, see the [Integrations](/integrations/oauth/index) tab. For anything not listed here, see [Custom providers](/guides/custom-providers).
 
 ## OAuth2 providers
 
@@ -18,9 +18,10 @@ For anything not listed here, see [Custom providers](/guides/custom-providers).
 | `google` | Google | `pkce` | `regex:.*googleapis.*` |
 | `hubspot` | HubSpot | `pkce` | `api.hubapi.com` |
 | `klaviyo-oauth` | Klaviyo (OAuth) | `pkce` | `a.klaviyo.com` |
-| `linear` | Linear | `dcr_pkce` | `api.linear.app` |
+| `linear` | Linear | `pkce` | `regex:.*\.linear\.app` |
 | `microsoft` | Microsoft | `pkce` | `graph.microsoft.com` |
 | `notion` | Notion | `pkce` | `api.notion.com` |
+| `notion_dcr` | Notion (DCR) | `dcr_pkce` | `mcp.notion.com` |
 | `postiz` | Postiz | `device_code` | `api.postiz.com` |
 | `slack` | Slack | `pkce` | `slack.com` |
 | `x` | X (Twitter) | `pkce` | `api.twitter.com` |
@@ -72,7 +73,7 @@ uvx authsome inspect openai --json
 
 ## Override a bundled provider
 
-To change a bundled definition — add scopes, point at a self-hosted instance, swap the host URL — copy the JSON to `~/.authsome/providers/<name>.json` and edit it. Custom providers always win over bundled ones with the same name.
+To change a bundled definition, add scopes, point at a self-hosted instance, swap the host URL, copy the JSON to `~/.authsome/providers/<name>.json` and edit it. Custom providers always win over bundled ones with the same name.
 
 ```bash
 uvx authsome inspect github > ~/.authsome/providers/github.json
@@ -90,4 +91,4 @@ Bundled providers live in `src/authsome/auth/bundled_providers/` inside the auth
 - A test in `tests/auth/providers/` confirming the JSON parses against the schema.
 - An update to this page.
 
-For a one-off provider you just need locally, register it as a custom provider — no source tree change required. See [Custom providers](/guides/custom-providers).
+For a one-off provider you just need locally, register it as a custom provider, no source tree change required. See [Custom providers](/guides/custom-providers).

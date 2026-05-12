@@ -1,0 +1,92 @@
+---
+title: "Anthropic SDK"
+sidebarTitle: "Anthropic SDK"
+description: "Use authsome to manage ANTHROPIC_API_KEY. Run agents under the proxy or pass the key at construction."
+icon: "code-branch"
+keywords: ["anthropic sdk authsome", "claude api key authsome", "anthropic credentials broker"]
+---
+
+The [Anthropic Python SDK](https://github.com/anthropics/anthropic-sdk-python) reads `ANTHROPIC_API_KEY` from the environment by default. Authsome can supply it through the proxy or through `export`.
+
+## Add Anthropic as a custom provider
+
+Anthropic isn't in the bundled set today. Register it as a custom provider:
+
+```bash
+cat > /tmp/anthropic.json <<EOF
+{
+  "schema_version": 1,
+  "name": "anthropic",
+  "display_name": "Anthropic",
+  "auth_type": "api_key",
+  "flow": "api_key",
+  "host_url": "api.anthropic.com",
+  "api_key": {
+    "header_name": "x-api-key",
+    "header_prefix": ""
+  },
+  "export": {
+    "env": {
+      "api_key": "ANTHROPIC_API_KEY"
+    }
+  }
+}
+EOF
+
+uvx authsome register /tmp/anthropic.json
+uvx authsome login anthropic
+```
+
+Get a key from [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys).
+
+See [Custom providers](/guides/custom-providers) for the full template.
+
+## Recommended: run the agent under the proxy
+
+```bash
+uvx authsome run -- python my_agent.py
+```
+
+The SDK initializes with `ANTHROPIC_API_KEY=authsome-proxy-managed`. Outbound requests to `api.anthropic.com` are intercepted and authenticated at the proxy layer.
+
+## Alternative: pass the key explicitly
+
+```python
+from authsome.server.dependencies import create_auth_service
+from anthropic import Anthropic
+
+auth = create_auth_service()
+client = Anthropic(api_key=auth.get_access_token("anthropic"))
+
+resp = client.messages.create(
+    model="claude-sonnet-4-5",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "ping"}],
+)
+print(resp.content[0].text)
+```
+
+## Multi-account workflows
+
+```bash
+uvx authsome login anthropic --connection personal
+uvx authsome login anthropic --connection team
+```
+
+In code:
+
+```python
+key = auth.get_access_token("anthropic", connection="team")
+client = Anthropic(api_key=key)
+```
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Custom providers" icon="puzzle-piece" href="/guides/custom-providers">
+    The custom-provider walkthrough.
+  </Card>
+  <Card title="Run agents with the proxy" icon="shield-halved" href="/guides/run-agents-with-proxy">
+    The injection model.
+  </Card>
+</Columns>

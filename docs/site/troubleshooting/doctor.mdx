@@ -1,6 +1,6 @@
 ---
 title: "Diagnose with `doctor`"
-description: "Run health checks on directory layout, encryption, and provider parsing — and read the output."
+description: "Run health checks on directory layout, encryption, and provider parsing, and read the output."
 ---
 
 `uvx authsome doctor` is the first command to run when something looks wrong. It walks the home directory layout, verifies encryption is available, and parses every provider definition.
@@ -24,78 +24,68 @@ A healthy machine prints `OK` for each check and exits with code `0`.
 
 ## Common failures
 
-### `master.key not found`
+<AccordionGroup>
+  <Accordion title="master.key not found" icon="key">
+    ```text
+    [FAIL] Master key not found at ~/.authsome/master.key
+    ```
 
-```text
-[FAIL] Master key not found at ~/.authsome/master.key
-```
+    Causes:
 
-Causes:
+    - You haven't run authsome on this machine before. The first CLI invocation auto-initializes the home directory. Re-run any command (for example, `uvx authsome whoami`) to trigger initialization.
+    - You moved or deleted `~/.authsome`. If you have a backup, restore it. Without the master key, encrypted records cannot be decrypted.
+  </Accordion>
 
-- You haven't run authsome on this machine before. The first CLI invocation auto-initializes the home directory. Re-run any command (for example, `uvx authsome whoami`) to trigger initialization.
-- You moved or deleted `~/.authsome`. If you have a backup, restore it. Without the master key, encrypted records cannot be decrypted.
+  <Accordion title="master.key has insecure permissions" icon="lock-open">
+    ```text
+    [FAIL] ~/.authsome/master.key has mode 0644 (expected 0600)
+    ```
 
-### `master.key has insecure permissions`
+    Fix:
 
-```text
-[FAIL] ~/.authsome/master.key has mode 0644 (expected 0600)
-```
+    ```bash
+    chmod 0600 ~/.authsome/master.key
+    ```
+  </Accordion>
 
-Fix:
+  <Accordion title="provider <name> failed to parse" icon="file-exclamation">
+    ```text
+    [FAIL] Provider 'acmecrm' failed to parse: missing required field 'token_url'
+    ```
 
-```bash
-chmod 0600 ~/.authsome/master.key
-```
+    A custom provider JSON in `~/.authsome/providers/` is malformed. Open the file, fix the indicated field, and re-run. See the [Provider schema](/reference/provider-schema) for required fields per auth type.
+  </Accordion>
 
-### `provider <name> failed to parse`
+  <Accordion title="keyring not available" icon="vault">
+    ```text
+    [FAIL] Encryption mode is 'keyring' but no keyring backend is available
+    ```
 
-```text
-[FAIL] Provider 'acmecrm' failed to parse: missing required field 'token_url'
-```
+    Causes:
 
-A custom provider JSON in `~/.authsome/providers/` is malformed. Open the file, fix the indicated field, and re-run. See the [Provider schema](/reference/provider-schema) for required fields per auth type.
+    - On Linux without a graphical session, the `keyring` library can't reach a backend. Switch to `local_key` mode by editing `~/.authsome/config.json`:
 
-### `keyring not available`
+      ```json
+      { "encryption": { "mode": "local_key" } }
+      ```
 
-```text
-[FAIL] Encryption mode is 'keyring' but no keyring backend is available
-```
+    - A required system package is missing. On Debian/Ubuntu: `sudo apt install gnome-keyring`.
+  </Accordion>
 
-Causes:
+  <Accordion title="profile store locked" icon="lock">
+    ```text
+    [FAIL] Could not acquire lock on profiles/default/lock
+    ```
 
-- On Linux without a graphical session, the `keyring` library can't reach a backend. Switch to `local_key` mode by editing `~/.authsome/config.json`:
+    Another authsome process is mid-write. Wait a few seconds and retry. If a stale lock persists (the previous process crashed):
 
-  ```json
-  { "encryption": { "mode": "local_key" } }
-  ```
+    ```bash
+    rm ~/.authsome/profiles/default/lock
+    ```
 
-- A required system package is missing. On Debian/Ubuntu: `sudo apt install gnome-keyring`.
-
-### `profile store locked`
-
-```text
-[FAIL] Could not acquire lock on profiles/default/lock
-```
-
-Another authsome process is mid-write. Wait a few seconds and retry. If a stale lock persists (the previous process crashed):
-
-```bash
-rm ~/.authsome/profiles/default/lock
-```
-
-Only do this when you are certain no other authsome process is running.
-
-## Inspect specific state
-
-For more detail than `doctor` shows, use these:
-
-```bash
-uvx authsome whoami                              # home directory + encryption mode
-uvx authsome list --json                         # all providers + connection states
-uvx authsome get <provider> --json               # connection record metadata
-uvx authsome inspect <provider>                  # provider definition
-uvx authsome log -n 100                          # recent audit events
-```
+    Only do this when you are certain no other authsome process is running.
+  </Accordion>
+</AccordionGroup>
 
 ## Verbose logging
 

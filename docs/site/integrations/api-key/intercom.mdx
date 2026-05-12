@@ -1,0 +1,105 @@
+---
+title: "Intercom"
+sidebarTitle: "Intercom"
+description: "Store and use your Intercom API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+icon: "intercom"
+keywords: ["intercom api key authsome", "intercom key broker", "intercom agent credentials", "authsome intercom"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Intercom uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `intercom` |
+| Display name | Intercom |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.intercom.io` |
+| Env var | `INTERCOM_API_KEY` |
+| Where to get a key | [https://app.intercom.com/a/developer-hub](https://app.intercom.com/a/developer-hub) |
+
+## Get a key
+
+Create an API key in the Intercom dashboard at [https://app.intercom.com/a/developer-hub](https://app.intercom.com/a/developer-hub).
+
+Intercom access tokens live under your workspace's developer hub. Replace `_` placeholders in the URL with your real workspace.
+
+## Log in
+
+```bash
+uvx authsome login intercom
+```
+
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get intercom --field status
+# → connected
+```
+
+## Use the key
+
+<CodeGroup>
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+key = auth.get_access_token("intercom", connection="default")
+```
+
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export intercom --format env)"
+echo $INTERCOM_API_KEY
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `INTERCOM_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.intercom.io`. The child process never sees the actual value.
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login intercom --connection personal
+uvx authsome login intercom --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login intercom --force          # rotate
+uvx authsome logout intercom                  # remove local credential
+uvx authsome remove intercom                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Intercom.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect intercom > ~/.authsome/providers/intercom.json
+# edit fields
+uvx authsome list   # source now shows "custom" for intercom
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

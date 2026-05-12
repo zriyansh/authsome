@@ -1,0 +1,102 @@
+---
+title: "Lemlist"
+sidebarTitle: "Lemlist"
+description: "Store and use your Lemlist API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["lemlist api key authsome", "lemlist key broker", "lemlist agent credentials", "authsome lemlist"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Lemlist uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `lemlist` |
+| Display name | Lemlist |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.lemlist.com` |
+| Env var | `LEMLIST_API_KEY` |
+| Where to get a key | [https://app.lemlist.com/settings/integrations](https://app.lemlist.com/settings/integrations) |
+
+## Get a key
+
+Create an API key in the Lemlist dashboard at [https://app.lemlist.com/settings/integrations](https://app.lemlist.com/settings/integrations).
+
+## Log in
+
+```bash
+uvx authsome login lemlist
+```
+
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get lemlist --field status
+# → connected
+```
+
+## Use the key
+
+<CodeGroup>
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+key = auth.get_access_token("lemlist", connection="default")
+```
+
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export lemlist --format env)"
+echo $LEMLIST_API_KEY
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `LEMLIST_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.lemlist.com`. The child process never sees the actual value.
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login lemlist --connection personal
+uvx authsome login lemlist --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login lemlist --force          # rotate
+uvx authsome logout lemlist                  # remove local credential
+uvx authsome remove lemlist                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Lemlist.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect lemlist > ~/.authsome/providers/lemlist.json
+# edit fields
+uvx authsome list   # source now shows "custom" for lemlist
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

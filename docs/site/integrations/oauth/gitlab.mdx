@@ -1,0 +1,123 @@
+---
+title: "GitLab"
+sidebarTitle: "GitLab"
+description: "Log in to GitLab from authsome via OAuth2. Tokens are stored locally and refreshed automatically."
+icon: "gitlab"
+keywords: ["gitlab oauth cli", "gitlab access token broker", "authsome gitlab", "gitlab agent credentials"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
+
+GitLab is a bundled OAuth2 provider in authsome. Project and repository access on GitLab.com and self-hosted GitLab instances.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `gitlab` |
+| Display name | GitLab |
+| Auth type | OAuth2 |
+| Default flow | `pkce`, PKCE browser flow |
+| PKCE supported | Yes |
+| Device code supported | No |
+| DCR supported | No |
+| Default scopes | `api`, `read_user`, `profile`, `email`, `read_repository`, `write_repository` |
+| Proxy host | `gitlab.com` |
+| Env var (`access_token`) | `GITLAB_ACCESS_TOKEN` |
+| Env var (`refresh_token`) | `GITLAB_REFRESH_TOKEN` |
+
+## Prerequisites
+
+You need to register an OAuth app with GitLab once. Create an application under your GitLab user settings (or group / instance admin for self-hosted), set the redirect URI to authsome's callback, and copy the application ID and secret.
+
+The redirect URI must be:
+
+```text
+http://127.0.0.1:7998/auth/callback/oauth
+```
+
+This is the only callback URL authsome's PKCE flow listens on.
+
+Dashboard: [https://gitlab.com/-/user_settings/applications](https://gitlab.com/-/user_settings/applications).
+
+## Log in
+
+```bash
+uvx authsome login gitlab
+```
+
+The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://gitlab.com/oauth/authorize` for the authorization step.
+
+Verify:
+
+```bash
+uvx authsome get gitlab --field status
+# → connected
+```
+
+## Custom scopes
+
+The bundled definition requests `api`, `read_user`, `profile`, `email`, `read_repository`, `write_repository`. Override at login time:
+
+```bash
+uvx authsome login gitlab --scopes "<comma-separated>"
+```
+
+The granted scopes are stored on the connection and visible in `uvx authsome get gitlab`.
+
+## Self-hosted instances
+
+For self-hosted GitLab, pass the base URL:
+
+```bash
+uvx authsome login gitlab --base-url https://gitlab.acme.com
+```
+
+The base URL is saved on the connection and reused for every token refresh.
+
+## Multiple accounts
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login gitlab --connection personal
+uvx authsome login gitlab --connection work
+```
+
+## Use the token
+
+<CodeGroup>
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+token = auth.get_access_token("gitlab", connection="default")
+```
+
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export gitlab --format env)"
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `GITLAB_ACCESS_TOKEN=authsome-proxy-managed` in the child's environment and injects the real token into outbound requests to `gitlab.com`. The child process never sees the actual value. Refresh tokens are never exported.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect gitlab > ~/.authsome/providers/gitlab.json
+# edit scopes, base_url, or anything else
+uvx authsome list   # source now shows "custom" for gitlab
+```
+
+User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).
+
+## What's next
+
+<WhatsNextOauth />

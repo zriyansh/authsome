@@ -1,0 +1,91 @@
+---
+title: "Generic Python agent"
+sidebarTitle: "Generic Python agent"
+description: "Any Python script that calls third-party APIs. Two patterns, both with authsome managing the credentials."
+icon: "python"
+keywords: ["python agent credentials", "authsome python script", "python api key broker", "python oauth broker"]
+---
+
+The general pattern for any Python script that calls external APIs. No framework required.
+
+## Pattern 1: run under the proxy
+
+Cleanest. The script reads env vars normally; authsome injects the real values at the proxy layer.
+
+```bash
+uvx authsome login openai
+uvx authsome login github
+uvx authsome run -- python my_script.py
+```
+
+In the script:
+
+```python
+import os
+import httpx
+
+# These look like real values to the script but are placeholders.
+# Authsome's proxy substitutes the real secret on outbound requests.
+key = os.environ["OPENAI_API_KEY"]
+gh = os.environ["GITHUB_ACCESS_TOKEN"]
+
+r = httpx.get("https://api.openai.com/v1/models", headers={"Authorization": f"Bearer {key}"})
+print(r.json())
+
+r = httpx.get("https://api.github.com/user", headers={"Authorization": f"Bearer {gh}"})
+print(r.json())
+```
+
+No authsome import in the script. The proxy does the work.
+
+## Pattern 2: use the library
+
+When you want fine-grained control, per-connection selection, or programmatic access to connection metadata:
+
+```python
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+
+openai_key = auth.get_access_token("openai", connection="default")
+github_token = auth.get_access_token("github", connection="work")
+
+import httpx
+r = httpx.get(
+    "https://api.openai.com/v1/models",
+    headers={"Authorization": f"Bearer {openai_key}"},
+)
+```
+
+Refresh is silent. Re-call `get_access_token` if your process outlives a token TTL.
+
+See [Python library](/reference/python-library) for the full surface.
+
+## When to choose which
+
+| Use the proxy | Use the library |
+|----------------|-----------------|
+| The script reads env vars and you don't want to change it. | You need per-call connection selection. |
+| You're running multiple subprocesses that all need credentials. | You're in a single process and want explicit control. |
+| You can install the mitmproxy CA on the machine. | You can't, or you're hitting TLS-pinned SDKs. |
+| You want secrets out of the env entirely. | You're fine with the library handling decryption inline. |
+
+## Multi-account
+
+```python
+auth.get_access_token("github", connection="personal")
+auth.get_access_token("github", connection="work")
+```
+
+See [Multiple connections per provider](/guides/multiple-connections).
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Python library" icon="code" href="/reference/python-library">
+    Every part of the library surface.
+  </Card>
+  <Card title="Run agents with the proxy" icon="shield-halved" href="/guides/run-agents-with-proxy">
+    The proxy injection model.
+  </Card>
+</Columns>

@@ -1,0 +1,104 @@
+---
+title: "G2"
+sidebarTitle: "G2"
+description: "Store and use your G2 API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["g2 api key authsome", "g2 key broker", "g2 agent credentials", "authsome g2"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+G2 uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `g2` |
+| Display name | G2 |
+| Auth type | API key |
+| Header | `Authorization: Token <key>` |
+| Proxy host | `api.g2.com` |
+| Env var | `G2_API_TOKEN` |
+| Provider docs | [https://api.g2.com/](https://api.g2.com/) |
+
+## Get a key
+
+See the G2 API documentation at [https://api.g2.com/](https://api.g2.com/) for how to obtain a key.
+
+G2 API access is negotiated with G2's team; there is no self-serve key dashboard.
+
+## Log in
+
+```bash
+uvx authsome login g2
+```
+
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get g2 --field status
+# → connected
+```
+
+## Use the key
+
+<CodeGroup>
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+key = auth.get_access_token("g2", connection="default")
+```
+
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export g2 --format env)"
+echo $G2_API_TOKEN
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `G2_API_TOKEN=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.g2.com`. The child process never sees the actual value.
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login g2 --connection personal
+uvx authsome login g2 --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login g2 --force          # rotate
+uvx authsome logout g2                  # remove local credential
+uvx authsome remove g2                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for G2.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect g2 > ~/.authsome/providers/g2.json
+# edit fields
+uvx authsome list   # source now shows "custom" for g2
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

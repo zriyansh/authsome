@@ -63,7 +63,7 @@ Authsome routes requests to providers using each provider's `host_url` field.
 | `api.github.com` | `github` provider | `Authorization: Bearer ghu_...` |
 | `example.com` | nothing | request passes through unchanged |
 
-The first provider whose `host_url` matches the request host wins. Ambiguous matches (two providers claim the same host) are not injected — the request is forwarded unchanged.
+The first provider whose `host_url` matches the request host wins. Ambiguous matches (two providers claim the same host) are not injected, the request is forwarded unchanged.
 
 For the regex form (`"host_url": "regex:^api[0-9]+\\.github\\.com$"`), see [Provider registry](/concepts/provider-registry).
 
@@ -73,35 +73,9 @@ For the regex form (`"host_url": "regex:^api[0-9]+\\.github\\.com$"`), see [Prov
   HTTPS interception requires the mitmproxy CA certificate to be trusted on your machine. Without it, the child sees TLS verification errors on every HTTPS call.
 </Warning>
 
-On macOS:
+Per-OS install instructions, including the Python-tooling `REQUESTS_CA_BUNDLE` / `SSL_CERT_FILE` overrides, are in [Proxy networking](/troubleshooting/proxy-networking#tls-verification-fails).
 
-```bash
-# Install the cert into the system trust store
-sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/.mitmproxy/mitmproxy-ca-cert.pem
-```
-
-On Linux (Debian/Ubuntu):
-
-```bash
-sudo cp ~/.mitmproxy/mitmproxy-ca-cert.pem /usr/local/share/ca-certificates/mitmproxy.crt
-sudo update-ca-certificates
-```
-
-For Python tooling that uses its own CA bundle (`requests`, `httpx`), you may also need:
-
-```bash
-export REQUESTS_CA_BUNDLE=~/.mitmproxy/mitmproxy-ca-cert.pem
-export SSL_CERT_FILE=~/.mitmproxy/mitmproxy-ca-cert.pem
-```
-
-See [Proxy networking](/troubleshooting/proxy-networking) for more.
-
-## Limitations
-
-- **HTTP(S) only.** WebSockets, gRPC, raw TCP, and database connections bypass the proxy.
-- **Pinned TLS** in some SDKs ignores `HTTP_PROXY` or rejects custom CAs.
-- **Default connection only.** The proxy uses each provider's default connection. Per-request connection selection is future work.
-- **Refresh tokens are never injected.** Only access tokens (OAuth2) and API keys leave the proxy.
+The proxy is HTTP(S)-only and uses each provider's default connection. Full routing contract and limitations: [Proxy injection](/concepts/proxy-injection).
 
 ## When to choose `run` over `export`
 

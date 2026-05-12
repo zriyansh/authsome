@@ -1,0 +1,123 @@
+---
+title: "Google"
+sidebarTitle: "Google"
+description: "Log in to Google from authsome via OAuth2. Tokens are stored locally and refreshed automatically."
+icon: "google"
+keywords: ["google oauth cli", "google access token broker", "authsome google", "google agent credentials"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
+
+Google is a bundled OAuth2 provider in authsome. Gmail, Drive, Calendar, Sheets, Cloud Storage, and any service under `*.googleapis.com`. Authsome's `host_url` is a regex (`regex:.*googleapis.*`).
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `google` |
+| Display name | Google |
+| Auth type | OAuth2 |
+| Default flow | `pkce`, PKCE browser flow |
+| PKCE supported | Yes |
+| Device code supported | Yes |
+| DCR supported | No |
+| Default scopes | `openid`, `profile` |
+| Proxy host | `regex:.*googleapis.*` |
+| Env var (`access_token`) | `GOOGLE_ACCESS_TOKEN` |
+| Env var (`refresh_token`) | `GOOGLE_REFRESH_TOKEN` |
+
+## Prerequisites
+
+You need to register an OAuth app with Google once. Create OAuth client credentials in the Google Cloud Console under APIs & Services. Pick "Desktop app" or "Web app" with the authsome callback URL.
+
+The redirect URI must be:
+
+```text
+http://127.0.0.1:7998/auth/callback/oauth
+```
+
+This is the only callback URL authsome's PKCE flow listens on.
+
+Dashboard: [https://console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials).
+
+## Log in
+
+```bash
+uvx authsome login google
+```
+
+The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://accounts.google.com/o/oauth2/v2/auth` for the authorization step.
+
+Verify:
+
+```bash
+uvx authsome get google --field status
+# → connected
+```
+
+## Headless setup
+
+For SSH or CI environments, use the device code flow:
+
+```bash
+uvx authsome login google --flow device_code
+```
+
+See [Headless setup](/guides/headless-device-code) for the full flow.
+
+## Custom scopes
+
+The bundled definition requests `openid`, `profile`. Override at login time:
+
+```bash
+uvx authsome login google --scopes "<comma-separated>"
+```
+
+The granted scopes are stored on the connection and visible in `uvx authsome get google`.
+
+## Multiple accounts
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login google --connection personal
+uvx authsome login google --connection work
+```
+
+## Use the token
+
+<CodeGroup>
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+token = auth.get_access_token("google", connection="default")
+```
+
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export google --format env)"
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `GOOGLE_ACCESS_TOKEN=authsome-proxy-managed` in the child's environment and injects the real token into outbound requests to `regex:.*googleapis.*`. The child process never sees the actual value. Refresh tokens are never exported.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect google > ~/.authsome/providers/google.json
+# edit scopes, base_url, or anything else
+uvx authsome list   # source now shows "custom" for google
+```
+
+User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).
+
+## What's next
+
+<WhatsNextOauth />

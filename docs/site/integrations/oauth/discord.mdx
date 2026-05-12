@@ -1,0 +1,117 @@
+---
+title: "Discord"
+sidebarTitle: "Discord"
+description: "Log in to Discord from authsome via OAuth2. Tokens are stored locally and refreshed automatically."
+icon: "discord"
+keywords: ["discord oauth cli", "discord access token broker", "authsome discord", "discord agent credentials"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
+
+Discord is a bundled OAuth2 provider in authsome. User identity, guild membership, and connection info.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `discord` |
+| Display name | Discord |
+| Auth type | OAuth2 |
+| Default flow | `pkce`, PKCE browser flow |
+| PKCE supported | No |
+| Device code supported | No |
+| DCR supported | No |
+| Default scopes | `identify`, `email`, `guilds`, `connections` |
+| Proxy host | `discord.com` |
+| Env var (`access_token`) | `DISCORD_ACCESS_TOKEN` |
+| Env var (`refresh_token`) | `DISCORD_REFRESH_TOKEN` |
+
+## Prerequisites
+
+You need to register an OAuth app with Discord once. Create an application at the Discord developer portal, then add a redirect URI under OAuth2 settings.
+
+The redirect URI must be:
+
+```text
+http://127.0.0.1:7998/auth/callback/oauth
+```
+
+This is the only callback URL authsome's PKCE flow listens on.
+
+Dashboard: [https://discord.com/developers/applications](https://discord.com/developers/applications).
+
+<Note>
+  Discord's OAuth2 endpoint does not require PKCE. Authsome runs the standard authorization-code flow.
+</Note>
+
+## Log in
+
+```bash
+uvx authsome login discord
+```
+
+The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://discord.com/oauth2/authorize` for the authorization step.
+
+Verify:
+
+```bash
+uvx authsome get discord --field status
+# → connected
+```
+
+## Custom scopes
+
+The bundled definition requests `identify`, `email`, `guilds`, `connections`. Override at login time:
+
+```bash
+uvx authsome login discord --scopes "<comma-separated>"
+```
+
+The granted scopes are stored on the connection and visible in `uvx authsome get discord`.
+
+## Multiple accounts
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login discord --connection personal
+uvx authsome login discord --connection work
+```
+
+## Use the token
+
+<CodeGroup>
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+token = auth.get_access_token("discord", connection="default")
+```
+
+```bash Proxy
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export discord --format env)"
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `DISCORD_ACCESS_TOKEN=authsome-proxy-managed` in the child's environment and injects the real token into outbound requests to `discord.com`. The child process never sees the actual value. Refresh tokens are never exported.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect discord > ~/.authsome/providers/discord.json
+# edit scopes, base_url, or anything else
+uvx authsome list   # source now shows "custom" for discord
+```
+
+User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).
+
+## What's next
+
+<WhatsNextOauth />
