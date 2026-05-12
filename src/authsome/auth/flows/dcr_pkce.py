@@ -47,7 +47,7 @@ class DcrPkceFlow(AuthFlow):
 
     callback_port: int = 7999
 
-    def begin(
+    async def begin(
         self,
         provider: ProviderDefinition,
         profile: str,
@@ -67,7 +67,7 @@ class DcrPkceFlow(AuthFlow):
 
         registered_new_client = not client_id
         if registered_new_client:
-            client_id, client_secret = self._register_client(provider, effective_scopes, redirect_uri)
+            client_id, client_secret = await self._register_client(provider, effective_scopes, redirect_uri)
 
         assert client_id is not None  # guaranteed: either passed in or registered above
 
@@ -98,7 +98,7 @@ class DcrPkceFlow(AuthFlow):
             if client_secret:
                 runtime_session.payload["internal_client_secret"] = client_secret
 
-    def resume(
+    async def resume(
         self,
         provider: ProviderDefinition,
         profile: str,
@@ -139,7 +139,7 @@ class DcrPkceFlow(AuthFlow):
         redirect_uri = runtime_session.payload.get("callback_url", "")
         effective_scopes = json.loads(runtime_session.payload.get("internal_scopes", "[]"))
 
-        token_data = self._exchange_code(
+        token_data = await self._exchange_code(
             provider=provider,
             auth_code=auth_code,
             redirect_uri=redirect_uri,
@@ -184,7 +184,7 @@ class DcrPkceFlow(AuthFlow):
             client_record=dcr_client,
         )
 
-    def _discover_registration_endpoint(self, provider: ProviderDefinition) -> str:
+    async def _discover_registration_endpoint(self, provider: ProviderDefinition) -> str:
         if provider.oauth is None:
             raise DiscoveryError("No OAuth config", provider=provider.name)
         parsed = urllib.parse.urlparse(provider.oauth.authorization_url)
@@ -203,16 +203,18 @@ class DcrPkceFlow(AuthFlow):
                 continue
         raise DiscoveryError(
             "Could not discover registration_endpoint via .well-known. "
-            "Set oauth.registration_endpoint in the provider definition.",
+            "Set registration.registration_endpoint in the provider definition.",
             provider=provider.name,
         )
 
-    def _register_client(
+    async def _register_client(
         self, provider: ProviderDefinition, scopes: list[str], redirect_uri: str
     ) -> tuple[str, str | None]:
         if provider.oauth is None:
             raise AuthenticationFailedError("No OAuth config", provider=provider.name)
-        reg_endpoint = provider.oauth.registration_endpoint or self._discover_registration_endpoint(provider)
+        reg_endpoint = (
+            provider.registration.registration_endpoint if provider.registration else None
+        ) or await self._discover_registration_endpoint(provider)
         dcr_payload: dict[str, Any] = {
             "client_name": f"authsome-{provider.name}",
             "redirect_uris": [redirect_uri],
@@ -243,7 +245,7 @@ class DcrPkceFlow(AuthFlow):
         return client_id, reg_data.get("client_secret")
 
     @staticmethod
-    def _exchange_code(
+    async def _exchange_code(
         *,
         provider: ProviderDefinition,
         auth_code: str,

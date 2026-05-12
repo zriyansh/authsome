@@ -8,12 +8,14 @@
     "authorization_url": "https://mcp.notion.com/authorize",
     "token_url": "https://mcp.notion.com/token",
     "revocation_url": "https://mcp.notion.com/token",
-    "registration_endpoint": "https://mcp.notion.com/register",
     "device_authorization_url": null,
     "scopes": [],
     "pkce": true,
     "supports_device_flow": false,
     "supports_dcr": true
+  },
+  "registration": {
+    "registration_endpoint": "https://mcp.notion.com/register"
   },
   "export": {
     "env": {

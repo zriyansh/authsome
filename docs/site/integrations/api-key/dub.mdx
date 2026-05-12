@@ -1,0 +1,104 @@
+---
+title: "Dub.co"
+sidebarTitle: "Dub.co"
+description: "Store and use your Dub.co API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["dub.co api key authsome", "dub.co key broker", "dub agent credentials", "authsome dub"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Dub.co uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `dub` |
+| Display name | Dub.co |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.dub.co` |
+| Env var | `DUB_API_KEY` |
+| Where to get a key | [https://app.dub.co/settings/tokens](https://app.dub.co/settings/tokens) |
+
+## Get a key
+
+Create an API key in the Dub.co dashboard at [https://app.dub.co/settings/tokens](https://app.dub.co/settings/tokens).
+
+## Log in
+
+```bash
+uvx authsome login dub
+```
+
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get dub --field status
+# → connected
+```
+
+## Use the key
+
+Run the agent under the proxy. The library tab is for embedding authsome inside a larger Python orchestrator.
+
+<CodeGroup>
+
+```bash Proxy (recommended)
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export dub --format env)"
+echo $DUB_API_KEY
+```
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+key = auth.get_access_token("dub", connection="default")
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `DUB_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.dub.co`. The child process never sees the actual value.
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login dub --connection personal
+uvx authsome login dub --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login dub --force          # rotate
+uvx authsome logout dub                  # remove local credential
+uvx authsome remove dub                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Dub.co.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect dub > ~/.authsome/providers/dub.json
+# edit fields
+uvx authsome list   # source now shows "custom" for dub
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

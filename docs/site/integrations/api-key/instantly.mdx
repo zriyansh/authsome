@@ -1,0 +1,104 @@
+---
+title: "Instantly"
+sidebarTitle: "Instantly"
+description: "Store and use your Instantly API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["instantly api key authsome", "instantly key broker", "instantly agent credentials", "authsome instantly"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Instantly uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `instantly` |
+| Display name | Instantly |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.instantly.ai` |
+| Env var | `INSTANTLY_API_KEY` |
+| Where to get a key | [https://app.instantly.ai/app/settings/integrations](https://app.instantly.ai/app/settings/integrations) |
+
+## Get a key
+
+Create an API key in the Instantly dashboard at [https://app.instantly.ai/app/settings/integrations](https://app.instantly.ai/app/settings/integrations).
+
+## Log in
+
+```bash
+uvx authsome login instantly
+```
+
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get instantly --field status
+# → connected
+```
+
+## Use the key
+
+Run the agent under the proxy. The library tab is for embedding authsome inside a larger Python orchestrator.
+
+<CodeGroup>
+
+```bash Proxy (recommended)
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export instantly --format env)"
+echo $INSTANTLY_API_KEY
+```
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+key = auth.get_access_token("instantly", connection="default")
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `INSTANTLY_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.instantly.ai`. The child process never sees the actual value.
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login instantly --connection personal
+uvx authsome login instantly --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login instantly --force          # rotate
+uvx authsome logout instantly                  # remove local credential
+uvx authsome remove instantly                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Instantly.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect instantly > ~/.authsome/providers/instantly.json
+# edit fields
+uvx authsome list   # source now shows "custom" for instantly
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

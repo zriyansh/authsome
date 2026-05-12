@@ -22,8 +22,15 @@ class OAuthConfig(BaseModel):
     pkce: bool = True
     supports_device_flow: bool = False
     supports_dcr: bool = False
-    registration_endpoint: str | None = None
     base_url: str | None = None
+
+    model_config = {"extra": "allow"}
+
+
+class ClientRegistrationConfig(BaseModel):
+    """Dynamic Client Registration configuration."""
+
+    registration_endpoint: str | None = None
 
     model_config = {"extra": "allow"}
 
@@ -63,6 +70,7 @@ class ProviderDefinition(BaseModel):
     flow: FlowType
 
     oauth: OAuthConfig | None = None
+    registration: ClientRegistrationConfig | None = None
     api_key: ApiKeyConfig | None = None
     export: ExportConfig | None = None
     docs: str | None = None
@@ -95,8 +103,10 @@ class ProviderDefinition(BaseModel):
             resolved.oauth.token_url = resolve(resolved.oauth.token_url) or resolved.oauth.token_url
             resolved.oauth.revocation_url = resolve(resolved.oauth.revocation_url)
             resolved.oauth.device_authorization_url = resolve(resolved.oauth.device_authorization_url)
-            if resolved.oauth.registration_endpoint:
-                resolved.oauth.registration_endpoint = resolve(resolved.oauth.registration_endpoint)
+
+        # Resolve Registration URLs
+        if resolved.registration and resolved.registration.registration_endpoint:
+            resolved.registration.registration_endpoint = resolve(resolved.registration.registration_endpoint)
 
         # Resolve host_url if it contains the template
         resolved.host_url = resolve(resolved.host_url) or resolved.host_url

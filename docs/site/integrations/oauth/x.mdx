@@ -1,0 +1,115 @@
+---
+title: "X (Twitter)"
+sidebarTitle: "X (Twitter)"
+description: "Log in to X (Twitter) from authsome via OAuth2. Tokens are stored locally and refreshed automatically."
+icon: "x-twitter"
+keywords: ["x (twitter) oauth cli", "x (twitter) access token broker", "authsome x", "x agent credentials"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
+
+X (Twitter) is a bundled OAuth2 provider in authsome. Reading and writing tweets, user lookup, and offline access (refresh tokens).
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `x` |
+| Display name | X (Twitter) |
+| Auth type | OAuth2 |
+| Default flow | `pkce`, PKCE browser flow |
+| PKCE supported | Yes |
+| Device code supported | No |
+| DCR supported | No |
+| Default scopes | `tweet.read`, `tweet.write`, `users.read`, `offline.access` |
+| Proxy host | `api.twitter.com` |
+| Env var (`access_token`) | `X_ACCESS_TOKEN` |
+| Env var (`refresh_token`) | `X_REFRESH_TOKEN` |
+
+## Prerequisites
+
+You need to register an OAuth app with X (Twitter) once. Create a project and app in the X developer portal. Enable OAuth 2.0, set the callback URL, and copy the client ID and secret.
+
+The redirect URI must be:
+
+```text
+http://127.0.0.1:7998/auth/callback/oauth
+```
+
+This is the only callback URL authsome's PKCE flow listens on.
+
+Dashboard: [https://developer.twitter.com/en/portal/dashboard](https://developer.twitter.com/en/portal/dashboard).
+
+## Log in
+
+```bash
+uvx authsome login x
+```
+
+The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://twitter.com/i/oauth2/authorize` for the authorization step.
+
+Verify:
+
+```bash
+uvx authsome get x --field status
+# → connected
+```
+
+## Custom scopes
+
+The bundled definition requests `tweet.read`, `tweet.write`, `users.read`, `offline.access`. Override at login time:
+
+```bash
+uvx authsome login x --scopes "<comma-separated>"
+```
+
+The granted scopes are stored on the connection and visible in `uvx authsome get x`.
+
+## Multiple accounts
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login x --connection personal
+uvx authsome login x --connection work
+```
+
+## Use the token
+
+Run the agent under the proxy. The library tab is for embedding authsome inside a larger Python orchestrator.
+
+<CodeGroup>
+
+```bash Proxy (recommended)
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export x --format env)"
+```
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+token = auth.get_access_token("x", connection="default")
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `X_ACCESS_TOKEN=authsome-proxy-managed` in the child's environment and injects the real token into outbound requests to `api.twitter.com`. The child process never sees the actual value. Refresh tokens are never exported.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect x > ~/.authsome/providers/x.json
+# edit scopes, base_url, or anything else
+uvx authsome list   # source now shows "custom" for x
+```
+
+User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).
+
+## What's next
+
+<WhatsNextOauth />

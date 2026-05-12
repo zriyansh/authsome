@@ -280,7 +280,7 @@ def format_error_code(exc: Exception) -> int:
     """Return a numerical exit code representing the exception type."""
     if exc.__class__.__name__ == "DaemonUnavailableError":
         return 9
-    if not isinstance(exc, (AuthsomeError, FileExistsError)):
+    if not isinstance(exc, AuthsomeError | FileExistsError):
         return 1
     exc_name = exc.__class__.__name__
     if exc_name in ("AuthenticationFailedError", "InputCancelledError"):

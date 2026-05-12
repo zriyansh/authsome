@@ -1,36 +1,34 @@
-"""Vault — the secure credential store.
+"""Vault — encrypted key-value layer over AppStore.
 
-The Vault is a generic encrypted key-value store. It owns:
-- The master key (via a pluggable crypto backend)
-- The SQLite storage backend
-- Encryption and decryption of all stored values
+The Vault wraps an AppStore's async KV backend and encrypts every value
+before writing and decrypts after reading.  It uses collections to
+logically separate different data types (profiles, providers, credentials).
 
-The Vault knows nothing about credential types, token lifecycle, or OAuth.
-All key schema decisions belong to the caller (AuthLayer).
+The Vault knows nothing about credential types, profiles, or providers.
+All key schema decisions belong to the caller (AuthService).
 """
 
 from __future__ import annotations
 
 import builtins
+import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from authsome.store.interfaces import AppStore, VaultStorage
+from authsome.store.interfaces import AppStore
 
 if TYPE_CHECKING:
+    from authsome.auth.models.config import GlobalConfig
     from authsome.vault.crypto import VaultCrypto
-
-_DEFAULT_PROFILE = "default"
 
 
 class Vault:
-    """
-    Encrypted key-value store backed by SQLite.
+    """Encrypted key-value store backed by an AppStore.
 
-    All values are encrypted at rest using AES-256-GCM. The master key is
+    All values are encrypted at rest using AES-256-GCM.  The master key is
     managed by the configured VaultCrypto backend (local file or OS keyring).
 
-    The Vault is key-agnostic. Key schema is owned by AuthLayer.
+    Config is delegated unencrypted (needed before crypto is available).
     """
 
     def __init__(
@@ -45,8 +43,6 @@ class Vault:
         self._crypto_mode = crypto_mode
         self._master_key_path = master_key_path
 
-    # ── Core KV interface ─────────────────────────────────────────────────
-
     @property
     def crypto(self) -> VaultCrypto:
         if self._crypto is None:
@@ -55,44 +51,77 @@ class Vault:
             self._crypto = create_crypto(self._master_key_path, self._crypto_mode)
         return self._crypto
 
-    # ── Core KV interface ─────────────────────────────────────────────────
+    @property
+    def home(self) -> Path:
+        """Base directory for the storage system."""
+        return self._app_store.home
 
-    def get(self, key: str, *, profile: str = _DEFAULT_PROFILE) -> str | None:
+    # ── Config (delegated, unencrypted — bootstrap dependency) ────────────
+
+    async def get_config(self) -> GlobalConfig:
+        return await self._app_store.get_config()
+
+    async def save_config(self, config: GlobalConfig) -> None:
+        await self._app_store.save_config(config)
+
+    # ── Index helpers ─────────────────────────────────────────────────────
+
+    async def _get_index(self, collection: str) -> builtins.list[str]:
+        val = await self._app_store.kv.get("__index__", collection=collection)
+        if not val:
+            return []
+        return json.loads(val["data"])
+
+    async def _save_index(self, collection: str, keys: builtins.list[str]) -> None:
+        await self._app_store.kv.put("__index__", {"data": json.dumps(sorted(keys))}, collection=collection)
+
+    # ── Encrypted KV interface ────────────────────────────────────────────
+
+    async def get(self, key: str, *, collection: str) -> str | None:
         """Retrieve and decrypt a value. Returns None if key not found."""
-        raw = self._storage(profile).get(key)
-        if raw is None:
+        val = await self._app_store.kv.get(key, collection=collection)
+        if val is None:
             return None
-        return self.crypto.decrypt(raw)
+        return self.crypto.decrypt(val["data"])
 
-    def put(self, key: str, value: str, *, profile: str = _DEFAULT_PROFILE) -> None:
+    async def put(self, key: str, value: str, *, collection: str) -> None:
         """Encrypt and store a value."""
         encrypted = self.crypto.encrypt(value)
-        self._storage(profile).put(key, encrypted)
+        await self._app_store.kv.put(key, {"data": encrypted}, collection=collection)
+        if key != "__index__":
+            idx = set(await self._get_index(collection))
+            if key not in idx:
+                idx.add(key)
+                await self._save_index(collection, builtins.list(idx))
 
-    def delete(self, key: str, *, profile: str = _DEFAULT_PROFILE) -> bool:
+    async def delete(self, key: str, *, collection: str) -> bool:
         """Delete a key. Returns True if the key existed."""
-        return self._storage(profile).delete(key)
+        existed = await self._app_store.kv.delete(key, collection=collection)
+        if existed and key != "__index__":
+            idx = set(await self._get_index(collection))
+            idx.discard(key)
+            await self._save_index(collection, builtins.list(idx))
+        return existed
 
-    def list(self, prefix: str = "", *, profile: str = _DEFAULT_PROFILE) -> builtins.list[str]:
-        """List all keys matching a prefix."""
-        return self._storage(profile).list_keys(prefix)
+    async def list(self, prefix: str = "", *, collection: str) -> builtins.list[str]:
+        """List all keys matching a prefix within a collection."""
+        idx = await self._get_index(collection)
+        if prefix:
+            return [k for k in idx if k.startswith(prefix)]
+        return list(idx)
 
-    def check_integrity(self, *, profile: str = _DEFAULT_PROFILE) -> bool:
+    # ── Lifecycle ─────────────────────────────────────────────────────────
+
+    async def check_integrity(self, *, profile: str | None = None) -> bool:
         """Perform health check on underlying store."""
-        return self._storage(profile).check_integrity()
+        return await self._app_store.check_integrity()
 
-    def close(self) -> None:
-        """Close all open storage connections."""
-        # Vault doesn't own the connections anymore, the AppStore does.
-        pass
+    async def close(self) -> None:
+        """Release resources."""
+        await self._app_store.close()
 
-    def __enter__(self) -> Vault:
+    async def __aenter__(self) -> Vault:
         return self
 
-    def __exit__(self, *args: object) -> None:
-        self.close()
-
-    # ── Internal ──────────────────────────────────────────────────────────
-
-    def _storage(self, profile: str) -> VaultStorage:
-        return self._app_store.get_vault_storage(profile)
+    async def __aexit__(self, *args: object) -> None:
+        await self.close()

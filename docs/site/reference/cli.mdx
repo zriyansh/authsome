@@ -17,11 +17,15 @@ All commands support `--json` for machine-readable output, `--quiet` to suppress
 | `get <provider>` | Get connection metadata (secrets redacted by default). |
 | `export <provider>` | Export credentials in `env` or `json` format. |
 | `run -- <cmd>` | Run a subprocess behind the local auth proxy. |
+| `scan` | Discover provider API keys in env files and the current environment. |
 | `logout <provider>` | Log out of a connection and remove local state. |
 | `revoke <provider>` | Reset all connections and client secrets for the provider. |
 | `remove <provider>` | Uninstall a custom provider or reset a bundled one. |
 | `register <path>` | Register a custom provider from a JSON file. |
+| `connection set-default <provider> <connection>` | Set the default connection for a provider. |
+| `ui` | Open the dashboard in the browser. |
 | `log` | View the audit log. |
+| `daemon <subcommand>` | Manage the local daemon: `serve`, `start`, `stop`, `restart`, `status`, `logs`. |
 
 ## Global flags
 
@@ -53,7 +57,7 @@ uvx authsome inspect github            # full provider definition
 uvx authsome inspect github --json     # same, as JSON
 ```
 
-`list` shows three states per provider — `available`, `configured`, `connected`. See [Credential storage](/concepts/credential-storage#the-three-states) for the state model.
+`list` shows three states per provider. `available`, `configured`, `connected`. See [Credential storage](/concepts/credential-storage#the-three-states) for the state model.
 
 ### `login`
 
@@ -76,11 +80,11 @@ uvx authsome login github                       # OAuth2 PKCE flow
 uvx authsome login github --flow device_code    # headless OAuth2
 uvx authsome login openai                       # API-key flow via browser bridge
 uvx authsome login github --connection work     # second connection on the same provider
-uvx authsome login okta --base-url https://acme.okta.com
+uvx authsome login github --base-url https://github.acme.com   # GitHub Enterprise
 ```
 
 <Warning>
-  Sensitive values — `client_secret`, API keys — are never accepted as command-line arguments. Authsome collects them through the secure browser bridge or, on headless machines, through masked terminal input.
+  Sensitive values. `client_secret`, API keys, are never accepted as command-line arguments. Authsome collects them through the secure browser bridge or, on headless machines, through masked terminal input.
 </Warning>
 
 ### `get`
@@ -117,7 +121,7 @@ uvx authsome export github --format env       # KEY=value lines
 uvx authsome export openai --format json      # JSON object
 ```
 
-Only the `access_token` (OAuth2) or `api_key` (API-key) is exported. Refresh tokens are never exposed — authsome handles refresh transparently.
+Only the `access_token` (OAuth2) or `api_key` (API-key) is exported. Refresh tokens are never exposed, authsome handles refresh transparently.
 
 ### `run`
 
@@ -142,6 +146,67 @@ How it works:
 6. Returns the child's exit code.
 
 See [Proxy injection](/concepts/proxy-injection) for the routing contract.
+
+### `scan`
+
+```bash
+uvx authsome scan [OPTIONS]
+```
+
+Scans `.env` files in the current directory tree and the active process environment for credentials matching bundled providers. By default it prints a drift report (what's in your env vs. what's in the vault).
+
+| Option | Description |
+|--------|-------------|
+| `--import` | Apply the discovered values, creating connections in the vault. |
+| `--connection <name>` | Target a non-default connection name when importing. |
+| `--json` | Machine-readable drift report. Combine with `--import` to apply. |
+
+```bash
+uvx authsome scan                           # report-only
+uvx authsome scan --json                    # report-only, JSON output
+uvx authsome scan --import                  # write discovered keys into the vault
+uvx authsome scan --import --connection ci  # import into a named connection
+```
+
+`scan` does not support `--quiet`. Use `--json` for headless contexts.
+
+### `connection set-default`
+
+```bash
+uvx authsome connection set-default <provider> <connection>
+```
+
+Sets the default connection for a provider. The proxy and library calls use the default unless an explicit `--connection` flag is passed.
+
+```bash
+uvx authsome connection set-default github work
+```
+
+### `ui`
+
+```bash
+uvx authsome ui [--no-browser]
+```
+
+Opens the daemon dashboard in your default browser at `http://127.0.0.1:7998/ui/`. Pass `--no-browser` to just print the URL.
+
+### `daemon`
+
+Daemon lifecycle management. The CLI normally auto-starts the daemon on first use; these subcommands let you control it explicitly (useful for systemd units, debugging, and CI).
+
+```bash
+uvx authsome daemon serve [--host 127.0.0.1] [--port 7998] [--reload]
+uvx authsome daemon start
+uvx authsome daemon stop
+uvx authsome daemon restart
+uvx authsome daemon status
+uvx authsome daemon logs [-n 100]
+```
+
+- `serve` runs the daemon in the foreground (blocks the terminal).
+- `start` / `stop` / `restart` manage a background daemon.
+- `status` prints PID, base URL, and uptime.
+- `logs` tails the daemon log file.
 
 ### `logout` / `revoke` / `remove`
 

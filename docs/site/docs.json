@@ -1,59 +1,221 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "authsome",
-  "description": "Local auth for AI agents. Log in once via OAuth2 or API key. Authsome keeps credentials fresh for every agent.",
+  "name": "Authsome",
+  "description": "Local credential broker for AI agents. Log in once via OAuth2 or API key. Authsome keeps tokens fresh and injects them at runtime.",
   "colors": {
-    "primary": "#047857",
-    "light": "#34D399",
-    "dark": "#047857"
+    "primary": "#83CA16",
+    "light": "#A3E635",
+    "dark": "#65A30D"
+  },
+  "background": {
+    "color": {
+      "light": "#FFFFFF",
+      "dark": "#0A0A0A"
+    }
+  },
+  "appearance": {
+    "default": "dark",
+    "strict": false
+  },
+  "banner": {
+    "content": "Authsome is in active development. [Star us on GitHub](https://github.com/agentrhq/authsome) to follow along.",
+    "dismissible": true
+  },
+  "seo": {
+    "indexing": "all",
+    "metatags": {
+      "canonical": "https://authsome.agentr.dev/docs",
+      "title-template": "%s · Authsome",
+      "og:site_name": "Authsome Docs",
+      "og:type": "website",
+      "og:description": "Local credential broker for AI agents. Log in once via OAuth2 or API key. Authsome keeps tokens fresh and injects them at runtime.",
+      "og:locale": "en_US",
+      "twitter:card": "summary_large_image",
+      "twitter:site": "@agentrhq",
+      "twitter:creator": "@agentrhq"
+    }
   },
   "navigation": {
-    "groups": [
+    "tabs": [
       {
-        "group": "Get started",
-        "pages": [
-          "index",
-          "quickstart"
+        "tab": "Documentation",
+        "icon": "book-open",
+        "groups": [
+          {
+            "group": "Get started",
+            "icon": "rocket",
+            "pages": [
+              "index",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "icon": "lightbulb",
+            "pages": [
+              "concepts/architecture",
+              "concepts/credential-storage",
+              "concepts/proxy-injection",
+              "concepts/provider-registry",
+              "concepts/profiles-vs-connections",
+              "concepts/the-daemon"
+            ]
+          },
+          {
+            "group": "Security",
+            "icon": "shield-halved",
+            "pages": [
+              "security/threat-model",
+              "security/encryption",
+              "security/daemon-trust-boundary",
+              "security/hosted-deployment",
+              "security/disclosure"
+            ]
+          },
+          {
+            "group": "Project",
+            "icon": "compass",
+            "pages": [
+              "roadmap",
+              "changelog",
+              "compared"
+            ]
+          }
         ]
       },
       {
-        "group": "Guides",
-        "pages": [
-          "guides/login-with-oauth",
-          "guides/use-api-keys",
-          "guides/run-agents-with-proxy",
-          "guides/deploy-on-gce",
-          "guides/custom-providers",
-          "guides/profiles",
-          "guides/headless-device-code"
+        "tab": "Guides",
+        "icon": "book",
+        "groups": [
+          {
+            "group": "Guides",
+            "icon": "book",
+            "pages": [
+              "guides/login-with-oauth",
+              "guides/use-api-keys",
+              "guides/run-agents-with-proxy",
+              "guides/headless-device-code",
+              "guides/multiple-connections",
+              "guides/profiles",
+              "guides/custom-providers"
+            ]
+          },
+          {
+            "group": "Troubleshooting",
+            "icon": "stethoscope",
+            "pages": [
+              "troubleshooting/doctor",
+              "troubleshooting/oauth-callbacks",
+              "troubleshooting/token-refresh",
+              "troubleshooting/proxy-networking",
+              "troubleshooting/daemon-issues"
+            ]
+          }
         ]
       },
       {
-        "group": "Concepts",
-        "pages": [
-          "concepts/architecture",
-          "concepts/credential-storage",
-          "concepts/proxy-injection",
-          "concepts/provider-registry"
+        "tab": "Reference",
+        "icon": "code",
+        "groups": [
+          {
+            "group": "Reference",
+            "icon": "code",
+            "pages": [
+              "reference/cli",
+              "reference/provider-schema",
+              "reference/environment-variables",
+              "reference/bundled-providers",
+              "reference/file-layout",
+              "reference/python-library",
+              "reference/daemon-api",
+              "reference/audit-log"
+            ]
+          }
         ]
       },
       {
-        "group": "Reference",
-        "pages": [
-          "reference/cli",
-          "reference/provider-schema",
-          "reference/environment-variables",
-          "reference/bundled-providers"
-        ]
-      },
-      {
-        "group": "Troubleshooting",
-        "pages": [
-          "troubleshooting/doctor",
-          "troubleshooting/oauth-callbacks",
-          "troubleshooting/token-refresh",
-          "troubleshooting/proxy-networking"
+        "tab": "Integrations",
+        "icon": "plug",
+        "groups": [
+          {
+            "group": "Agent frameworks",
+            "icon": "robot",
+            "pages": [
+              "integrations/agents/index",
+              "integrations/agents/claude-code",
+              "integrations/agents/codex",
+              "integrations/agents/cursor",
+              "integrations/agents/opencode",
+              "integrations/agents/cowork",
+              "integrations/agents/nanoclaw",
+              "integrations/agents/langchain",
+              "integrations/agents/llamaindex",
+              "integrations/agents/openai-agents-sdk",
+              "integrations/agents/anthropic-sdk",
+              "integrations/agents/python"
+            ]
+          },
+          {
+            "group": "OAuth providers",
+            "icon": "right-to-bracket",
+            "pages": [
+              "integrations/oauth/index",
+              "integrations/oauth/atlassian",
+              "integrations/oauth/discord",
+              "integrations/oauth/github",
+              "integrations/oauth/gitlab",
+              "integrations/oauth/google",
+              "integrations/oauth/hubspot",
+              "integrations/oauth/klaviyo-oauth",
+              "integrations/oauth/linear",
+              "integrations/oauth/microsoft",
+              "integrations/oauth/notion",
+              "integrations/oauth/notion-dcr",
+              "integrations/oauth/postiz",
+              "integrations/oauth/slack",
+              "integrations/oauth/x"
+            ]
+          },
+          {
+            "group": "API-key providers",
+            "icon": "key",
+            "pages": [
+              "integrations/api-key/index",
+              "integrations/api-key/ahrefs",
+              "integrations/api-key/apollo",
+              "integrations/api-key/ashby",
+              "integrations/api-key/beehiiv",
+              "integrations/api-key/brevo",
+              "integrations/api-key/buffer",
+              "integrations/api-key/calendly",
+              "integrations/api-key/clearbit",
+              "integrations/api-key/dub",
+              "integrations/api-key/g2",
+              "integrations/api-key/hunter",
+              "integrations/api-key/instantly",
+              "integrations/api-key/intercom",
+              "integrations/api-key/keywords-everywhere",
+              "integrations/api-key/klaviyo",
+              "integrations/api-key/lemlist",
+              "integrations/api-key/livestorm",
+              "integrations/api-key/mailchimp",
+              "integrations/api-key/mention-me",
+              "integrations/api-key/openai",
+              "integrations/api-key/optimizely",
+              "integrations/api-key/postmark",
+              "integrations/api-key/resend",
+              "integrations/api-key/rewardful",
+              "integrations/api-key/savvycal",
+              "integrations/api-key/semrush",
+              "integrations/api-key/sendgrid",
+              "integrations/api-key/tolt",
+              "integrations/api-key/typeform",
+              "integrations/api-key/wistia",
+              "integrations/api-key/zapier"
+            ]
+          }
         ]
       }
     ]
@@ -63,41 +225,58 @@
       {
         "label": "PyPI",
         "href": "https://pypi.org/project/authsome/"
+      },
+      {
+        "label": "llms.txt",
+        "href": "/docs/llms.txt"
       }
     ],
     "primary": {
       "type": "github",
-      "href": "https://github.com/manojbajaj95/authsome"
+      "href": "https://github.com/agentrhq/authsome"
     }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "cursor"
+    ]
+  },
+  "feedback": {
+    "thumbsRating": true,
+    "suggestEdit": true
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/manojbajaj95/authsome"
+      "github": "https://github.com/agentrhq/authsome"
     },
     "links": [
       {
-        "header": "Resources",
+        "header": "Product",
         "items": [
-          {
-            "label": "GitHub",
-            "href": "https://github.com/manojbajaj95/authsome"
-          },
-          {
-            "label": "PyPI",
-            "href": "https://pypi.org/project/authsome/"
-          },
-          {
-            "label": "Spec",
-            "href": "https://github.com/manojbajaj95/authsome/blob/main/docs/specs/authsome-v1.md"
-          }
+          { "label": "Home", "href": "https://authsome.agentr.dev" },
+          { "label": "GitHub", "href": "https://github.com/agentrhq/authsome" },
+          { "label": "PyPI", "href": "https://pypi.org/project/authsome/" }
+        ]
+      },
+      {
+        "header": "Docs",
+        "items": [
+          { "label": "Quickstart", "href": "/docs/quickstart" },
+          { "label": "CLI reference", "href": "/docs/reference/cli" },
+          { "label": "Architecture", "href": "/docs/concepts/architecture" },
+          { "label": "llms.txt", "href": "/docs/llms.txt" }
+        ]
+      },
+      {
+        "header": "Company",
+        "items": [
+          { "label": "Agentr", "href": "https://agentr.dev" }
         ]
       }
     ]
-  },
-  "seo": {
-    "metatags": {
-      "og:site_name": "authsome",
-      "og:type": "website"
-    }
   }
 }

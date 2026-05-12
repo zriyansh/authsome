@@ -12,7 +12,7 @@ import click
 from loguru import logger
 
 from authsome.auth.models.provider import ProviderDefinition
-from authsome.cli.context import ContextObj
+from authsome.cli.context import ContextObj, common_options, pass_ctx
 from authsome.utils import format_error_code
 
 
@@ -21,7 +21,12 @@ def handle_errors(func):
 
     @functools.wraps(func)
     def wrapper(ctx_obj: ContextObj, *args, **kwargs):
+        import asyncio
+        import inspect
+
         try:
+            if inspect.iscoroutinefunction(func):
+                return asyncio.run(func(ctx_obj, *args, **kwargs))
             return func(ctx_obj, *args, **kwargs)
         except Exception as exc:
             if ctx_obj.json_output:
@@ -31,6 +36,11 @@ def handle_errors(func):
             sys.exit(format_error_code(exc))
 
     return wrapper
+
+
+def auth_command(func):
+    """Composite decorator combining common options, context injection, and error handling."""
+    return common_options(pass_ctx(handle_errors(func)))
 
 
 def setup_logging(verbose: bool, log_file: Path | None) -> None:
@@ -67,8 +77,8 @@ def _validate_provider_endpoints(definition: Any, ctx_obj: ContextObj) -> list[t
             endpoints_to_check.append(("revocation_url", definition.oauth.revocation_url, False))
         if definition.oauth.device_authorization_url:
             endpoints_to_check.append(("device_authorization_url", definition.oauth.device_authorization_url, False))
-        if definition.oauth.registration_endpoint:
-            endpoints_to_check.append(("registration_endpoint", definition.oauth.registration_endpoint, False))
+    if definition.registration and definition.registration.registration_endpoint:
+        endpoints_to_check.append(("registration_endpoint", definition.registration.registration_endpoint, False))
     if definition.host_url:
         endpoints_to_check.append(("host_url", definition.host_url, True))
 

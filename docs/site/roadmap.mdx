@@ -1,0 +1,105 @@
+---
+title: "Roadmap"
+sidebarTitle: "Roadmap"
+description: "What's landed, what's next, and what's deliberately out of scope. The layered architecture's planned layers and the open questions behind them."
+icon: "map"
+keywords: ["authsome roadmap", "authsome planned features", "identity policy audit", "authsome future"]
+---
+
+Authsome's architecture is layered: identity, policy, vault, auth, audit. v1 ships Vault, Auth, and the proxy orchestrator. Identity, Policy, and Audit are documented in the design but not yet enforced. This page is the honest tracker for what's coming and what isn't.
+
+The canonical design document is [`authsome-design.md`](https://github.com/agentrhq/authsome/blob/main/docs/authsome-design.md) in the source tree.
+
+## Landed in v1
+
+- **Vault** <Badge color="green">Shipped</Badge> Encrypted SQLite per profile with AES-256-GCM. Local file or OS keyring backend for the master key. See [Encryption at rest](/security/encryption).
+- **Auth** <Badge color="green">Shipped</Badge> OAuth2 PKCE, device code, and DCR + PKCE flows. API-key flow with a browser bridge and `getpass` fallback. Automatic refresh through the AuthLayer.
+- **Provider registry** <Badge color="green">Shipped</Badge> 14 OAuth + 31 API-key bundled providers. User overrides at `~/.authsome/providers/`. Custom provider registration via `authsome register`.
+- **Proxy** <Badge color="green">Shipped</Badge> mitmproxy-based local HTTP proxy. Host-matched routing via `host_url`. Per-provider header injection. Placeholder env vars in the child process.
+- **Daemon** <Badge color="green">Shipped</Badge> FastAPI HTTP server on `127.0.0.1:7998`. Browser bridges, OAuth callbacks, dashboard UI. See [The local daemon](/concepts/the-daemon).
+- **Audit** <Badge color="green">Shipped</Badge> Append-only `audit.log` with structured JSON events for every significant CLI action. See [Audit log format](/reference/audit-log).
+- **CLI** <Badge color="green">Shipped</Badge> `whoami`, `doctor`, `list`, `inspect`, `login`, `get`, `export`, `run`, `logout`, `revoke`, `remove`, `register`, `log`. See [CLI reference](/reference/cli).
+
+## Coming next
+
+### Identity layer <Badge color="amber">Planned</Badge>
+
+Cryptographic agent identity using Ed25519 keys plus a principal chain token that combines an agent actor identity with the user subject identity.
+
+- **v1 <Badge color="amber">Planned</Badge>** local-only. Agent URIs in the form `agent://local/<name>`. User identity derived from the OS session.
+- **Later <Badge color="gray">Future</Badge>** real SPIFFE format (`spiffe://trust-domain/path`). Multi-user via RFC 8693 Token Exchange.
+
+### Policy layer <Badge color="amber">Planned</Badge>
+
+`can(agent, on_behalf_of=user, operation, resource) → allow | deny` evaluated before any vault access. The sidecar resolves identity first, passes it to policy as a parameter (the "layers don't reach sideways" rule).
+
+- **v1 <Badge color="amber">Planned</Badge>** TOML-based rules. A default-allow policy for fresh single-user installs so the layer is in place without breaking the current UX.
+- **Later <Badge color="gray">Future</Badge>** [Cedar](https://www.cedarpolicy.com) for full rule evaluation. TOML rules map to Cedar policies on migration.
+
+### CLI-level profile switching <Badge color="amber">Planned</Badge>
+
+`--profile <name>` flag on every command. Today the active profile is set via `config.json`. Programmatic profile creation works; the CLI flag does not.
+
+### Per-request connection selection in the proxy <Badge color="amber">Planned</Badge>
+
+The proxy currently uses each provider's default connection. Future work: declare per-request connection via headers or path-matching, so a single agent can talk to two connections of the same provider in one run.
+
+### Master key rotation <Badge color="gray">Future</Badge>
+
+Re-encrypt every record under a new master key without losing state. The wire format anticipates this (records carry a `kid` field in the JSON envelope spec). The migration command will land when there's a real reason to rotate.
+
+## Recently open questions
+
+These are tracked in [`authsome-design.md`](https://github.com/agentrhq/authsome/blob/main/docs/authsome-design.md) under "Open Questions". They are unresolved enough to call out separately.
+
+| Question | Status |
+|----------|--------|
+| Final vault protocol shape (sync vs async, error contract, health-check shape) | Open |
+| Multi-user token derivation (OS session works only for single-user local) | Open |
+| Cedar migration from TOML rules | Open |
+| Policy identity bootstrap (sidecar resolves, policy receives as parameter) | Candidate answer, not confirmed |
+| Canonical credential address model across vault backends | KV form documented; full model open |
+
+## Deliberately out of scope
+
+These are intentional product decisions, not gaps.
+
+- **A SaaS secrets manager.** Authsome is local-first and self-hosted by design. There is no "Authsome Cloud".
+- **A network-level identity system.** Authsome complements SPIFFE/SPIRE at the credential layer rather than replacing them.
+- **Rotate-on-use secret stores.** Credentials are refreshed by the auth layer, not rotated on every use.
+- **Enterprise identity platform replacement.** Federation and broad enterprise IDP integration is a downstream concern, not the v1 focus.
+
+## Hosted deployment
+
+Hosted mode exists in v1 for internal-only deployments. It is **not** ready for internet-facing or multi-tenant use. Before hosted authsome should be treated as production for external traffic, the following must land:
+
+- Real per-user authentication inside the daemon.
+- Tenant separation between users sharing the daemon.
+- Persistent browser-session storage (today's sessions are in-memory).
+- A built-in admin secret or bearer token gate on the daemon.
+- CSRF protection and session hardening on browser forms.
+
+See [Hosted deployment model](/security/hosted-deployment) for the current internal-network shape.
+
+## How to influence the roadmap
+
+- **File an issue.** [github.com/agentrhq/authsome/issues](https://github.com/agentrhq/authsome/issues).
+- **Open a PR.** The README and `CONTRIBUTING.md` cover the contribution process. The bundled provider list is the most common contribution target; see [Custom providers](/guides/custom-providers) for the schema and [Bundled providers](/reference/bundled-providers) for the upstream submission path.
+- **Security issues.** [Responsible disclosure](/security/disclosure).
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Architecture" icon="layer-group" href="/concepts/architecture">
+    The layered model and what each layer owns.
+  </Card>
+  <Card title="Threat model" icon="shield-halved" href="/security/threat-model">
+    Current trust assumptions and known limits.
+  </Card>
+  <Card title="Compared to alternatives" icon="balance-scale" href="/compared">
+    Authsome vs hardcoded env tokens, SaaS secrets managers, and DIY.
+  </Card>
+  <Card title="Changelog" icon="clock-rotate-left" href="/changelog">
+    Recent releases.
+  </Card>
+</Columns>

@@ -3,7 +3,7 @@ title: "Use API keys"
 description: "Authenticate with OpenAI, Anthropic, and other API-key providers through a secure browser bridge."
 ---
 
-API-key providers like OpenAI, Anthropic, and SendGrid don't run an OAuth flow — you have one long-lived secret. Authsome captures it through a local browser form so it never appears in shell history or process listings, then stores it encrypted in your profile.
+API-key providers like OpenAI, Anthropic, and SendGrid don't run an OAuth flow, you have one long-lived secret. Authsome captures it through a local browser form so it never appears in shell history or process listings, then stores it encrypted in your profile.
 
 ## Log in
 
@@ -11,7 +11,7 @@ API-key providers like OpenAI, Anthropic, and SendGrid don't run an OAuth flow �
 uvx authsome login openai
 ```
 
-A browser window opens to a local form at `http://127.0.0.1:7999`. Paste the API key into the masked input and submit. The terminal prints `Successfully logged in to openai (default).`
+A browser window opens to a local form at `http://127.0.0.1:7998`. Paste the API key into the masked input and submit. The terminal prints `Successfully logged in to openai (default).`
 
 <Warning>
   API keys are never accepted as command-line arguments and never read from shell prompts. The browser bridge form is the only path. On a headless machine (no `DISPLAY`), authsome falls back to masked terminal input via `getpass`.
@@ -26,7 +26,7 @@ uvx authsome get openai --field status          # → connected
 uvx authsome get openai --field api_key --show-secret
 ```
 
-`--show-secret` reveals the stored value. Use it sparingly — the safer pattern is `authsome run` (see below).
+`--show-secret` reveals the stored value. Use it sparingly, the safer pattern is `authsome run` (see below).
 
 ## Multiple keys for the same provider
 

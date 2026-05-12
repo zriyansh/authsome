@@ -1,0 +1,68 @@
+---
+title: "Cowork"
+sidebarTitle: "Cowork"
+description: "Run multi-agent Cowork workflows with per-agent credential isolation using authsome profiles."
+icon: "users"
+keywords: ["cowork authsome", "multi-agent credentials", "per-agent profile", "cowork github oauth"]
+---
+
+Cowork is a multi-agent runtime that supervises several agents running concurrently. Authsome pairs naturally: give each agent its own profile so credentials never bleed between roles.
+
+## Per-agent profiles
+
+```bash
+# create profiles for each agent role (programmatic; see below)
+# then login with the right home dir for each
+AUTHSOME_HOME=~/.authsome-pr-bot   uvx authsome login github
+AUTHSOME_HOME=~/.authsome-reviewer uvx authsome login github --connection read
+```
+
+Each profile has its own vault file, own audit log, own master-key access. An agent running with `AUTHSOME_HOME=~/.authsome-pr-bot` cannot reach credentials in `~/.authsome-reviewer`.
+
+To create named profiles inside a single `AUTHSOME_HOME`:
+
+```python
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+auth.create_profile("pr-bot", description="Auto-PR agent")
+auth.create_profile("reviewer", description="Code review agent")
+```
+
+See [Profiles](/guides/profiles) and [Profiles vs connections](/concepts/profiles-vs-connections).
+
+## Run each agent under its own proxy
+
+```bash
+AUTHSOME_HOME=~/.authsome-pr-bot \
+  uvx authsome run -- python pr_bot.py
+
+AUTHSOME_HOME=~/.authsome-reviewer \
+  uvx authsome run -- python reviewer.py
+```
+
+Each agent's HTTP_PROXY points at a different daemon instance, each backed by a different vault. The agents cannot read each other's credentials even if one is compromised.
+
+## Multi-agent best practices
+
+- **One profile per role**, not one per developer. A developer with two agents should still have two profiles.
+- **Audit each profile separately.** `audit.log` is per-`AUTHSOME_HOME`. Logging is easy to forward.
+- **Rotate after compromise of one agent only.** Other profiles are unaffected.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| Two agents accidentally share credentials | They're using the same `AUTHSOME_HOME`. Split them. |
+| Port 7998 conflicts | Each `AUTHSOME_HOME` starts its own daemon on its own ephemeral port. Confirm with `lsof -i`. |
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Profiles" icon="layer-group" href="/guides/profiles">
+    How profiles work and how to create them.
+  </Card>
+  <Card title="Profiles vs connections" icon="users" href="/concepts/profiles-vs-connections">
+    Pick the right isolation level.
+  </Card>
+</Columns>

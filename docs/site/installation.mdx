@@ -1,0 +1,152 @@
+---
+title: "Installation"
+sidebarTitle: "Installation"
+description: "Install authsome with pip, uv, or uvx. No build step, no system dependencies beyond Python 3.13."
+icon: "download"
+keywords: ["authsome install", "pip install authsome", "uvx authsome", "authsome python 3.13"]
+---
+
+Authsome runs on Python 3.13 or newer. It ships as a single PyPI package with no native build step.
+
+## Pick an install path
+
+<Tabs>
+  <Tab title="uvx (recommended)">
+    No persistent install. `uvx` fetches and caches the package on first use.
+
+    ```bash
+    uvx authsome --version
+    ```
+
+    Every command in the docs is written for `uvx`. The first invocation downloads authsome; subsequent invocations reuse the cache.
+
+    Pin a version:
+
+    ```bash
+    uvx authsome@0.2.4 --version
+    ```
+  </Tab>
+  <Tab title="uv">
+    Project-scoped install with [`uv`](https://docs.astral.sh/uv/).
+
+    ```bash
+    uv tool install authsome
+    authsome --version
+    ```
+
+    Upgrade:
+
+    ```bash
+    uv tool upgrade authsome
+    ```
+  </Tab>
+  <Tab title="pip">
+    Global or virtualenv install.
+
+    ```bash
+    pip install authsome
+    authsome --version
+    ```
+
+    Upgrade:
+
+    ```bash
+    pip install --upgrade authsome
+    ```
+  </Tab>
+  <Tab title="From source">
+    Clone the repo and install in editable mode. Use this when you are contributing or running an unreleased branch.
+
+    ```bash
+    git clone https://github.com/agentrhq/authsome.git
+    cd authsome
+    uv pip install -e ".[dev]"
+    uv run authsome --version
+    ```
+  </Tab>
+</Tabs>
+
+## Verify the install
+
+```bash
+uvx authsome whoami
+uvx authsome doctor
+```
+
+`whoami` prints the home directory and active encryption mode. `doctor` walks the home directory, verifies encryption is available, and parses every bundled provider definition. A healthy install reports `OK` for each check and exits with code `0`.
+
+If `doctor` reports failures, see [Diagnose with doctor](/troubleshooting/doctor).
+
+## First-run initialization
+
+On the first command, authsome initializes its home directory at `~/.authsome/`:
+
+```text
+~/.authsome/
+  config.json
+  master.key            mode 0600
+  audit.log
+  profiles/default/
+    store.db
+    lock
+```
+
+The master key is generated locally with 256 bits of entropy. Override the home location with `AUTHSOME_HOME` for ephemeral or per-project setups:
+
+```bash
+export AUTHSOME_HOME=/var/lib/authsome
+uvx authsome whoami
+```
+
+See [Filesystem layout](/reference/file-layout) for the full directory model.
+
+## Choose the encryption backend
+
+By default, the master key sits in `~/.authsome/master.key` with mode `0600`. To use the OS keychain instead (macOS Keychain, GNOME Keyring, Windows Credential Manager), edit `~/.authsome/config.json`:
+
+```json
+{
+  "spec_version": 1,
+  "default_profile": "default",
+  "encryption": {
+    "mode": "keyring"
+  }
+}
+```
+
+Re-run `uvx authsome doctor` to confirm the backend is reachable. The trade-offs are covered in [Encryption at rest](/security/encryption).
+
+## Optional: trust the proxy CA
+
+`uvx authsome run` injects auth headers through a local mitmproxy. HTTPS interception requires the mitmproxy CA to be trusted on the machine. You can defer this until you actually use `run`. When you're ready, the per-OS install steps are in [Proxy networking](/troubleshooting/proxy-networking#tls-verification-fails).
+
+## Uninstall
+
+Remove the package:
+
+```bash
+uv tool uninstall authsome     # if installed via `uv tool install`
+pip uninstall authsome         # if installed via pip
+# uvx leaves nothing to uninstall; clear the cache with `uv cache clean` if desired
+```
+
+Remove stored credentials and configuration:
+
+```bash
+rm -rf ~/.authsome
+```
+
+This destroys every stored connection and the master key. If you're on `keyring` encryption mode, also delete the `authsome` entry from your OS keychain.
+
+To revoke remote sessions for any provider before uninstalling, run `uvx authsome revoke <provider>` for each one first.
+
+## Next steps
+
+<Columns cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Log in to GitHub and OpenAI, then run an agent in under five minutes.
+  </Card>
+  <Card title="CLI reference" icon="terminal" href="/reference/cli">
+    Every command, every flag, every exit code.
+  </Card>
+</Columns>

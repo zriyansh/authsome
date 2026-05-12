@@ -3,7 +3,7 @@ title: "Headless setup with device code"
 description: "Authenticate over SSH or in CI without a local browser by using the OAuth2 Device Authorization Grant."
 ---
 
-The PKCE flow needs a local browser to receive the OAuth callback. On a remote SSH session, in CI, or on a headless server there's no browser to open. Use the **Device Code flow** instead — you log in on a separate device and authsome polls the token endpoint until you authorize.
+The PKCE flow needs a local browser to receive the OAuth callback. On a remote SSH session, in CI, or on a headless server there's no browser to open. Use the **Device Code flow** instead, you log in on a separate device and authsome polls the token endpoint until you authorize.
 
 ## Prerequisites
 
@@ -18,7 +18,7 @@ The provider must support the device authorization grant. In a provider definiti
 }
 ```
 
-GitHub, Google, Microsoft, and many others support it. Check `uvx authsome inspect <provider>` for `supports_device_flow: true`.
+GitHub, Google, Microsoft, and many others support it. Check `uvx authsome inspect <provider>` for `supports_device_flow: true`. [Postiz](/integrations/oauth/postiz) is the only bundled provider that defaults to the device code flow.
 
 ## Run the login
 
@@ -58,7 +58,7 @@ Use the device code flow when:
 - You are running setup in a CI pipeline that has terminal output but no browser.
 - You are inside a Docker container with no exposed ports back to your laptop.
 
-For GitHub specifically, even when a local browser is available, the device code flow can be useful — it avoids registering an OAuth app entirely (GitHub's device flow uses the public GitHub OAuth client by default).
+For GitHub specifically, even when a local browser is available, the device code flow can be useful, it avoids registering an OAuth app entirely (GitHub's device flow uses the public GitHub OAuth client by default).
 
 ## Use it in CI
 
@@ -84,7 +84,7 @@ The browser bridge is skipped automatically when no display is available.
 
 ## Override the default flow per provider
 
-To make `device_code` the default for a provider — for example, you always log in to GitHub from servers — drop a custom JSON file at `~/.authsome/providers/github.json` with `"flow": "device_code"`. See [Provider registry](/concepts/provider-registry) for how overrides work.
+To make `device_code` the default for a provider, for example, you always log in to GitHub from servers, drop a custom JSON file at `~/.authsome/providers/github.json` with `"flow": "device_code"`. See [Provider registry](/concepts/provider-registry) for how overrides work.
 
 ## What's next
 
