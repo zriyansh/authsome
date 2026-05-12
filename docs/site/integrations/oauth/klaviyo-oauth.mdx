@@ -77,21 +77,23 @@ uvx authsome login klaviyo-oauth --connection work
 
 ## Use the token
 
+Run the agent under the proxy. The library tab is for embedding authsome inside a larger Python orchestrator.
+
 <CodeGroup>
+
+```bash Proxy (recommended)
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export klaviyo-oauth --format env)"
+```
 
 ```python Python library
 from authsome.server.dependencies import create_auth_service
 
 auth = create_auth_service()
 token = auth.get_access_token("klaviyo-oauth", connection="default")
-```
-
-```bash Proxy
-uvx authsome run -- python my_agent.py
-```
-
-```bash Environment
-eval "$(uvx authsome export klaviyo-oauth --format env)"
 ```
 
 </CodeGroup>

@@ -6,9 +6,9 @@ icon: "microchip"
 keywords: ["nanoclaw authsome", "openclaw authsome", "hermesagent authsome", "lightweight agent credentials"]
 ---
 
-NanoClaw, OpenClaw, and HermesAgent are lightweight Python agent runners in the agentr ecosystem. They don't bundle credential management. Authsome fills that gap with two interchangeable patterns. The same patterns work for any Python-native agent runner.
+NanoClaw, OpenClaw, and HermesAgent are lightweight Python agent runners in the agentr ecosystem. They don't bundle credential management. Authsome fills that gap. The same patterns work for any Python-native agent runner.
 
-## Pattern 1: run under the proxy
+## Run under the proxy
 
 ```bash
 uvx authsome login github
@@ -16,11 +16,11 @@ uvx authsome login openai
 uvx authsome run -- python -m <your_runner>
 ```
 
-The runner sees placeholder env vars. Outbound HTTPS to matched providers is authenticated at the proxy layer.
+The runner sees placeholder env vars. Outbound HTTPS to matched providers is authenticated at the proxy layer. This is the recommended path.
 
-## Pattern 2: use the library
+## Embedding the library
 
-These runners are Python-native. Skip the proxy and call authsome directly from your agent code:
+If you're wiring authsome into a larger orchestrator and want explicit per-call control, call the library directly from your agent code:
 
 ```python
 from authsome.server.dependencies import create_auth_service

@@ -56,7 +56,18 @@ uvx authsome get openai --field status
 
 ## Use the key
 
+Run the agent under the proxy. The library tab is for embedding authsome inside a larger Python orchestrator.
+
 <CodeGroup>
+
+```bash Proxy (recommended)
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export openai --format env)"
+echo $OPENAI_API_KEY     # sk-...
+```
 
 ```python Python library
 from authsome.server.dependencies import create_auth_service
@@ -71,15 +82,6 @@ resp = client.chat.completions.create(
     messages=[{"role": "user", "content": "ping"}],
 )
 print(resp.choices[0].message.content)
-```
-
-```bash Proxy
-uvx authsome run -- python my_agent.py
-```
-
-```bash Environment
-eval "$(uvx authsome export openai --format env)"
-echo $OPENAI_API_KEY     # sk-...
 ```
 
 </CodeGroup>

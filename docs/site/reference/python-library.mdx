@@ -8,6 +8,10 @@ keywords: ["authsome python", "AuthService", "authsome library", "auth.get_acces
 
 Authsome is a Python library as well as a CLI. The public surface lives in the top-level `authsome` package.
 
+<Note>
+  The supported integration surface for almost every workflow is the **CLI plus the proxy** (`uvx authsome run -- <your agent>`). The library exists for embedding authsome inside a larger Python orchestrator with custom storage, custom subprocess management, or per-call connection selection that the proxy can't yet do. If you're not in that case, the CLI is the right tool. See [Run agents with the proxy](/guides/run-agents-with-proxy).
+</Note>
+
 ## Install
 
 ```bash
