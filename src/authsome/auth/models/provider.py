@@ -20,7 +20,7 @@ class OAuthConfig(BaseModel):
     device_token_request: Literal["oauth2_form", "json"] = "oauth2_form"
     scopes: list[str] = Field(default_factory=list)
     pkce: bool = True
-    supports_device_flow: bool = False
+    supports_device_code: bool = False
     supports_dcr: bool = False
     base_url: str | None = None
 

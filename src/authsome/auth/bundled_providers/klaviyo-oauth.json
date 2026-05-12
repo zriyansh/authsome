@@ -13,7 +13,7 @@
       "accounts:read"
     ],
     "pkce": true,
-    "supports_device_flow": false,
+    "supports_device_code": false,
     "supports_dcr": false
   },
   "export": {

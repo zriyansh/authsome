@@ -40,7 +40,7 @@ Create a `.json` file using one of the templates below.
     "device_authorization_url": null,
     "scopes": ["read", "write"],
     "pkce": true,
-    "supports_device_flow": false,
+    "supports_device_code": false,
     "supports_dcr": true
   },
   "registration": {
@@ -103,11 +103,11 @@ Create a `.json` file using one of the templates below.
 | `authorization_url` | Yes | URL the user is redirected to for authorization. Supports `{base_url}` template. |
 | `token_url` | Yes | Endpoint to exchange auth codes for tokens. Supports `{base_url}` template. |
 | `revocation_url` | No | Endpoint for remote token revocation. Supports `{base_url}` template. |
-| `device_authorization_url` | No | Required if `supports_device_flow` is `true`. Supports `{base_url}` template. |
+| `device_authorization_url` | No | Required if `supports_device_code` is `true`. Supports `{base_url}` template. |
 | `base_url` | No | Default base URL for multi-tenant or self-hosted services (e.g. GitHub Enterprise, Okta). |
 | `scopes` | Yes | Default scopes to request. |
 | `pkce` | Yes | Whether PKCE is supported/required. |
-| `supports_device_flow` | No | Set `true` if device code flow is available. |
+| `supports_device_code` | No | Set `true` if device code flow is available. |
 | `supports_dcr` | No | Set `true` if Dynamic Client Registration is available. |
 | `registration_endpoint` | No | Required if `supports_dcr` is `true`. Supports `{base_url}` template. |
 

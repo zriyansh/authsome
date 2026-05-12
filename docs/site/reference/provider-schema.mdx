@@ -29,11 +29,11 @@ Required when `auth_type` is `oauth2`.
 | `authorization_url` | Yes | Authorization endpoint. Supports `{base_url}` template. |
 | `token_url` | Yes | Token endpoint. Supports `{base_url}` template. |
 | `revocation_url` | No | Revocation endpoint, if the provider has one. Supports `{base_url}`. |
-| `device_authorization_url` | If `supports_device_flow` | Device authorization endpoint. Supports `{base_url}`. |
+| `device_authorization_url` | If `supports_device_code` | Device authorization endpoint. Supports `{base_url}`. |
 | `base_url` | No | Default base URL for multi-tenant or self-hosted providers. |
 | `scopes` | Yes | Default scopes to request. |
 | `pkce` | Yes | `true` if the provider supports PKCE (RFC 7636). |
-| `supports_device_flow` | No | `true` if the device authorization grant is available. |
+| `supports_device_code` | No | `true` if the device authorization grant is available. |
 | `supports_dcr` | No | `true` if Dynamic Client Registration is available. |
 | `registration_endpoint` | If `supports_dcr` | DCR endpoint URL. Supports `{base_url}`. |
 
@@ -120,7 +120,7 @@ Use the regex form only when an API genuinely serves multiple hosts following a 
 | `flow` | Valid `auth_type` |
 |--------|-------------------|
 | `pkce` | `oauth2` |
-| `device_code` | `oauth2` (provider must set `supports_device_flow: true`) |
+| `device_code` | `oauth2` (provider must set `supports_device_code: true`) |
 | `dcr_pkce` | `oauth2` (provider must set `supports_dcr: true`) |
 | `api_key` | `api_key` |
 
@@ -144,7 +144,7 @@ Use the regex form only when an API genuinely serves multiple hosts following a 
     "device_authorization_url": "{base_url}/login/device/code",
     "scopes": ["repo", "read:user"],
     "pkce": true,
-    "supports_device_flow": true,
+    "supports_device_code": true,
     "supports_dcr": false
   },
   "host_url": "api.github.com",
