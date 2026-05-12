@@ -56,19 +56,37 @@ def _decode(token: str) -> tuple[bytes, bytes]:
         raise EncryptionUnavailableError(f"Malformed vault ciphertext: {exc}") from exc
 
 
-class LocalFileCrypto(VaultCrypto):
+class _AesGcmCrypto(VaultCrypto):
+    """Base class for AES-GCM encryption backends."""
+
+    def __init__(self, master_key: bytes) -> None:
+        self._aesgcm = AESGCM(master_key)
+
+    def encrypt(self, plaintext: str) -> str:
+        nonce = secrets.token_bytes(_NONCE_SIZE_BYTES)
+        ct_with_tag = self._aesgcm.encrypt(nonce, plaintext.encode("utf-8"), None)
+        return _encode(nonce, ct_with_tag)
+
+    def decrypt(self, ciphertext: str) -> str:
+        nonce, ct_with_tag = _decode(ciphertext)
+        try:
+            return self._aesgcm.decrypt(nonce, ct_with_tag, None).decode("utf-8")
+        except Exception as exc:
+            raise EncryptionUnavailableError(f"Decryption failed: {exc}") from exc
+
+
+class LocalFileCrypto(_AesGcmCrypto):
     """AES-256-GCM with master key stored as a local file."""
 
     def __init__(self, key_file: Path) -> None:
         self._key_file = key_file
-        self._aesgcm = self._load_or_create()
+        super().__init__(self._load_key())
 
-    def _load_or_create(self) -> AESGCM:
+    def _load_key(self) -> bytes:
         if self._key_file.exists():
             try:
                 key_data = json.loads(self._key_file.read_text(encoding="utf-8"))
-                master_key = base64.b64decode(key_data["key"])
-                return AESGCM(master_key)
+                return base64.b64decode(key_data["key"])
             except (json.JSONDecodeError, KeyError, ValueError) as exc:
                 raise EncryptionUnavailableError(f"Failed to read local key file {self._key_file}: {exc}") from exc
 
@@ -86,28 +104,16 @@ class LocalFileCrypto(VaultCrypto):
         except OSError:
             pass
         logger.info("Generated new master key at {}", self._key_file)
-        return AESGCM(master_key)
-
-    def encrypt(self, plaintext: str) -> str:
-        nonce = secrets.token_bytes(_NONCE_SIZE_BYTES)
-        ct_with_tag = self._aesgcm.encrypt(nonce, plaintext.encode("utf-8"), None)
-        return _encode(nonce, ct_with_tag)
-
-    def decrypt(self, ciphertext: str) -> str:
-        nonce, ct_with_tag = _decode(ciphertext)
-        try:
-            return self._aesgcm.decrypt(nonce, ct_with_tag, None).decode("utf-8")
-        except Exception as exc:
-            raise EncryptionUnavailableError(f"Decryption failed: {exc}") from exc
+        return master_key
 
 
-class KeyringCrypto(VaultCrypto):
+class KeyringCrypto(_AesGcmCrypto):
     """AES-256-GCM with master key stored in the OS keyring."""
 
     def __init__(self) -> None:
-        self._aesgcm = self._load_or_create()
+        super().__init__(self._load_key())
 
-    def _load_or_create(self) -> AESGCM:
+    def _load_key(self) -> bytes:
         try:
             import keyring as kr
         except ImportError as exc:
@@ -123,7 +129,7 @@ class KeyringCrypto(VaultCrypto):
             ) from exc
 
         if key_b64:
-            return AESGCM(base64.b64decode(key_b64))
+            return base64.b64decode(key_b64)
 
         master_key = secrets.token_bytes(_KEY_SIZE_BYTES)
         key_b64_str = base64.b64encode(master_key).decode("ascii")
@@ -135,19 +141,7 @@ class KeyringCrypto(VaultCrypto):
                 "Use encryption mode 'local_key' for headless environments."
             ) from exc
         logger.info("Generated and stored new master key in OS keyring")
-        return AESGCM(master_key)
-
-    def encrypt(self, plaintext: str) -> str:
-        nonce = secrets.token_bytes(_NONCE_SIZE_BYTES)
-        ct_with_tag = self._aesgcm.encrypt(nonce, plaintext.encode("utf-8"), None)
-        return _encode(nonce, ct_with_tag)
-
-    def decrypt(self, ciphertext: str) -> str:
-        nonce, ct_with_tag = _decode(ciphertext)
-        try:
-            return self._aesgcm.decrypt(nonce, ct_with_tag, None).decode("utf-8")
-        except Exception as exc:
-            raise EncryptionUnavailableError(f"Decryption failed: {exc}") from exc
+        return master_key
 
 
 def create_crypto(key_file: Path | None, mode: str = "local_key") -> VaultCrypto:

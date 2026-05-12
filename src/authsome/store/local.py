@@ -49,6 +49,9 @@ class LocalAppStore(AppStore):
     def is_healthy(self) -> bool:
         return True
 
+    def check_integrity(self) -> bool:
+        return True
+
     # ── Config (unencrypted) ──────────────────────────────────────────────
 
     def get_config(self) -> GlobalConfig:

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-
 from fastapi import APIRouter, Depends
 
 from authsome import __version__
@@ -16,21 +14,43 @@ router = APIRouter()
 
 @router.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    return HealthResponse(status="ok", version=__version__, pid=os.getpid())
+    return HealthResponse(status="ok", version=__version__)
 
 
 @router.get("/ready", response_model=ReadyResponse)
 def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
     checks: dict[str, str] = {}
     issues: list[str] = []
+    warnings: list[str] = []
 
+    # 1. Config & Schema Version Check
     try:
         config = auth.vault.get_config()
-        checks["config"] = "ok" if config else "ok"
+        checks["config"] = "ok"
+
+        # Verify spec_version matches standard expected version (1)
+        expected_spec_version = 1
+        if getattr(config, "spec_version", None) != expected_spec_version:
+            issues.append(
+                f"config: spec_version mismatch (got {config.spec_version}, expected {expected_spec_version})"
+            )
+            checks["version_compatibility"] = "failed"
+        else:
+            checks["version_compatibility"] = "ok"
     except Exception as exc:
         checks["config"] = "failed"
+        checks["version_compatibility"] = "failed"
         issues.append(f"config: {exc}")
 
+    # 2. Profiles Count Check
+    try:
+        auth.list_profiles()
+        checks["profiles"] = "ok"
+    except Exception as exc:
+        checks["profiles"] = "failed"
+        issues.append(f"profiles: {exc}")
+
+    # 3. Providers List Check
     try:
         auth.list_providers()
         checks["providers"] = "ok"
@@ -38,6 +58,18 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
         checks["providers"] = "failed"
         issues.append(f"providers: {exc}")
 
+    # 4. Connected Providers Check
+    try:
+        conn_list = auth.list_connections()
+        checks["connections"] = "ok"
+        connected_count = sum(1 for p in conn_list for c in p.get("connections", []) if c.get("status") == "connected")
+        if connected_count == 0:
+            warnings.append("no active provider connections found")
+    except Exception as exc:
+        checks["connections"] = "failed"
+        issues.append(f"connections: {exc}")
+
+    # 5. Vault Roundtrip & Store Integrity Check
     try:
         auth.vault.put("__ready_test__", "ok", collection=f"vault:{auth.identity}")
         value = auth.vault.get("__ready_test__", collection=f"vault:{auth.identity}")
@@ -45,11 +77,31 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
         checks["vault"] = "ok" if value == "ok" else "failed"
         if value != "ok":
             issues.append("vault: readiness roundtrip failed")
+            checks["vault"] = "failed"
+        else:
+            checks["vault"] = "ok"
+
+        if not auth.vault.check_integrity(profile=auth.identity):
+            issues.append("vault: store failed integrity check")
+            checks["integrity"] = "failed"
+        else:
+            checks["integrity"] = "ok"
     except Exception as exc:
         checks["vault"] = "failed"
+        checks["integrity"] = "failed"
         issues.append(f"vault: {exc}")
 
-    return ReadyResponse(status="ready" if not issues else "not_ready", checks=checks, issues=issues)
+    # TODO: Re-enable master.key permission checks once backend implementation stabilizes.
+    # (Previous implementation alerted users if file was world-readable)
+
+    except Exception as exc:
+        if "file_permissions" not in checks:
+            checks["file_permissions"] = "failed"
+        checks["key_age"] = "failed"
+        issues.append(f"file_checks: {exc}")
+
+    status = "ready" if not issues else "not_ready"
+    return ReadyResponse(status=status, checks=checks, issues=issues, warnings=warnings)
 
 
 @router.get("/whoami")

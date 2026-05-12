@@ -27,9 +27,11 @@ def get_server_base_url() -> str:
 
 def create_auth_service(home: Path | None = None) -> AuthService:
     """Create the singleton auth service for the local daemon."""
+    from authsome import audit
     from authsome.auth import AuthService
 
     resolved_home = home or get_authsome_home()
+    audit.setup(resolved_home / "audit.log")
     app_store = LocalAppStore(resolved_home)
     app_store.ensure_initialized()
 

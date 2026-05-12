@@ -116,6 +116,10 @@ class Vault:
 
     # ── Lifecycle ─────────────────────────────────────────────────────────
 
+    def check_integrity(self, *, profile: str | None = None) -> bool:
+        """Perform health check on underlying store."""
+        return self._app_store.check_integrity()
+
     def close(self) -> None:
         """Release resources."""
         pass

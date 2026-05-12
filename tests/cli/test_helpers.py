@@ -9,12 +9,6 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from authsome.cli.daemon_control import DaemonUnavailableError
-from authsome.cli.main import (
-    _format_duration,
-    connection_is_active,
-    format_error_code,
-    format_expires_at,
-)
 from authsome.errors import (
     AuthenticationFailedError,
     ConnectionAlreadyExistsError,
@@ -25,6 +19,12 @@ from authsome.errors import (
     ProviderNotFoundError,
     RefreshFailedError,
     StoreUnavailableError,
+)
+from authsome.utils import (
+    connection_is_active,
+    format_duration,
+    format_error_code,
+    format_expires_at,
 )
 
 # ── format_expires_at ────────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ def test_format_expires_at_z_suffix() -> None:
     assert "expires in" in label
 
 
-# ── _format_duration ─────────────────────────────────────────────────────────
+# ── format_duration ──────────────────────────────────────────────────────────
 
 
 @pytest.mark.parametrize(
@@ -103,7 +103,7 @@ def test_format_expires_at_z_suffix() -> None:
     ],
 )
 def test_format_duration(seconds: int, expected: str) -> None:
-    assert _format_duration(seconds) == expected
+    assert format_duration(seconds) == expected
 
 
 # ── connection_is_active ─────────────────────────────────────────────────────

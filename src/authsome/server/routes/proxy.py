@@ -66,7 +66,7 @@ def _auth_endpoint_paths(provider) -> set[str]:
         provider.oauth.token_url,
         provider.oauth.revocation_url,
         provider.oauth.device_authorization_url,
-        provider.oauth.registration_endpoint,
+        (provider.registration.registration_endpoint if provider.registration else None),
     ]:
         if not raw_url:
             continue

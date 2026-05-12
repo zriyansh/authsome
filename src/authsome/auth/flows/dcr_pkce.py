@@ -203,7 +203,7 @@ class DcrPkceFlow(AuthFlow):
                 continue
         raise DiscoveryError(
             "Could not discover registration_endpoint via .well-known. "
-            "Set oauth.registration_endpoint in the provider definition.",
+            "Set registration.registration_endpoint in the provider definition.",
             provider=provider.name,
         )
 
@@ -212,7 +212,9 @@ class DcrPkceFlow(AuthFlow):
     ) -> tuple[str, str | None]:
         if provider.oauth is None:
             raise AuthenticationFailedError("No OAuth config", provider=provider.name)
-        reg_endpoint = provider.oauth.registration_endpoint or self._discover_registration_endpoint(provider)
+        reg_endpoint = (
+            provider.registration.registration_endpoint if provider.registration else None
+        ) or self._discover_registration_endpoint(provider)
         dcr_payload: dict[str, Any] = {
             "client_name": f"authsome-{provider.name}",
             "redirect_uris": [redirect_uri],

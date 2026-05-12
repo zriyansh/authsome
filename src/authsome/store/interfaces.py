@@ -44,6 +44,11 @@ class AppStore(ABC):
         """Check if the store is accessible."""
         ...
 
+    @abstractmethod
+    def check_integrity(self) -> bool:
+        """Perform a health check on the storage medium."""
+        ...
+
     # ── Config (unencrypted — needed before crypto is available) ──────────
 
     @abstractmethod
