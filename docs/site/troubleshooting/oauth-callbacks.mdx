@@ -5,121 +5,123 @@ description: "Diagnose `redirect_uri_mismatch`, port-in-use, browser-not-opening
 
 The PKCE flow runs a temporary HTTP server on `127.0.0.1:7999` to receive the OAuth callback. Most login failures fall into one of the categories below.
 
-## `redirect_uri_mismatch`
+<AccordionGroup>
+  <Accordion title="redirect_uri_mismatch" icon="link-slash">
+    The provider's authorization page returns:
 
-The provider's authorization page returns:
-
-```text
-The redirect_uri MUST match the registered callback URL for this application.
-```
-
-Authsome listens on a single redirect URI:
-
-```text
-http://127.0.0.1:7999/callback
-```
-
-Fix it at the provider:
-
-<Steps>
-  <Step title="Open your OAuth app settings">
-    For GitHub: [github.com/settings/developers](https://github.com/settings/developers). For other providers, find the equivalent OAuth app management page.
-  </Step>
-  <Step title="Edit the callback URL">
-    Set **Authorization callback URL** (or the equivalent field) to `http://127.0.0.1:7999/callback`. The path matters — it must be `/callback`, not `/`.
-  </Step>
-  <Step title="Save and retry login">
-    ```bash
-    uvx authsome login <provider> --force
+    ```text
+    The redirect_uri MUST match the registered callback URL for this application.
     ```
-  </Step>
-</Steps>
 
-<Tip>
-  For services that support Dynamic Client Registration, the `dcr_pkce` flow registers a fresh OAuth client with the right redirect URI automatically. Check `uvx authsome inspect <provider>` for `supports_dcr: true`.
-</Tip>
+    Authsome listens on a single redirect URI:
 
-## Port 7999 already in use
+    ```text
+    http://127.0.0.1:7999/callback
+    ```
 
-```text
-Error: address already in use: 127.0.0.1:7999
-```
+    Fix it at the provider:
 
-Another process is bound to the port. Find and stop it:
+    <Steps>
+      <Step title="Open your OAuth app settings">
+        For GitHub: [github.com/settings/developers](https://github.com/settings/developers). For other providers, find the equivalent OAuth app management page.
+      </Step>
+      <Step title="Edit the callback URL">
+        Set **Authorization callback URL** (or the equivalent field) to `http://127.0.0.1:7999/callback`. The path matters, it must be `/callback`, not `/`.
+      </Step>
+      <Step title="Save and retry login">
+        ```bash
+        uvx authsome login <provider> --force
+        ```
+      </Step>
+    </Steps>
 
-```bash
-# macOS / Linux
-lsof -nP -iTCP:7999 -sTCP:LISTEN
-kill <PID>
-```
+    <Tip>
+      For services that support Dynamic Client Registration, the `dcr_pkce` flow registers a fresh OAuth client with the right redirect URI automatically. Check `uvx authsome inspect <provider>` for `supports_dcr: true`.
+    </Tip>
+  </Accordion>
 
-A common cause is a previous authsome run that did not exit cleanly. Restart your terminal if `lsof` shows nothing yet the bind still fails.
+  <Accordion title="Port 7999 already in use" icon="plug-circle-exclamation">
+    ```text
+    Error: address already in use: 127.0.0.1:7999
+    ```
 
-## Browser does not open
+    Another process is bound to the port. Find and stop it:
 
-The terminal prints the authorization URL but no browser launches.
+    ```bash
+    # macOS / Linux
+    lsof -nP -iTCP:7999 -sTCP:LISTEN
+    kill <PID>
+    ```
 
-| Cause | Fix |
-|-------|-----|
-| You're SSHed into a remote machine | Use `--flow device_code` instead. See [Headless setup](/guides/headless-device-code). |
-| `webbrowser` Python module can't find a default browser | Set `BROWSER` env var: `export BROWSER=$(which firefox)`. |
-| Headless Linux without `DISPLAY` | Same as SSH — use the device code flow. |
+    A common cause is a previous authsome run that did not exit cleanly. Restart your terminal if `lsof` shows nothing yet the bind still fails.
+  </Accordion>
 
-You can also copy the URL printed in the terminal and open it manually on any device. As long as the redirect lands on `http://127.0.0.1:7999/callback` on the same machine where authsome is waiting, the flow completes.
+  <Accordion title="Browser does not open" icon="browser">
+    The terminal prints the authorization URL but no browser launches.
 
-## Browser opens but never returns to authsome
+    | Cause | Fix |
+    |-------|-----|
+    | You're SSHed into a remote machine | Use `--flow device_code` instead. See [Headless setup](/guides/headless-device-code). |
+    | `webbrowser` Python module can't find a default browser | Set `BROWSER` env var: `export BROWSER=$(which firefox)`. |
+    | Headless Linux without `DISPLAY` | Same as SSH, use the device code flow. |
 
-The browser shows the provider's authorization page, you click **Authorize**, and… nothing. The terminal is still waiting.
+    You can also copy the URL printed in the terminal and open it manually on any device. As long as the redirect lands on `http://127.0.0.1:7999/callback` on the same machine where authsome is waiting, the flow completes.
+  </Accordion>
 
-| Cause | Fix |
-|-------|-----|
-| The browser landed on `http://127.0.0.1:7999/callback` but authsome timed out | Re-run `uvx authsome login --force`. |
-| A corporate proxy is intercepting `127.0.0.1` traffic | Add `127.0.0.1` and `localhost` to your `NO_PROXY` env var. |
-| You authorized in a different browser profile that can't reach localhost | Use the same browser profile as your authsome shell. |
+  <Accordion title="Browser opens but never returns to authsome" icon="clock">
+    The browser shows the provider's authorization page, you click **Authorize**, and nothing. The terminal is still waiting.
 
-## `state mismatch` error
+    | Cause | Fix |
+    |-------|-----|
+    | The browser landed on `http://127.0.0.1:7999/callback` but authsome timed out | Re-run `uvx authsome login --force`. |
+    | A corporate proxy is intercepting `127.0.0.1` traffic | Add `127.0.0.1` and `localhost` to your `NO_PROXY` env var. |
+    | You authorized in a different browser profile that can't reach localhost | Use the same browser profile as your authsome shell. |
+  </Accordion>
 
-```text
-Error: OAuth state parameter does not match
-```
+  <Accordion title="state mismatch error" icon="shield-halved">
+    ```text
+    Error: OAuth state parameter does not match
+    ```
 
-Authsome generates a random `state` parameter and rejects callbacks that don't echo it back. Causes:
+    Authsome generates a random `state` parameter and rejects callbacks that don't echo it back. Causes:
 
-- A stale tab from a previous login is hitting the callback. Close it and retry.
-- A man-in-the-middle is replaying old callback URLs. Investigate before retrying.
+    - A stale tab from a previous login is hitting the callback. Close it and retry.
+    - A man-in-the-middle is replaying old callback URLs. Investigate before retrying.
+  </Accordion>
 
-## `client_id` or `client_secret` rejected
+  <Accordion title="client_id or client_secret rejected" icon="id-card">
+    The provider's token endpoint returns `invalid_client`.
 
-The provider's token endpoint returns `invalid_client`.
+    ```text
+    Error: token exchange failed: invalid_client
+    ```
 
-```text
-Error: token exchange failed: invalid_client
-```
+    The stored client credentials don't match what the provider expects.
 
-The stored client credentials don't match what the provider expects.
+    ```bash
+    uvx authsome revoke <provider>     # clear stored client + tokens
+    uvx authsome login <provider>      # re-enter client_id and client_secret via browser bridge
+    ```
 
-```bash
-uvx authsome revoke <provider>     # clear stored client + tokens
-uvx authsome login <provider>      # re-enter client_id and client_secret via browser bridge
-```
+    If you've recently rotated the OAuth app's client secret, this is the expected flow.
+  </Accordion>
 
-If you've recently rotated the OAuth app's client secret, this is the expected flow.
+  <Accordion title="Scopes not granted" icon="filter">
+    The login completes but the agent gets `403 Insufficient scope` on real API calls.
 
-## Scopes not granted
+    ```bash
+    uvx authsome get <provider> --field scopes
+    ```
 
-The login completes but the agent gets `403 Insufficient scope` on real API calls.
+    If the granted scopes don't include what your agent needs:
 
-```bash
-uvx authsome get <provider> --field scopes
-```
+    ```bash
+    uvx authsome login <provider> --scopes "<scope1>,<scope2>" --force
+    ```
 
-If the granted scopes don't include what your agent needs:
-
-```bash
-uvx authsome login <provider> --scopes "<scope1>,<scope2>" --force
-```
-
-The provider re-prompts for consent on the additional scopes.
+    The provider re-prompts for consent on the additional scopes.
+  </Accordion>
+</AccordionGroup>
 
 ## What's next
 

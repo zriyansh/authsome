@@ -53,7 +53,7 @@ uvx authsome inspect github            # full provider definition
 uvx authsome inspect github --json     # same, as JSON
 ```
 
-`list` shows three states per provider — `available`, `configured`, `connected`. See [Credential storage](/concepts/credential-storage#the-three-states) for the state model.
+`list` shows three states per provider. `available`, `configured`, `connected`. See [Credential storage](/concepts/credential-storage#the-three-states) for the state model.
 
 ### `login`
 
@@ -80,7 +80,7 @@ uvx authsome login okta --base-url https://acme.okta.com
 ```
 
 <Warning>
-  Sensitive values — `client_secret`, API keys — are never accepted as command-line arguments. Authsome collects them through the secure browser bridge or, on headless machines, through masked terminal input.
+  Sensitive values. `client_secret`, API keys, are never accepted as command-line arguments. Authsome collects them through the secure browser bridge or, on headless machines, through masked terminal input.
 </Warning>
 
 ### `get`
@@ -117,7 +117,7 @@ uvx authsome export github --format env       # KEY=value lines
 uvx authsome export openai --format json      # JSON object
 ```
 
-Only the `access_token` (OAuth2) or `api_key` (API-key) is exported. Refresh tokens are never exposed — authsome handles refresh transparently.
+Only the `access_token` (OAuth2) or `api_key` (API-key) is exported. Refresh tokens are never exposed, authsome handles refresh transparently.
 
 ### `run`
 

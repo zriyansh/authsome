@@ -1,0 +1,99 @@
+---
+title: "Codex"
+sidebarTitle: "Codex"
+description: "Use authsome from OpenAI's Codex CLI. Run agents under the auth proxy so credentials never enter the agent's environment."
+icon: "terminal"
+keywords: ["codex authsome", "openai codex credentials", "codex oauth", "codex api key broker"]
+---
+
+OpenAI's [Codex CLI](https://github.com/openai/codex) is a coding agent that runs locally and shells out to other tools. Authsome plugs in cleanly: wrap the agent invocation with `uvx authsome run --` and the proxy injects fresh credentials for every service the agent calls.
+
+<Prompt
+  description="**Run Codex under the auth proxy.** Paste this to set up the wrapper."
+  icon="terminal"
+  iconType="solid"
+  actions={["copy"]}
+>
+Set me up to run Codex under authsome's auth proxy so my OpenAI key and GitHub token are injected at request time instead of sitting in my environment.
+
+1. Run `uvx authsome login openai` and `uvx authsome login github` if I'm not already logged in.
+2. Launch Codex with `uvx authsome run -- codex`.
+3. After Codex starts, verify the env is clean by running `env | grep -E "OPENAI|GITHUB"` in the agent's shell. The values should read `authsome-proxy-managed`.
+4. Make one real API call (a quick `gh api user` or an OpenAI chat completion) to confirm the proxy is injecting the real credentials.
+</Prompt>
+
+## What you get
+
+- One login per service. Codex never sees raw `client_secret`s, tokens, or API keys.
+- Automatic refresh. OAuth tokens stay fresh between Codex sessions.
+- Multi-account support. Run Codex against your work GitHub one minute, personal the next.
+- The same vault. Connections created from Codex live alongside connections from the regular CLI.
+
+## Recommended pattern: run Codex under the proxy
+
+```bash
+uvx authsome login github
+uvx authsome login openai
+uvx authsome run -- codex
+```
+
+Inside Codex:
+
+- `OPENAI_API_KEY=authsome-proxy-managed` is set in Codex's environment, so its SDK initializes.
+- Outbound HTTPS calls to `api.openai.com`, `api.github.com`, and any other matched provider are intercepted and authenticated at the proxy layer.
+- Codex's own subprocess calls inherit the same `HTTP_PROXY` / `HTTPS_PROXY` variables, so tools Codex spawns are also covered.
+
+## Alternative: env export before launch
+
+If Codex is running in an environment where the proxy CA cannot be trusted, fall back to env-var export:
+
+```bash
+eval "$(uvx authsome export openai --format env)"
+eval "$(uvx authsome export github --format env)"
+codex
+```
+
+The variables persist for the shell session. Codex (and anything it spawns) reads them as it normally would. Re-run `eval` after token refresh, or use the proxy pattern above to avoid that step.
+
+## Multiple accounts
+
+```bash
+uvx authsome login github --connection personal
+uvx authsome login github --connection work
+uvx authsome login github --connection work --force   # switch default to work
+uvx authsome run -- codex
+```
+
+The proxy uses each provider's default connection. To target a non-default connection in a single Codex session, set it as the default with `--force` first. See [Multiple connections per provider](/guides/multiple-connections).
+
+## Use authsome inside the agent
+
+Codex agents that write Python can pull credentials directly from authsome:
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+key = ctx.auth.get_access_token("openai", connection="default")
+```
+
+This pattern is cleaner than passing keys through prompts or hardcoding them into `.env` files. See [Python library](/reference/python-library).
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| Codex starts but every API call fails with TLS errors | The mitmproxy CA isn't trusted. See [Proxy networking](/troubleshooting/proxy-networking). |
+| Codex doesn't see the env var even though `authsome run` set it | Verify with `uvx authsome run -- env \| grep OPENAI`. |
+| Authsome login hangs | `uvx authsome doctor` and check port 7998 / 7999 availability. |
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Run agents with the proxy" icon="shield-halved" href="/guides/run-agents-with-proxy">
+    The injection model in detail.
+  </Card>
+  <Card title="OpenAI integration" icon="key" href="/integrations/api-key/openai">
+    Set up the OpenAI key Codex will use.
+  </Card>
+</Columns>

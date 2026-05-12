@@ -1,0 +1,109 @@
+---
+title: "Linear"
+sidebarTitle: "Linear"
+description: "Log in to Linear from authsome via OAuth2. Tokens are stored locally and refreshed automatically."
+keywords: ["linear oauth cli", "linear access token broker", "authsome linear", "linear agent credentials"]
+---
+
+import ProxyInjection from "/snippets/proxy-injection.mdx";
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
+
+Linear is a bundled OAuth2 provider in authsome. Linear teams, projects, issues, comments. Read and write scopes.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `linear` |
+| Display name | Linear |
+| Auth type | OAuth2 |
+| Default flow | `pkce`, PKCE browser flow |
+| PKCE supported | Yes |
+| Device code supported | No |
+| DCR supported | No |
+| Default scopes | `read`, `write` |
+| Proxy host | `regex:.*\.linear\.app` |
+| Env var (`access_token`) | `LINEAR_ACCESS_TOKEN` |
+| Env var (`refresh_token`) | `LINEAR_REFRESH_TOKEN` |
+
+## Prerequisites
+
+You need to register an OAuth app with Linear once. Linear supports Dynamic Client Registration (DCR). You do **not** need to register an OAuth app. Authsome registers an ephemeral client on every login.
+
+The redirect URI must be:
+
+```text
+http://127.0.0.1:7999/callback
+```
+
+This is the only callback URL authsome's PKCE flow listens on.
+
+## Log in
+
+```bash
+uvx authsome login linear
+```
+
+The first time, authsome opens a local form at `http://127.0.0.1:7999` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://linear.app/oauth/authorize` for the authorization step.
+
+Verify:
+
+```bash
+uvx authsome get linear --field status
+# → connected
+```
+
+## Custom scopes
+
+The bundled definition requests `read`, `write`. Override at login time:
+
+```bash
+uvx authsome login linear --scopes "<comma-separated>"
+```
+
+The granted scopes are stored on the connection and visible in `uvx authsome get linear`.
+
+## Multiple accounts
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login linear --connection personal
+uvx authsome login linear --connection work
+```
+
+## Use the token
+
+### From a Python agent
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+token = ctx.auth.get_access_token("linear", connection="default")
+```
+
+<ProxyInjection envVar="LINEAR_ACCESS_TOKEN" secretLabel="token" host="regex:.*\.linear\.app" />
+
+### As an environment variable
+
+```bash
+eval "$(uvx authsome export linear --format env)"
+```
+
+Refresh tokens are never exported. Authsome refreshes silently.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect linear > ~/.authsome/providers/linear.json
+# edit scopes, base_url, or anything else
+uvx authsome list   # source now shows "custom" for linear
+```
+
+User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).
+
+## What's next
+
+<WhatsNextOauth />

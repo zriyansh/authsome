@@ -1,0 +1,112 @@
+---
+title: "Profiles vs connections"
+sidebarTitle: "Profiles vs connections"
+description: "When to use a profile and when to use a connection. The two namespaces, why they're different, and the rule of thumb."
+icon: "users"
+keywords: ["authsome profile", "authsome connection", "multiple github accounts", "credential isolation"]
+---
+
+Authsome has two layers of credential namespacing. People confuse them, then end up with credentials in the wrong place. This page makes the distinction explicit.
+
+## The two namespaces
+
+```text
+profile:<profile_name>:<provider_name>:connection:<connection_name>
+```
+
+- **Profile** scopes the entire credential set. Different vault file, different lock, different audit log.
+- **Connection** scopes a credential record within one provider. Same vault, different key.
+
+## At a glance
+
+| | Profile | Connection |
+|---|---|---|
+| Storage | Separate SQLite file per profile | Different key in the same SQLite file |
+| Encryption | Same master key (top-level `master.key`) | Same record encryption inside the vault |
+| Isolation | Total. One profile cannot see another. | Within a provider only. Same provider can hold many. |
+| CLI flag | (active profile via `config.json`) | `--connection <name>` on every read/write command |
+| Use when | You want credential sets that never see each other | You want multiple accounts on the same provider, both reachable |
+
+## The rule of thumb
+
+> If credentials should **never** see each other, use **profiles**. If both should be reachable in the same context, use **connections** within one profile.
+
+## Examples
+
+**Two GitHub accounts.** You want to push to a personal repo and a work repo from the same shell. Use one profile, two connections:
+
+```bash
+uvx authsome login github --connection personal
+uvx authsome login github --connection work
+uvx authsome get github --connection work --field access_token --show-secret
+```
+
+**Personal vs employer's tooling.** You don't want personal Slack credentials anywhere near work tooling. Use separate profiles. The `work` profile is its own SQLite store with its own audit log.
+
+```text
+~/.authsome/
+  profiles/
+    default/  ← personal
+    work/     ← employer
+```
+
+**Per-agent scoping.** You want each agent to only see the credentials it needs. Use a profile per agent: `agent-cold-email`, `agent-pr-bot`. The agent's process runs against that profile only.
+
+**Testing a different OAuth client.** You want to verify a new `client_id` without overwriting the canonical one. Spin up a throwaway profile, do the test, delete the profile.
+
+## Which one is active
+
+The active profile is whichever `default_profile` is set to in `~/.authsome/config.json`. CLI-level `--profile` switching is planned but not yet wired up.
+
+```json
+{
+  "spec_version": 1,
+  "default_profile": "work",
+  "encryption": { "mode": "local_key" }
+}
+```
+
+To run a single command against a different profile today, switch the file (or symlink it) before invoking the CLI.
+
+## On-disk shape
+
+<Tree>
+  <Tree.Folder name="~/.authsome/" defaultOpen>
+    <Tree.File name="config.json" />
+    <Tree.File name="master.key" />
+    <Tree.Folder name="profiles/" defaultOpen>
+      <Tree.Folder name="default/" defaultOpen>
+        <Tree.File name="store.db" />
+        <Tree.File name="lock" />
+      </Tree.Folder>
+      <Tree.Folder name="work/" defaultOpen>
+        <Tree.File name="store.db" />
+        <Tree.File name="lock" />
+      </Tree.Folder>
+    </Tree.Folder>
+  </Tree.Folder>
+</Tree>
+
+`config.json` holds the active profile name. `master.key` is shared across all profiles. Each `store.db` is independently encrypted under the same master key.
+
+The vault key namespace inside each `store.db`:
+
+```text
+profile:<profile>:<provider>:metadata
+profile:<profile>:<provider>:state
+profile:<profile>:<provider>:client
+profile:<profile>:<provider>:connection:<connection_name>
+```
+
+See [Credential storage](/concepts/credential-storage) for the full key model and what each row holds.
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Profiles" icon="layer-group" href="/guides/profiles">
+    Create, switch, and manage profiles.
+  </Card>
+  <Card title="Multiple connections per provider" icon="users" href="/guides/multiple-connections">
+    The connection-flag pattern for two accounts on one provider.
+  </Card>
+</Columns>

@@ -1,0 +1,91 @@
+---
+title: "Postiz"
+sidebarTitle: "Postiz"
+description: "Log in to Postiz from authsome via OAuth2. Tokens are stored locally and refreshed automatically."
+keywords: ["postiz oauth cli", "postiz access token broker", "authsome postiz", "postiz agent credentials"]
+---
+
+import ProxyInjection from "/snippets/proxy-injection.mdx";
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
+
+Postiz is a bundled OAuth2 provider in authsome. Postiz social posting and scheduling APIs.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `postiz` |
+| Display name | Postiz |
+| Auth type | OAuth2 |
+| Default flow | `device_code`, headless |
+| PKCE supported | Yes |
+| Device code supported | Yes |
+| DCR supported | No |
+| Default scopes | (none) |
+| Proxy host | `api.postiz.com` |
+| Env var (`access_token`) | `POSTIZ_ACCESS_TOKEN` |
+| Provider docs | [Link](https://docs.postiz.com/public-api/oauth) |
+
+## Prerequisites
+
+Postiz uses the device authorization grant. No callback URL is registered. You enter a short code on a separate device after running `authsome login`.
+
+## Log in
+
+```bash
+uvx authsome login postiz
+```
+
+Authsome prints a verification URL and a short user code. Open the URL on any device, enter the code, approve the app, and authsome's poll completes.
+
+Verify:
+
+```bash
+uvx authsome get postiz --field status
+# → connected
+```
+
+## Multiple accounts
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login postiz --connection personal
+uvx authsome login postiz --connection work
+```
+
+## Use the token
+
+### From a Python agent
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+token = ctx.auth.get_access_token("postiz", connection="default")
+```
+
+<ProxyInjection envVar="POSTIZ_ACCESS_TOKEN" secretLabel="token" host="api.postiz.com" />
+
+### As an environment variable
+
+```bash
+eval "$(uvx authsome export postiz --format env)"
+```
+
+Refresh tokens are never exported. Authsome refreshes silently.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect postiz > ~/.authsome/providers/postiz.json
+# edit scopes, base_url, or anything else
+uvx authsome list   # source now shows "custom" for postiz
+```
+
+User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).
+
+## What's next
+
+<WhatsNextOauth />

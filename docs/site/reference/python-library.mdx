@@ -1,0 +1,199 @@
+---
+title: "Python library"
+sidebarTitle: "Python library"
+description: "Use authsome from Python directly. The AuthsomeContext entry point and the AuthLayer API."
+icon: "code"
+keywords: ["authsome python", "AuthsomeContext", "authsome library", "ctx.auth.get_access_token", "authsome programmatic"]
+---
+
+Authsome is a Python library as well as a CLI. The entry point is `AuthsomeContext`, a small runtime container that wires together the vault, the auth layer, and the proxy runner.
+
+## Install
+
+```bash
+pip install authsome
+# or
+uv pip install authsome
+```
+
+Python 3.13 or newer.
+
+## Quick start
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+
+token = ctx.auth.get_access_token("github", connection="default")
+
+import httpx
+r = httpx.get(
+    "https://api.github.com/user",
+    headers={"Authorization": f"Bearer {token}"},
+)
+print(r.json())
+```
+
+`AuthsomeContext.create()` reads `~/.authsome/config.json`, opens the active profile's vault, and exposes the auth layer. The same context is created once per CLI invocation; you can create one per process for library use.
+
+## AuthsomeContext
+
+The runtime wiring container. Holds the vault, the auth layer, and the proxy runner as attributes. No business logic of its own.
+
+```python
+ctx = AuthsomeContext.create()
+
+ctx.auth         # AuthLayer
+ctx.vault        # Vault
+ctx.proxy        # ProxyRunner
+ctx.home         # pathlib.Path to ~/.authsome
+```
+
+Use `AuthsomeContext.create()` for the default install. Pass a different `home=` to point at a non-default directory:
+
+```python
+from pathlib import Path
+ctx = AuthsomeContext.create(home=Path("/var/lib/authsome"))
+```
+
+## Get an access token
+
+```python
+token = ctx.auth.get_access_token("github", connection="default")
+```
+
+The auth layer reads the connection record from the vault, refreshes the token if it's expired, writes the refreshed record back, and returns a plaintext string. Refresh is silent. The caller does not see refresh tokens, expiry timestamps, or scopes.
+
+For API-key providers, the same call returns the API key:
+
+```python
+key = ctx.auth.get_access_token("openai", connection="default")
+```
+
+The function is named `get_access_token` for OAuth heritage; for API-key providers it returns the stored key value. Both use cases hit the same code path.
+
+## Inspect connections
+
+```python
+record = ctx.auth.get_connection("github", connection="default")
+
+record.status            # ConnectionStatus enum
+record.scopes            # list[str]
+record.expires_at        # datetime | None
+record.account.id        # provider-side account id
+record.account.label     # display name
+```
+
+Sensitive fields on the record are encrypted on disk and decrypted on read.
+
+## List providers
+
+```python
+for entry in ctx.auth.list_providers():
+    print(entry.name, entry.display_name, entry.source, entry.auth_type)
+```
+
+`source` is `"bundled"` or `"custom"`. The full provider definition is available via:
+
+```python
+definition = ctx.auth.get_provider("github")
+definition.flow                  # FlowType
+definition.host_url
+definition.oauth.scopes          # default scopes
+```
+
+## Manage connections programmatically
+
+```python
+ctx.auth.create_profile("work", description="Work GitHub + Linear")
+ctx.auth.logout("github", connection="work")
+ctx.auth.revoke("github")
+```
+
+`create_profile` adds an entry under `profiles/<name>/`. `logout` removes a local connection. `revoke` calls the provider's revocation endpoint (where supported) and clears all local state for the provider in the active profile.
+
+## Run a flow
+
+Library users typically rely on the CLI for login because the flows need a browser or a TTY. To run a flow programmatically:
+
+```python
+ctx.auth.login("github", flow="pkce", connection="default")
+```
+
+This blocks until the browser flow completes. For the four flow types (`pkce`, `device_code`, `dcr_pkce`, `api_key`) the behavior matches `uvx authsome login`. The headless `device_code` variant prints the verification URL and user code via the configured input provider.
+
+## Use the proxy from code
+
+```python
+with ctx.proxy.run() as proxy:
+    # proxy.url is http://127.0.0.1:<port>
+    # spawn a subprocess with HTTP_PROXY=proxy.url
+    ...
+```
+
+In practice, the CLI's `authsome run` is the right interface. Calling `ctx.proxy.run()` directly is for embedding authsome inside a larger orchestrator.
+
+## Vault access
+
+The vault interface is intentionally minimal:
+
+```python
+ctx.vault.get(key)
+ctx.vault.put(key, value)
+ctx.vault.delete(key)
+ctx.vault.list(prefix)
+```
+
+Keys follow the namespace:
+
+```text
+profile:<profile>:<provider>:metadata
+profile:<profile>:<provider>:state
+profile:<profile>:<provider>:client
+profile:<profile>:<provider>:connection:<connection_name>
+```
+
+Direct vault access is rare. Prefer the auth layer; it manages encryption, decryption, and connection lifecycle for you.
+
+## Errors
+
+All exceptions inherit from `authsome.errors.AuthsomeError`. The common ones:
+
+| Exception | When |
+|-----------|------|
+| `ProviderNotFound` | `get_provider("does-not-exist")`. |
+| `ConnectionNotFound` | `get_connection("github", connection="missing")`. |
+| `RefreshFailed` | Provider rejected the refresh token. |
+| `AuthenticationFailed` | Browser flow returned an error or the user cancelled. |
+| `StoreUnavailable` | Vault file is locked or unreadable. |
+
+Exit codes in [CLI reference](/reference/cli) map one-to-one to these classes.
+
+## When to use the library vs the CLI
+
+| Use the library | Use the CLI |
+|-----------------|--------------|
+| You're embedding authsome inside an existing Python agent. | You're driving authsome from any non-Python runtime. |
+| You need fine-grained control over which connection to use per call. | The default-connection model is fine. |
+| You're writing tests that need to stub the vault or auth layer. | You're a human running commands. |
+| You want to read connection metadata without parsing CLI output. | The `--json` flag is enough. |
+
+For most agent workflows, `uvx authsome run -- <agent>` is simpler than embedding the library directly. The library exists for cases where the CLI shape doesn't fit.
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Architecture" icon="layer-group" href="/concepts/architecture">
+    The layered model and where AuthsomeContext sits.
+  </Card>
+  <Card title="CLI reference" icon="terminal" href="/reference/cli">
+    Every command. The CLI is a client of the same code.
+  </Card>
+  <Card title="Provider schema" icon="file-code" href="/reference/provider-schema">
+    The fields on a ProviderDefinition.
+  </Card>
+  <Card title="Filesystem layout" icon="folder-tree" href="/reference/file-layout">
+    Where the library reads and writes.
+  </Card>
+</Columns>

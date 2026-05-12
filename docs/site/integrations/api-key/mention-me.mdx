@@ -1,0 +1,99 @@
+---
+title: "Mention Me"
+sidebarTitle: "Mention Me"
+description: "Store and use your Mention Me API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["mention me api key authsome", "mention me key broker", "mention-me agent credentials", "authsome mention-me"]
+---
+
+import ProxyInjection from "/snippets/proxy-injection.mdx";
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Mention Me uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `mention-me` |
+| Display name | Mention Me |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `mention-me.com` |
+| Env var | `MENTIONME_API_KEY` |
+| Where to get a key | [https://app.mention-me.com/api](https://app.mention-me.com/api) |
+
+## Get a key
+
+Create an API key in the Mention Me dashboard at [https://app.mention-me.com/api](https://app.mention-me.com/api).
+
+## Log in
+
+```bash
+uvx authsome login mention-me
+```
+
+A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get mention-me --field status
+# → connected
+```
+
+## Use the key
+
+<ProxyInjection envVar="MENTIONME_API_KEY" secretLabel="key" host="mention-me.com" />
+
+### From a Python agent
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+key = ctx.auth.get_access_token("mention-me", connection="default")
+```
+
+### As an environment variable
+
+```bash
+eval "$(uvx authsome export mention-me --format env)"
+echo $MENTIONME_API_KEY
+```
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login mention-me --connection personal
+uvx authsome login mention-me --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login mention-me --force          # rotate
+uvx authsome logout mention-me                  # remove local credential
+uvx authsome remove mention-me                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Mention Me.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect mention-me > ~/.authsome/providers/mention-me.json
+# edit fields
+uvx authsome list   # source now shows "custom" for mention-me
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

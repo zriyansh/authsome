@@ -1,0 +1,83 @@
+---
+title: "Agent frameworks"
+sidebarTitle: "Overview"
+description: "Drop authsome into any agent framework. Claude Code, Cursor, OpenCode, LangChain, LlamaIndex, and others."
+keywords: ["agent credential management", "agent oauth", "agent api keys", "authsome agent frameworks", "authsome langchain", "authsome cursor"]
+---
+
+Authsome is provider-side, not framework-side. It manages credentials for the services your agents call. Any agent that makes HTTP requests can use authsome through one of two patterns:
+
+- **Run under the proxy.** `uvx authsome run -- <your agent>`. Headers are injected at request time. The agent's environment never contains real secrets.
+- **Use the Python library.** `ctx.auth.get_access_token("provider")` to fetch a fresh token, then pass it to your client of choice.
+
+This section has a page per agent framework with the install path, the recommended pattern, and any framework-specific notes.
+
+## Frameworks covered
+
+<Columns cols={2}>
+  <Card title="Claude Code" icon="robot" href="/integrations/agents/claude-code">
+    Anthropic's CLI for coding agents. Authsome ships as a bundled skill.
+  </Card>
+  <Card title="Codex" icon="terminal" href="/integrations/agents/codex">
+    OpenAI's coding agent. Run agents through the auth proxy.
+  </Card>
+  <Card title="Cursor" icon="cursor" href="/integrations/agents/cursor">
+    The Cursor IDE agent. Wire up MCP servers and shell commands against authsome.
+  </Card>
+  <Card title="OpenCode" icon="code" href="/integrations/agents/opencode">
+    OpenCode CLI. Use the proxy or env-var export.
+  </Card>
+  <Card title="Cowork" icon="users" href="/integrations/agents/cowork">
+    Multi-agent runtime. Per-agent profiles isolate credentials.
+  </Card>
+  <Card title="NanoClaw / OpenClaw / HermesAgent" icon="microchip" href="/integrations/agents/nanoclaw">
+    Lightweight agent runners. Same patterns as the library path.
+  </Card>
+  <Card title="LangChain" icon="link" href="/integrations/agents/langchain">
+    Inject tokens at LLM/tool boundaries.
+  </Card>
+  <Card title="LlamaIndex" icon="layer-group" href="/integrations/agents/llamaindex">
+    Wrap data-loader credentials behind authsome.
+  </Card>
+  <Card title="OpenAI Agents SDK" icon="rocket" href="/integrations/agents/openai-agents-sdk">
+    Replace `OPENAI_API_KEY` env-var management with proxy injection.
+  </Card>
+  <Card title="Anthropic SDK" icon="code-branch" href="/integrations/agents/anthropic-sdk">
+    Same idea for `ANTHROPIC_API_KEY`.
+  </Card>
+  <Card title="Generic Python agent" icon="python" href="/integrations/agents/python">
+    Any Python script that calls third-party APIs.
+  </Card>
+</Columns>
+
+## The two patterns, in one minute
+
+### Proxy (recommended for production)
+
+```bash
+uvx authsome run -- python my_agent.py
+```
+
+The agent runs as a subprocess of authsome. A local HTTP proxy intercepts outbound requests and injects the right `Authorization` header per provider. The child process never sees the real secret because the proxy substitutes a placeholder env var like `OPENAI_API_KEY=authsome-proxy-managed`. See [Run agents with the proxy](/guides/run-agents-with-proxy).
+
+### Library (recommended when you need control)
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+token = ctx.auth.get_access_token("github", connection="default")
+```
+
+Direct call into authsome's auth layer. Returns a usable token. Refresh is silent. See [Python library](/reference/python-library).
+
+## Per-framework notes
+
+Each page in this section covers:
+
+- How to invoke authsome from that framework (skill, command wrapper, or library call).
+- The recommended security pattern.
+- Multi-account workflows where applicable.
+- Framework-specific gotchas (TLS pinning, env-var precedence, MCP wiring).
+
+If a framework you use isn't listed, the generic patterns are in [Run agents with the proxy](/guides/run-agents-with-proxy) and [Python library](/reference/python-library).

@@ -1,0 +1,77 @@
+---
+title: "OAuth providers"
+sidebarTitle: "Overview"
+description: "Every OAuth2 provider authsome ships out of the box. PKCE, device code, and DCR flows."
+keywords: ["authsome oauth providers", "oauth credential management", "agent oauth credentials", "oauth pkce cli"]
+---
+
+Authsome ships with 14 bundled OAuth2 providers. Each has a default flow (PKCE, device code, or Dynamic Client Registration) and a `host_url` for proxy injection. You can override any of them by dropping a JSON file with the same name into `~/.authsome/providers/`.
+
+## Bundled OAuth providers
+
+| Provider | Flow | Host | Notes |
+|----------|------|------|-------|
+| [atlassian](/integrations/oauth/atlassian) | `pkce` | `api.atlassian.com` | Jira and Confluence Cloud. |
+| [discord](/integrations/oauth/discord) | `pkce` | `discord.com` | Bot and user OAuth. |
+| [github](/integrations/oauth/github) | `pkce` | `api.github.com` | Device code also supported. |
+| [gitlab](/integrations/oauth/gitlab) | `pkce` | `gitlab.com` | Self-hosted via `--base-url`. |
+| [google](/integrations/oauth/google) | `pkce` | `regex:.*googleapis.*` | Covers Gmail, Drive, Calendar, etc. |
+| [hubspot](/integrations/oauth/hubspot) | `pkce` | `api.hubapi.com` | |
+| [klaviyo-oauth](/integrations/oauth/klaviyo) | `pkce` | `a.klaviyo.com` | OAuth variant. The API-key variant is `klaviyo`. |
+| [linear](/integrations/oauth/linear) | `dcr_pkce` | `api.linear.app` | DCR; no OAuth app to register. |
+| [microsoft](/integrations/oauth/microsoft) | `pkce` | `graph.microsoft.com` | Microsoft Graph. |
+| [notion](/integrations/oauth/notion) | `pkce` | `api.notion.com` | Standard OAuth app. |
+| [notion_dcr](/integrations/oauth/notion-dcr) | `dcr_pkce` | `api.notion.com` | DCR variant of Notion. |
+| [postiz](/integrations/oauth/postiz) | `device_code` | `api.postiz.com` | Headless-friendly. |
+| [slack](/integrations/oauth/slack) | `pkce` | `slack.com` | Workspace-scoped. |
+| [x](/integrations/oauth/x) | `pkce` | `api.twitter.com` | X (formerly Twitter). |
+
+For all providers in one CLI view:
+
+```bash
+uvx authsome list
+```
+
+## How the bundled flow is chosen
+
+Every provider definition declares a default `flow`. The four flow types:
+
+| Flow | When |
+|------|------|
+| `pkce` | Standard OAuth2 with PKCE. Browser-capable setup. Requires registering an OAuth app at the provider. |
+| `device_code` | Headless OAuth2. User enters a code on a separate device. No callback URL to register. |
+| `dcr_pkce` | Dynamic Client Registration followed by PKCE. The provider registers an OAuth client for you. Used for services that support DCR. |
+| `api_key` | Not OAuth. See [API-key providers](/integrations/api-key/index). |
+
+Override the flow at login time if the provider supports the alternative:
+
+```bash
+uvx authsome login github --flow device_code
+```
+
+## Add an OAuth provider
+
+If authsome doesn't bundle the provider you need:
+
+1. Find the provider's `authorization_url`, `token_url`, and supported scopes.
+2. Write a JSON definition. See [Custom providers](/guides/custom-providers) for templates.
+3. `uvx authsome register ./<name>.json`.
+
+The JSON schema is in [Provider schema](/reference/provider-schema).
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Log in with OAuth" icon="right-to-bracket" href="/guides/login-with-oauth">
+    The full OAuth login walkthrough.
+  </Card>
+  <Card title="API-key providers" icon="key" href="/integrations/api-key/index">
+    The other half of the bundled set.
+  </Card>
+  <Card title="Custom providers" icon="puzzle-piece" href="/guides/custom-providers">
+    Add an OAuth provider authsome doesn't ship.
+  </Card>
+  <Card title="Provider registry" icon="folder-tree" href="/concepts/provider-registry">
+    How authsome resolves names to definitions.
+  </Card>
+</Columns>

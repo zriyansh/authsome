@@ -1,0 +1,81 @@
+---
+title: "LangChain"
+sidebarTitle: "LangChain"
+description: "Use authsome with LangChain. Pull fresh tokens at agent construction or run the whole chain under the proxy."
+icon: "link"
+keywords: ["langchain authsome", "langchain credentials", "langchain oauth", "langchain api keys"]
+---
+
+[LangChain](https://www.langchain.com) reads provider credentials from environment variables or constructor arguments. Authsome supplies either, so the chain never needs hardcoded secrets.
+
+## Pattern 1: pass tokens at construction
+
+```python
+from authsome.context import AuthsomeContext
+from langchain_openai import ChatOpenAI
+from langchain_community.tools.github.tool import GitHubAction
+
+ctx = AuthsomeContext.create()
+
+llm = ChatOpenAI(
+    api_key=ctx.auth.get_access_token("openai"),
+    model="gpt-4o-mini",
+)
+
+github = GitHubAction(
+    github_access_token=ctx.auth.get_access_token("github"),
+)
+```
+
+Refresh is transparent. The next call to `get_access_token` returns a fresh value if the cached one expired. Construct the clients once per request rather than caching them across long-running processes if your tokens have short TTLs.
+
+## Pattern 2: run the whole chain under the proxy
+
+```bash
+uvx authsome login openai
+uvx authsome login github
+uvx authsome run -- python my_chain.py
+```
+
+LangChain SDKs read placeholder env vars (`OPENAI_API_KEY=authsome-proxy-managed`) and initialize. The proxy substitutes the real key for outbound HTTPS to `api.openai.com`, `api.github.com`, and other matched hosts. No code changes to your chain.
+
+## Tools that call out to providers
+
+Many LangChain tools (`GitHubToolkit`, `SerpAPIWrapper`, `BraveSearch`, etc.) read their secret from a constructor or env var. Either pattern above works:
+
+```python
+from langchain_community.utilities import SerpAPIWrapper
+
+# pattern 1: pass directly
+search = SerpAPIWrapper(serpapi_api_key=ctx.auth.get_access_token("serpapi"))
+
+# pattern 2: rely on env-var injection from the proxy
+import os
+search = SerpAPIWrapper()   # reads SERPAPI_API_KEY from env, which is the proxy placeholder
+```
+
+For tools that authsome doesn't bundle, add a [custom provider](/guides/custom-providers) so the proxy can match by host and the env-var pattern works.
+
+## Async clients
+
+`AsyncChatOpenAI` and other async wrappers work identically. Authsome's auth layer is synchronous; call `get_access_token` once at client construction and pass the value in.
+
+## Multi-account workflows
+
+```python
+work = ctx.auth.get_access_token("github", connection="work")
+personal = ctx.auth.get_access_token("github", connection="personal")
+```
+
+See [Multiple connections per provider](/guides/multiple-connections).
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Python library" icon="code" href="/reference/python-library">
+    The full library surface.
+  </Card>
+  <Card title="OpenAI integration" icon="key" href="/integrations/api-key/openai">
+    Set up the OpenAI key LangChain will use.
+  </Card>
+</Columns>

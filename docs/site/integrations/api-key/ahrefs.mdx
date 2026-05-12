@@ -1,0 +1,99 @@
+---
+title: "Ahrefs"
+sidebarTitle: "Ahrefs"
+description: "Store and use your Ahrefs API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["ahrefs api key authsome", "ahrefs key broker", "ahrefs agent credentials", "authsome ahrefs"]
+---
+
+import ProxyInjection from "/snippets/proxy-injection.mdx";
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Ahrefs uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `ahrefs` |
+| Display name | Ahrefs |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.ahrefs.com` |
+| Env var | `AHREFS_API_KEY` |
+| Where to get a key | [https://app.ahrefs.com/api](https://app.ahrefs.com/api) |
+
+## Get a key
+
+Create an API key in the Ahrefs dashboard at [https://app.ahrefs.com/api](https://app.ahrefs.com/api).
+
+## Log in
+
+```bash
+uvx authsome login ahrefs
+```
+
+A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get ahrefs --field status
+# → connected
+```
+
+## Use the key
+
+<ProxyInjection envVar="AHREFS_API_KEY" secretLabel="key" host="api.ahrefs.com" />
+
+### From a Python agent
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+key = ctx.auth.get_access_token("ahrefs", connection="default")
+```
+
+### As an environment variable
+
+```bash
+eval "$(uvx authsome export ahrefs --format env)"
+echo $AHREFS_API_KEY
+```
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login ahrefs --connection personal
+uvx authsome login ahrefs --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login ahrefs --force          # rotate
+uvx authsome logout ahrefs                  # remove local credential
+uvx authsome remove ahrefs                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Ahrefs.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect ahrefs > ~/.authsome/providers/ahrefs.json
+# edit fields
+uvx authsome list   # source now shows "custom" for ahrefs
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

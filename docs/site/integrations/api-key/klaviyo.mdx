@@ -1,0 +1,99 @@
+---
+title: "Klaviyo"
+sidebarTitle: "Klaviyo"
+description: "Store and use your Klaviyo API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["klaviyo api key authsome", "klaviyo key broker", "klaviyo agent credentials", "authsome klaviyo"]
+---
+
+import ProxyInjection from "/snippets/proxy-injection.mdx";
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Klaviyo uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `klaviyo` |
+| Display name | Klaviyo |
+| Auth type | API key |
+| Header | `Authorization: Klaviyo-API-Key <key>` |
+| Proxy host | `a.klaviyo.com` |
+| Env var | `KLAVIYO_API_KEY` |
+| Where to get a key | [https://www.klaviyo.com/account#api-keys-tab](https://www.klaviyo.com/account#api-keys-tab) |
+
+## Get a key
+
+Create an API key in the Klaviyo dashboard at [https://www.klaviyo.com/account#api-keys-tab](https://www.klaviyo.com/account#api-keys-tab).
+
+## Log in
+
+```bash
+uvx authsome login klaviyo
+```
+
+A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get klaviyo --field status
+# → connected
+```
+
+## Use the key
+
+<ProxyInjection envVar="KLAVIYO_API_KEY" secretLabel="key" host="a.klaviyo.com" />
+
+### From a Python agent
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+key = ctx.auth.get_access_token("klaviyo", connection="default")
+```
+
+### As an environment variable
+
+```bash
+eval "$(uvx authsome export klaviyo --format env)"
+echo $KLAVIYO_API_KEY
+```
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login klaviyo --connection personal
+uvx authsome login klaviyo --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login klaviyo --force          # rotate
+uvx authsome logout klaviyo                  # remove local credential
+uvx authsome remove klaviyo                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Klaviyo.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect klaviyo > ~/.authsome/providers/klaviyo.json
+# edit fields
+uvx authsome list   # source now shows "custom" for klaviyo
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

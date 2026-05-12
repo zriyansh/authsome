@@ -1,0 +1,99 @@
+---
+title: "Clearbit"
+sidebarTitle: "Clearbit"
+description: "Store and use your Clearbit API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["clearbit api key authsome", "clearbit key broker", "clearbit agent credentials", "authsome clearbit"]
+---
+
+import ProxyInjection from "/snippets/proxy-injection.mdx";
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Clearbit uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `clearbit` |
+| Display name | Clearbit |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.clearbit.com` |
+| Env var | `CLEARBIT_API_KEY` |
+| Where to get a key | [https://dashboard.clearbit.com/api](https://dashboard.clearbit.com/api) |
+
+## Get a key
+
+Create an API key in the Clearbit dashboard at [https://dashboard.clearbit.com/api](https://dashboard.clearbit.com/api).
+
+## Log in
+
+```bash
+uvx authsome login clearbit
+```
+
+A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get clearbit --field status
+# → connected
+```
+
+## Use the key
+
+<ProxyInjection envVar="CLEARBIT_API_KEY" secretLabel="key" host="api.clearbit.com" />
+
+### From a Python agent
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+key = ctx.auth.get_access_token("clearbit", connection="default")
+```
+
+### As an environment variable
+
+```bash
+eval "$(uvx authsome export clearbit --format env)"
+echo $CLEARBIT_API_KEY
+```
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login clearbit --connection personal
+uvx authsome login clearbit --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login clearbit --force          # rotate
+uvx authsome logout clearbit                  # remove local credential
+uvx authsome remove clearbit                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Clearbit.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect clearbit > ~/.authsome/providers/clearbit.json
+# edit fields
+uvx authsome list   # source now shows "custom" for clearbit
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

@@ -1,0 +1,122 @@
+---
+title: "Microsoft"
+sidebarTitle: "Microsoft"
+description: "Log in to Microsoft from authsome via OAuth2. Tokens are stored locally and refreshed automatically."
+icon: "microsoft"
+keywords: ["microsoft oauth cli", "microsoft access token broker", "authsome microsoft", "microsoft agent credentials"]
+---
+
+import ProxyInjection from "/snippets/proxy-injection.mdx";
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
+
+Microsoft is a bundled OAuth2 provider in authsome. Microsoft Graph: Outlook mail, calendar, OneDrive files, Tasks, user profile.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `microsoft` |
+| Display name | Microsoft |
+| Auth type | OAuth2 |
+| Default flow | `pkce`, PKCE browser flow |
+| PKCE supported | Yes |
+| Device code supported | Yes |
+| DCR supported | No |
+| Default scopes | `User.Read`, `offline_access`, `Mail.ReadWrite`, `Calendars.ReadWrite`, `Files.ReadWrite`, `Tasks.ReadWrite` |
+| Proxy host | `graph.microsoft.com` |
+| Env var (`access_token`) | `MICROSOFT_ACCESS_TOKEN` |
+| Env var (`refresh_token`) | `MICROSOFT_REFRESH_TOKEN` |
+
+## Prerequisites
+
+You need to register an OAuth app with Microsoft once. Register an application in Microsoft Entra (formerly Azure AD). Configure the platform as "Mobile and desktop applications" with authsome's callback URL.
+
+The redirect URI must be:
+
+```text
+http://127.0.0.1:7999/callback
+```
+
+This is the only callback URL authsome's PKCE flow listens on.
+
+Dashboard: [https://entra.microsoft.com/](https://entra.microsoft.com/).
+
+## Log in
+
+```bash
+uvx authsome login microsoft
+```
+
+The first time, authsome opens a local form at `http://127.0.0.1:7999` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://login.microsoftonline.com/common/oauth2/v2.0/authorize` for the authorization step.
+
+Verify:
+
+```bash
+uvx authsome get microsoft --field status
+# → connected
+```
+
+## Headless setup
+
+For SSH or CI environments, use the device code flow:
+
+```bash
+uvx authsome login microsoft --flow device_code
+```
+
+See [Headless setup](/guides/headless-device-code) for the full flow.
+
+## Custom scopes
+
+The bundled definition requests `User.Read`, `offline_access`, `Mail.ReadWrite`, `Calendars.ReadWrite`, `Files.ReadWrite`, `Tasks.ReadWrite`. Override at login time:
+
+```bash
+uvx authsome login microsoft --scopes "<comma-separated>"
+```
+
+The granted scopes are stored on the connection and visible in `uvx authsome get microsoft`.
+
+## Multiple accounts
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login microsoft --connection personal
+uvx authsome login microsoft --connection work
+```
+
+## Use the token
+
+### From a Python agent
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+token = ctx.auth.get_access_token("microsoft", connection="default")
+```
+
+<ProxyInjection envVar="MICROSOFT_ACCESS_TOKEN" secretLabel="token" host="graph.microsoft.com" />
+
+### As an environment variable
+
+```bash
+eval "$(uvx authsome export microsoft --format env)"
+```
+
+Refresh tokens are never exported. Authsome refreshes silently.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect microsoft > ~/.authsome/providers/microsoft.json
+# edit scopes, base_url, or anything else
+uvx authsome list   # source now shows "custom" for microsoft
+```
+
+User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).
+
+## What's next
+
+<WhatsNextOauth />

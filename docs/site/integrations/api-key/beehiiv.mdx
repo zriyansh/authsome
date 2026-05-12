@@ -1,0 +1,99 @@
+---
+title: "Beehiiv"
+sidebarTitle: "Beehiiv"
+description: "Store and use your Beehiiv API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["beehiiv api key authsome", "beehiiv key broker", "beehiiv agent credentials", "authsome beehiiv"]
+---
+
+import ProxyInjection from "/snippets/proxy-injection.mdx";
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Beehiiv uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `beehiiv` |
+| Display name | Beehiiv |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.beehiiv.com` |
+| Env var | `BEEHIIV_API_KEY` |
+| Where to get a key | [https://app.beehiiv.com/settings/integrations/api](https://app.beehiiv.com/settings/integrations/api) |
+
+## Get a key
+
+Create an API key in the Beehiiv dashboard at [https://app.beehiiv.com/settings/integrations/api](https://app.beehiiv.com/settings/integrations/api).
+
+## Log in
+
+```bash
+uvx authsome login beehiiv
+```
+
+A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get beehiiv --field status
+# → connected
+```
+
+## Use the key
+
+<ProxyInjection envVar="BEEHIIV_API_KEY" secretLabel="key" host="api.beehiiv.com" />
+
+### From a Python agent
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+key = ctx.auth.get_access_token("beehiiv", connection="default")
+```
+
+### As an environment variable
+
+```bash
+eval "$(uvx authsome export beehiiv --format env)"
+echo $BEEHIIV_API_KEY
+```
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login beehiiv --connection personal
+uvx authsome login beehiiv --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login beehiiv --force          # rotate
+uvx authsome logout beehiiv                  # remove local credential
+uvx authsome remove beehiiv                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Beehiiv.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect beehiiv > ~/.authsome/providers/beehiiv.json
+# edit fields
+uvx authsome list   # source now shows "custom" for beehiiv
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

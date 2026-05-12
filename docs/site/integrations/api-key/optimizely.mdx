@@ -1,0 +1,99 @@
+---
+title: "Optimizely"
+sidebarTitle: "Optimizely"
+description: "Store and use your Optimizely API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["optimizely api key authsome", "optimizely key broker", "optimizely agent credentials", "authsome optimizely"]
+---
+
+import ProxyInjection from "/snippets/proxy-injection.mdx";
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Optimizely uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `optimizely` |
+| Display name | Optimizely |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.optimizely.com` |
+| Env var | `OPTIMIZELY_API_KEY` |
+| Where to get a key | [https://app.optimizely.com/v2/profile/api](https://app.optimizely.com/v2/profile/api) |
+
+## Get a key
+
+Create an API key in the Optimizely dashboard at [https://app.optimizely.com/v2/profile/api](https://app.optimizely.com/v2/profile/api).
+
+## Log in
+
+```bash
+uvx authsome login optimizely
+```
+
+A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get optimizely --field status
+# → connected
+```
+
+## Use the key
+
+<ProxyInjection envVar="OPTIMIZELY_API_KEY" secretLabel="key" host="api.optimizely.com" />
+
+### From a Python agent
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+key = ctx.auth.get_access_token("optimizely", connection="default")
+```
+
+### As an environment variable
+
+```bash
+eval "$(uvx authsome export optimizely --format env)"
+echo $OPTIMIZELY_API_KEY
+```
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login optimizely --connection personal
+uvx authsome login optimizely --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login optimizely --force          # rotate
+uvx authsome logout optimizely                  # remove local credential
+uvx authsome remove optimizely                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Optimizely.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect optimizely > ~/.authsome/providers/optimizely.json
+# edit fields
+uvx authsome list   # source now shows "custom" for optimizely
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

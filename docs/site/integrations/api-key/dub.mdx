@@ -1,0 +1,99 @@
+---
+title: "Dub.co"
+sidebarTitle: "Dub.co"
+description: "Store and use your Dub.co API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["dub.co api key authsome", "dub.co key broker", "dub agent credentials", "authsome dub"]
+---
+
+import ProxyInjection from "/snippets/proxy-injection.mdx";
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Dub.co uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `dub` |
+| Display name | Dub.co |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.dub.co` |
+| Env var | `DUB_API_KEY` |
+| Where to get a key | [https://app.dub.co/settings/tokens](https://app.dub.co/settings/tokens) |
+
+## Get a key
+
+Create an API key in the Dub.co dashboard at [https://app.dub.co/settings/tokens](https://app.dub.co/settings/tokens).
+
+## Log in
+
+```bash
+uvx authsome login dub
+```
+
+A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get dub --field status
+# → connected
+```
+
+## Use the key
+
+<ProxyInjection envVar="DUB_API_KEY" secretLabel="key" host="api.dub.co" />
+
+### From a Python agent
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+key = ctx.auth.get_access_token("dub", connection="default")
+```
+
+### As an environment variable
+
+```bash
+eval "$(uvx authsome export dub --format env)"
+echo $DUB_API_KEY
+```
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login dub --connection personal
+uvx authsome login dub --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login dub --force          # rotate
+uvx authsome logout dub                  # remove local credential
+uvx authsome remove dub                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Dub.co.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect dub > ~/.authsome/providers/dub.json
+# edit fields
+uvx authsome list   # source now shows "custom" for dub
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

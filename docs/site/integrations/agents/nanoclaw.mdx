@@ -1,0 +1,59 @@
+---
+title: "NanoClaw, OpenClaw, HermesAgent"
+sidebarTitle: "NanoClaw / OpenClaw / HermesAgent"
+description: "Lightweight Python agent runners. Use authsome via the proxy or the library."
+icon: "microchip"
+keywords: ["nanoclaw authsome", "openclaw authsome", "hermesagent authsome", "lightweight agent credentials"]
+---
+
+NanoClaw, OpenClaw, and HermesAgent are small Python agent runners. They don't bundle credential management. Authsome fills that gap with two interchangeable patterns.
+
+## Pattern 1: run under the proxy
+
+```bash
+uvx authsome login github
+uvx authsome login openai
+uvx authsome run -- python -m nanoclaw    # or openclaw, hermesagent
+```
+
+The runner sees placeholder env vars. Outbound HTTPS to matched providers is authenticated at the proxy layer.
+
+## Pattern 2: use the library
+
+These runners are Python-native. Skip the proxy and call authsome directly from your agent code:
+
+```python
+from authsome.context import AuthsomeContext
+from nanoclaw import Agent
+
+ctx = AuthsomeContext.create()
+
+agent = Agent(
+    github_token=ctx.auth.get_access_token("github"),
+    openai_key=ctx.auth.get_access_token("openai"),
+)
+agent.run()
+```
+
+Refresh is silent. The agent never holds an expired token long enough to matter.
+
+See [Python library](/reference/python-library) for the full surface.
+
+## When to use which
+
+| Use the proxy | Use the library |
+|----------------|------------------|
+| You want a single layer that catches every outbound call. | You want fine-grained control over which connection to use per agent. |
+| You're using third-party clients you can't easily modify. | The agent is yours and you can pass tokens directly. |
+| You need transparent injection for shell tools the agent spawns. | You don't spawn shell tools. |
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Run agents with the proxy" icon="shield-halved" href="/guides/run-agents-with-proxy">
+    The proxy injection model.
+  </Card>
+  <Card title="Python library" icon="code" href="/reference/python-library">
+    `AuthsomeContext` and the auth-layer API.
+  </Card>
+</Columns>

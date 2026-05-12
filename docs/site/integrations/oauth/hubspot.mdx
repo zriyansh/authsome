@@ -1,0 +1,116 @@
+---
+title: "HubSpot"
+sidebarTitle: "HubSpot"
+description: "Log in to HubSpot from authsome via OAuth2. Tokens are stored locally and refreshed automatically."
+icon: "hubspot"
+keywords: ["hubspot oauth cli", "hubspot access token broker", "authsome hubspot", "hubspot agent credentials"]
+---
+
+import ProxyInjection from "/snippets/proxy-injection.mdx";
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
+
+HubSpot is a bundled OAuth2 provider in authsome. HubSpot CRM objects: contacts, companies, deals, owners.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `hubspot` |
+| Display name | HubSpot |
+| Auth type | OAuth2 |
+| Default flow | `pkce`, PKCE browser flow |
+| PKCE supported | No |
+| Device code supported | No |
+| DCR supported | No |
+| Default scopes | `crm.objects.contacts.read`, `crm.objects.contacts.write`, `crm.objects.companies.read`, `crm.objects.companies.write`, `crm.objects.deals.read`, `crm.objects.deals.write`, `crm.objects.owners.read` |
+| Proxy host | `api.hubapi.com` |
+| Env var (`access_token`) | `HUBSPOT_ACCESS_TOKEN` |
+| Env var (`refresh_token`) | `HUBSPOT_REFRESH_TOKEN` |
+
+## Prerequisites
+
+You need to register an OAuth app with HubSpot once. Create a HubSpot app in the developer dashboard. Configure the OAuth callback URL and request the scopes you need.
+
+The redirect URI must be:
+
+```text
+http://127.0.0.1:7999/callback
+```
+
+This is the only callback URL authsome's PKCE flow listens on.
+
+Dashboard: [https://app.hubspot.com/developer](https://app.hubspot.com/developer).
+
+<Note>
+  HubSpot's OAuth flow does not support PKCE today. Authsome runs the standard authorization-code flow with `client_secret` exchange.
+</Note>
+
+## Log in
+
+```bash
+uvx authsome login hubspot
+```
+
+The first time, authsome opens a local form at `http://127.0.0.1:7999` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://app.hubspot.com/oauth/authorize` for the authorization step.
+
+Verify:
+
+```bash
+uvx authsome get hubspot --field status
+# → connected
+```
+
+## Custom scopes
+
+The bundled definition requests `crm.objects.contacts.read`, `crm.objects.contacts.write`, `crm.objects.companies.read`, `crm.objects.companies.write`, `crm.objects.deals.read`, `crm.objects.deals.write`, `crm.objects.owners.read`. Override at login time:
+
+```bash
+uvx authsome login hubspot --scopes "<comma-separated>"
+```
+
+The granted scopes are stored on the connection and visible in `uvx authsome get hubspot`.
+
+## Multiple accounts
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login hubspot --connection personal
+uvx authsome login hubspot --connection work
+```
+
+## Use the token
+
+### From a Python agent
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+token = ctx.auth.get_access_token("hubspot", connection="default")
+```
+
+<ProxyInjection envVar="HUBSPOT_ACCESS_TOKEN" secretLabel="token" host="api.hubapi.com" />
+
+### As an environment variable
+
+```bash
+eval "$(uvx authsome export hubspot --format env)"
+```
+
+Refresh tokens are never exported. Authsome refreshes silently.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect hubspot > ~/.authsome/providers/hubspot.json
+# edit scopes, base_url, or anything else
+uvx authsome list   # source now shows "custom" for hubspot
+```
+
+User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).
+
+## What's next
+
+<WhatsNextOauth />

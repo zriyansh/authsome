@@ -1,0 +1,117 @@
+---
+title: "Cursor"
+sidebarTitle: "Cursor"
+description: "Wire Cursor's IDE agent into authsome. MCP servers, shell commands, and inline Python all share one credential vault."
+icon: "code"
+keywords: ["cursor authsome", "cursor credentials", "cursor mcp authsome", "cursor github token", "cursor openai key"]
+---
+
+[Cursor](https://cursor.sh) is an AI-first code editor. Its agent surface includes inline AI calls, MCP servers, and shell tool execution. Authsome plugs in at the shell layer: any tool the Cursor agent runs through `uvx authsome run --` gets fresh credentials injected automatically.
+
+<Prompt
+  description="**Wire Cursor's terminal tool to authsome.** Open this prompt directly in Cursor to apply it."
+  icon="terminal"
+  iconType="solid"
+  actions={["copy", "cursor"]}
+>
+Update my Cursor terminal tool so every shell command the agent runs goes through authsome's proxy.
+
+1. Open Cursor settings → tools → Terminal.
+2. Change the terminal command to: `uvx authsome run -- /bin/zsh -i` (or `/bin/bash -i` on Linux/WSL).
+3. Confirm `uvx authsome list` from the agent's terminal shows my connected providers.
+4. If `authsome` isn't installed, install it with `pip install authsome` first, then log me into GitHub and OpenAI.
+
+Verify by asking the agent to run `uvx authsome run -- env | grep -E "PROXY|TOKEN|API_KEY"` and confirm the placeholder values are present.
+</Prompt>
+
+## What you get
+
+- Cursor's agent shells out without ever seeing raw secrets.
+- One credential vault shared with the regular CLI, with Claude Code, and with anything else on the machine.
+- MCP servers wrapped by `authsome run` inherit the same credential model.
+- Multi-account flows work the same as on the CLI.
+
+## Recommended pattern: wrap shell tools
+
+Open Cursor's settings → tools → Terminal, and prefix the shell command Cursor uses with `uvx authsome run --`. For example:
+
+```text
+uvx authsome run -- /bin/zsh -i
+```
+
+Every command the agent runs in that terminal inherits `HTTP_PROXY` / `HTTPS_PROXY` and placeholder env vars. Outbound API calls to matched provider hosts are authenticated at the proxy layer.
+
+## Wrap an MCP server
+
+When you add an MCP server in Cursor's settings, prefix its launch command with `authsome run --`:
+
+```json
+{
+  "mcpServers": {
+    "my-mcp": {
+      "command": "uvx",
+      "args": ["authsome", "run", "--", "node", "/path/to/server.js"]
+    }
+  }
+}
+```
+
+The MCP server runs behind the proxy. Any third-party API calls it makes use authsome-managed credentials.
+
+## Inline Python calls
+
+Cursor agents that run Python directly can use the library:
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+token = ctx.auth.get_access_token("github", connection="default")
+```
+
+See [Python library](/reference/python-library).
+
+## Multiple accounts per provider
+
+```bash
+uvx authsome login github --connection work
+uvx authsome login github --connection personal
+```
+
+The proxy uses each provider's default connection. To run Cursor against a specific connection, set it as the default with `--force`:
+
+```bash
+uvx authsome login github --connection work --force
+```
+
+Per-request connection selection inside Cursor is not yet supported. See [Multiple connections per provider](/guides/multiple-connections).
+
+## TLS interception
+
+Cursor's built-in HTTP clients honor `HTTP_PROXY`. Third-party MCP servers sometimes use TLS pinning or their own CA bundle. If you see TLS errors from a specific MCP server, point its environment at the mitmproxy CA:
+
+```bash
+export REQUESTS_CA_BUNDLE=~/.mitmproxy/mitmproxy-ca-cert.pem
+export SSL_CERT_FILE=~/.mitmproxy/mitmproxy-ca-cert.pem
+```
+
+The general guidance is in [Proxy networking](/troubleshooting/proxy-networking).
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| Cursor agent runs commands but they don't see the proxy | Verify the terminal command is prefixed with `uvx authsome run --`. |
+| MCP server crashes on launch | Run the same command outside Cursor with `--verbose` to see the real error. |
+| Tokens look stale | `uvx authsome get <provider> --field status` from a terminal Cursor wraps. |
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Run agents with the proxy" icon="shield-halved" href="/guides/run-agents-with-proxy">
+    The proxy injection model.
+  </Card>
+  <Card title="Multiple connections per provider" icon="users" href="/guides/multiple-connections">
+    Per-account workflows.
+  </Card>
+</Columns>

@@ -51,7 +51,7 @@ uvx authsome doctor
 
 ## Add an API-key provider
 
-API-key providers like OpenAI use the same login command, but the flow is different — authsome opens a local form so you can paste the key without it appearing in shell history or process listings.
+API-key providers like OpenAI use the same login command, but the flow is different. Authsome opens a local form so you can paste the key without it appearing in shell history or process listings.
 
 ```bash
 uvx authsome login openai
@@ -83,7 +83,7 @@ python my_agent.py
 
 ### Option 2: Run behind the auth proxy
 
-Best for production-style agents. Authsome starts a local HTTP proxy that intercepts outbound requests to known provider hosts and injects the auth headers — the child process never sees the raw secret.
+Best for production-style agents. Authsome starts a local HTTP proxy that intercepts outbound requests to known provider hosts and injects the auth headers. The child process never sees the raw secret.
 
 ```bash
 uvx authsome run -- python my_agent.py

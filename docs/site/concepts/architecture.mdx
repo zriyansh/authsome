@@ -1,15 +1,16 @@
 ---
 title: "Architecture"
-description: "Five layers — identity, policy, vault, auth, audit — composed by an explicit orchestrator."
+description: "Five layers · identity, policy, vault, auth, audit · composed by an explicit orchestrator."
 ---
 
-Authsome is layered. Each layer has one bounded responsibility. Layers do not reach sideways into other layers — explicit orchestrators compose them. This makes every layer independently testable and independently swappable.
+Authsome is layered. Each layer has one bounded responsibility. Layers do not reach sideways into other layers. Explicit orchestrators compose them. This makes every layer independently testable and independently swappable.
 
 Two deployment modes share the same layered architecture:
 
-- **Sidecar mode** — `authsome run -- python agent.py`. Transparent credential injection through an HTTP proxy. No auth code in the agent.
-- **Library mode** — `from authsome.context import AuthsomeContext`. A direct programmatic API.
+- **Sidecar mode**. `authsome run -- python agent.py`. Transparent credential injection through an HTTP proxy. No auth code in the agent.
+- **Library mode**. `from authsome.context import AuthsomeContext`. A direct programmatic API.
 
+<Frame caption="Sidecar-mode call graph. Identity and policy gate the vault; the auth layer refreshes when needed; the sidecar writes back, injects the Authorization header, and audits at every step.">
 ```text
 agent
   ↓  HTTP request via HTTP_PROXY=localhost:<port>
@@ -31,6 +32,7 @@ external API
   ↓
 audit        ←  append-only log entry at every step
 ```
+</Frame>
 
 ## The five layers
 
@@ -78,7 +80,7 @@ ctx = AuthsomeContext.create()
 token = ctx.auth.get_access_token("github", connection="default")
 ```
 
-Acquisition flows shipped today: PKCE (RFC 7636), Device Authorization Grant (RFC 8628), Dynamic Client Registration + PKCE, and an API-key flow.
+Acquisition flows shipped today: <Tooltip tip="Proof Key for Code Exchange. RFC 7636. Prevents authorization-code interception by binding the code to a random code verifier the client generated.">PKCE</Tooltip>, <Tooltip tip="Device Authorization Grant. RFC 8628. Headless OAuth flow where the user enters a short code on a separate device.">Device Authorization Grant</Tooltip>, <Tooltip tip="Dynamic Client Registration. The server registers an OAuth client on the fly so the user does not need to pre-register an app.">Dynamic Client Registration</Tooltip> + PKCE, and an API-key flow.
 
 ## AuthsomeContext: the orchestrator
 
@@ -111,19 +113,7 @@ See [Proxy injection](/concepts/proxy-injection) for the routing contract and kn
 
 ## Storage layout
 
-```text
-~/.authsome/
-  config.json         global settings, encryption mode, active profile
-  master.key          encryption key, mode 0600
-  audit.log           append-only audit events
-  providers/          user-defined provider definitions
-  profiles/
-    default/
-      store.db        per-profile credential store (SQLite)
-      lock            advisory write lock
-```
-
-Profiles isolate credential sets — for example `default`, `work`, or a profile per agent.
+State lives under `~/.authsome/`. See [Filesystem layout](/reference/file-layout) for the full tree and per-file reference.
 
 ## Standards
 

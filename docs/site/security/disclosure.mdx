@@ -1,0 +1,56 @@
+---
+title: "Responsible disclosure"
+sidebarTitle: "Disclosure"
+description: "How to report a security issue in authsome."
+icon: "envelope"
+keywords: ["authsome security disclosure", "authsome vulnerability report", "responsible disclosure", "security@agentr.dev"]
+---
+
+If you find a security issue in authsome, please tell us privately so we can fix it before it's public.
+
+## How to report
+
+Email **security@agentr.dev** with:
+
+- A clear description of the issue and its impact.
+- Steps to reproduce. A minimal proof of concept is ideal.
+- Affected versions if you've narrowed it down (`uvx authsome --version`).
+- Your name and a way to credit you in the fix announcement, if you'd like credit.
+
+If email isn't an option, open a [private security advisory on GitHub](https://github.com/agentrhq/authsome/security/advisories/new).
+
+## What to expect
+
+| Step | Timeline |
+|------|----------|
+| Acknowledgement | Within 72 hours |
+| Triage and severity assessment | Within 5 business days |
+| Fix scoping and target release | Communicated after triage |
+| Coordinated disclosure | After a fix is released, unless the issue is being actively exploited |
+
+We will keep you in the loop through the fix and credit you in the release notes unless you prefer to remain anonymous.
+
+## Scope
+
+In scope:
+
+- The authsome CLI, library, and daemon.
+- Bundled provider definitions under `src/authsome/auth/bundled_providers/`.
+- The mitmproxy-based local HTTP proxy.
+- The daemon dashboard UI.
+
+Out of scope:
+
+- Bugs in third-party providers' OAuth implementations. Report those to the provider.
+- Bugs in the dependencies authsome ships. Report those upstream. We will track the relevant CVE and bump our pinned version.
+- Issues that require local root or physical access to the machine. Authsome's threat model assumes the local machine and user account are trusted; see [Threat model](/security/threat-model).
+
+## What we won't do
+
+- We won't pay bounties. Authsome is open source; we credit researchers in release notes.
+- We won't act on unverified reports. We need reproducible steps or a clear theoretical model.
+- We won't publish a fix before triage is complete.
+
+## Public release notes
+
+Fixed issues are documented in [CHANGELOG.md](https://github.com/agentrhq/authsome/blob/main/CHANGELOG.md) and the GitHub release announcement, with a CVE identifier when one is assigned.

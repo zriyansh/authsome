@@ -58,7 +58,7 @@ Some bundled provider definitions declare `api_key.env_var` so the API-key flow 
 
 If the variable is set and non-empty, `uvx authsome login <provider>` uses its value with no prompt. If unset, the secure browser bridge takes over.
 
-The OAuth2 client config block can declare `client.client_id_env` and `client.client_secret_env` for similar automated collection. Bundled providers do not currently declare these — they rely on the browser bridge — but custom provider definitions can.
+The OAuth2 client config block can declare `client.client_id_env` and `client.client_secret_env` for similar automated collection. Bundled providers do not currently declare these, they rely on the browser bridge, but custom provider definitions can.
 
 ## Outputs from `uvx authsome export`
 
@@ -129,7 +129,7 @@ A typical agent run that pulls credentials from authsome:
 uvx authsome login github
 uvx authsome login openai
 
-# Run the agent through the proxy — secrets stay in the vault
+# Run the agent through the proxy, secrets stay in the vault
 uvx authsome run -- python my_agent.py
 ```
 

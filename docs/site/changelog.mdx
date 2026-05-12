@@ -1,0 +1,93 @@
+---
+title: "Changelog"
+sidebarTitle: "Changelog"
+description: "Curated release history. For the full per-commit log, see CHANGELOG.md in the repository."
+icon: "clock-rotate-left"
+keywords: ["authsome changelog", "authsome release notes", "authsome version history"]
+---
+
+A curated summary of authsome releases. For the full per-commit log, see [CHANGELOG.md](https://github.com/agentrhq/authsome/blob/main/CHANGELOG.md) in the repository.
+
+<Update label="0.2.4" description="2026-05-08">
+  **Interactive dashboard.** The local daemon now serves an interactive dashboard at `/overview`. Lime-themed UI matching the marketing site palette. Per-provider detail panes for OAuth and API-key connections.
+
+  **Hosted daemon deployment.** Added `AUTHSOME_DAEMON_URL` (client-side) and `AUTHSOME_SERVER_BASE_URL` (server-side) for shared internal deployments. See [Hosted deployment model](/security/hosted-deployment).
+
+  **Customizable home directory.** `AUTHSOME_HOME` overrides the default `~/.authsome/` location. Useful for per-project credential isolation and CI.
+
+  **Notion DCR provider.** Added `notion_dcr` (Dynamic Client Registration) variant for the MCP endpoint at `mcp.notion.com`.
+
+  **Improved error handling.** Custom error propagation between the daemon server and CLI client.
+
+  **Non-interactive register.** New `--yes` flag on `authsome register` skips the confirmation prompt in scripts.
+
+  **Distinct exit code for cancelled credential entry** (exit code 8) so scripts can distinguish user cancellation from authentication failure.
+</Update>
+
+<Update label="0.2.3" description="2026-05-01">
+  Documentation pass. Added demo video to README.
+</Update>
+
+<Update label="0.2.2" description="2026-04-29">
+  **Audit logging.** Structured JSON event log written to `~/.authsome/audit.log` for every significant action (login, logout, revoke, export, register). See [Audit log format](/reference/audit-log).
+
+  **List output rendered as a table.** `uvx authsome list` shows providers, source (bundled / custom), auth type, default connection, and status in a single tabular view.
+
+  **Expanded `whoami` context.** Reports the home directory, encryption mode, and active profile.
+
+  **Regex proxy host URLs.** Provider definitions can declare `host_url: "regex:..."` to match multiple hosts behind a single provider (used by Google and Linear).
+</Update>
+
+<Update label="0.2.1" description="2026-04-28">
+  Fix: set connection `host_url` directly from the resolved provider definition.
+</Update>
+
+<Update label="0.2.0" description="2026-04-28">
+  **Architectural restructure.** Vault and AuthLayer split into separate layers with a documented protocol boundary. Public Python API moved (`AuthClient` → `AuthsomeContext`). CLI commands and flags are unchanged. See [Architecture](/concepts/architecture).
+
+  **Browser bridge for sensitive input.** OAuth `client_secret` and API keys are now collected through a local browser form (or `getpass` fallback). Sensitive values are no longer accepted as command-line arguments.
+
+  **`{base_url}` templating.** Multi-tenant providers (GitHub Enterprise, Okta, GitLab self-managed) declare a default `base_url` and `--base-url` overrides it at login time. See [Custom providers](/guides/custom-providers#multi-tenant-providers).
+
+  **`--verbose` and `--log-file` flags.** loguru-backed file logging with `--verbose` for DEBUG to stderr.
+
+  **mitmproxy CA injection.** Subprocesses started by `authsome run` get a combined system + mitmproxy CA bundle so SDKs trust the proxy by default.
+
+  ⚠ **Breaking:** `AuthClient` is replaced by `AuthsomeContext`. Library users should switch to `from authsome.context import AuthsomeContext`. See [Python library](/reference/python-library).
+</Update>
+
+<Update label="0.1.x" description="up to 2026-04-24">
+  Initial public series. Established the CLI surface (`login`, `logout`, `revoke`, `remove`, `list`, `inspect`, `get`, `export`, `run`, `register`, `doctor`, `whoami`), the four flow types (PKCE, device code, DCR + PKCE, API key), and the bundled provider set. Major additions in this series include the proxy runner, RC publishing, OAuth scope support, the `--force` flag, and several bundled-provider additions (Ashby, Klaviyo, and others).
+</Update>
+
+## Versioning
+
+Authsome follows [Semantic Versioning](https://semver.org). The current series is `0.x`, so breaking changes can happen on minor bumps and are called out under `### ⚠ BREAKING CHANGES` in [CHANGELOG.md](https://github.com/agentrhq/authsome/blob/main/CHANGELOG.md). Once the `1.0` line lands, breaking changes will be confined to major bumps.
+
+## Upgrading
+
+Authsome is installed as a regular Python package:
+
+```bash
+# uvx (recommended). fetches the latest on first use
+uvx authsome --version
+
+# uv tool
+uv tool upgrade authsome
+
+# pip
+pip install --upgrade authsome
+```
+
+Stored credentials, providers, and `config.json` persist across upgrades. The `schema_version` field in `~/.authsome/config.json` and on every `ConnectionRecord` is reserved for forward-compatibility migrations.
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Roadmap" icon="map" href="/roadmap">
+    What's coming and what's deliberately out of scope.
+  </Card>
+  <Card title="Installation" icon="download" href="/installation">
+    Install paths and upgrade commands.
+  </Card>
+</Columns>

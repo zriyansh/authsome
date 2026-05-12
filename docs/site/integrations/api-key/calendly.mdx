@@ -1,0 +1,99 @@
+---
+title: "Calendly"
+sidebarTitle: "Calendly"
+description: "Store and use your Calendly API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["calendly api key authsome", "calendly key broker", "calendly agent credentials", "authsome calendly"]
+---
+
+import ProxyInjection from "/snippets/proxy-injection.mdx";
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Calendly uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `calendly` |
+| Display name | Calendly |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.calendly.com` |
+| Env var | `CALENDLY_API_KEY` |
+| Where to get a key | [https://calendly.com/integrations/api_webhooks](https://calendly.com/integrations/api_webhooks) |
+
+## Get a key
+
+Create an API key in the Calendly dashboard at [https://calendly.com/integrations/api_webhooks](https://calendly.com/integrations/api_webhooks).
+
+## Log in
+
+```bash
+uvx authsome login calendly
+```
+
+A local browser form opens at `http://127.0.0.1:7999`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get calendly --field status
+# → connected
+```
+
+## Use the key
+
+<ProxyInjection envVar="CALENDLY_API_KEY" secretLabel="key" host="api.calendly.com" />
+
+### From a Python agent
+
+```python
+from authsome.context import AuthsomeContext
+
+ctx = AuthsomeContext.create()
+key = ctx.auth.get_access_token("calendly", connection="default")
+```
+
+### As an environment variable
+
+```bash
+eval "$(uvx authsome export calendly --format env)"
+echo $CALENDLY_API_KEY
+```
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login calendly --connection personal
+uvx authsome login calendly --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login calendly --force          # rotate
+uvx authsome logout calendly                  # remove local credential
+uvx authsome remove calendly                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Calendly.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect calendly > ~/.authsome/providers/calendly.json
+# edit fields
+uvx authsome list   # source now shows "custom" for calendly
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />
