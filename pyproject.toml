@@ -35,6 +35,7 @@ dependencies = [
     "uvicorn>=0.30",
     "python-multipart>=0.0.27",
     "jinja2>=3.1",
+    "py-key-value-aio[disk]",
 ]
 
 [project.optional-dependencies]
