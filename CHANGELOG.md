@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.2.5](https://github.com/agentrhq/authsome/compare/authsome-v0.2.4...authsome-v0.2.5) (2026-05-12)
+
+
+### Features
+
+* add --reload flag to daemon serve command and replace custom file watcher ([8fea50e](https://github.com/agentrhq/authsome/commit/8fea50e09a9b54a130133301876627bc67d57827))
+* add --reload flag to daemon serve command and replace custom file watcher with uvicorn native reload ([2faa3c9](https://github.com/agentrhq/authsome/commit/2faa3c957bb377b82c804d8ed5ebbd26c94d0c71))
+* add RFC 7009 token revocation support to BaseFlow and integrate into Auth service ([74b96a3](https://github.com/agentrhq/authsome/commit/74b96a319c163461109beb370c49e0b88227f966))
+* add RFC 7009 token revocation support to BaseFlow and integrate into Auth service ([7af96fc](https://github.com/agentrhq/authsome/commit/7af96fc5633871ab56c391db25018f2e9e07378b))
+* **cli:** add import-env for headless API key ingestion ([bc318ff](https://github.com/agentrhq/authsome/commit/bc318fff28781f90a0b8259beef2114b730c8d72))
+* **cli:** add import-env for headless API key ingestion ([e080286](https://github.com/agentrhq/authsome/commit/e0802865bc2052c583b2e7fa0ffed303481d651c))
+* **cli:** add scan command for env provider detection ([9f9b8d4](https://github.com/agentrhq/authsome/commit/9f9b8d4de75bd6a53795454156bbc0514cb2908e))
+* **cli:** add scan command for env provider detection and optional import ([9dee261](https://github.com/agentrhq/authsome/commit/9dee261c0164ed3e202977dfd4ad199804aae6ef))
+* enhance system health checks with permission, integrity, and key rotation monitoring ([dede72a](https://github.com/agentrhq/authsome/commit/dede72a1a6defd8167600ab7859f7c640550a5fa))
+* expand doctor checks ([97afd37](https://github.com/agentrhq/authsome/commit/97afd37cfc04120c6cf635cdc69b7ba20cde17ce))
+* expand doctor checks ([03ad70f](https://github.com/agentrhq/authsome/commit/03ad70fa3655a05daf82fcc7ba8513beb3ada6a6))
+* expand health checks with integrity, permission, and rotation w… ([0956ef1](https://github.com/agentrhq/authsome/commit/0956ef1688e4cce4cf8454d2665ecea06457fe37))
+* expand health checks with integrity, permission, and rotation warnings and update CLI UI to support warn status ([c885067](https://github.com/agentrhq/authsome/commit/c885067f046fa4b65fe6c3f99e1c4e694db2064b))
+* implement auto-restart for daemon when source files are modified during development ([6fd7a6b](https://github.com/agentrhq/authsome/commit/6fd7a6b34b480d20b14b3926f64f9dd57095c47d))
+* implement centralized audit logging and refactor duration formatting utility ([f9b5b89](https://github.com/agentrhq/authsome/commit/f9b5b8995a5fc5408d3e1b2c28affdd0f14cff65))
+* move OAuth2 refresh token logic to BaseFlow and update service to use flow-specific handlers ([9b0366d](https://github.com/agentrhq/authsome/commit/9b0366dd014e3542a3f8156909ead8fd91a61561))
+* move OAuth2 refresh token logic to BaseFlow and update service to use flow-specific handlers ([77b07d0](https://github.com/agentrhq/authsome/commit/77b07d0b41fc3e39bbee79c2409a68c85fadf64c))
+* stabilize and document specific CLI exit codes for error states ([9f40cc6](https://github.com/agentrhq/authsome/commit/9f40cc6e02c5a95f9304c5948ca7cb5e222fa8cd))
+* standardize CLI exit codes and add comprehensive documentation for error states ([8024433](https://github.com/agentrhq/authsome/commit/80244339c9990b741f48093123a9fbaf54f7c3c6))
+* standardize CLI JSON output format with versioning ([c1c4fec](https://github.com/agentrhq/authsome/commit/c1c4fec7a0ea5a1715d8d818ecee191f64dde719))
+* standardize CLI JSON output format with versioning and stable schema fields ([933d106](https://github.com/agentrhq/authsome/commit/933d106f1f14f370ca829b9e03843d43fa4d32ce))
+
+
+### Bug Fixes
+
+* correct daemon health check logic to properly validate client status and readiness ([e92bdad](https://github.com/agentrhq/authsome/commit/e92bdad5bbe208f3942618a06ae193f72eefd520))
+* prevent accidental termination of unrelated processes by validat ([f6b2f30](https://github.com/agentrhq/authsome/commit/f6b2f30c77a85ba56e0409fd5028417ea0b09c8f))
+* prevent accidental termination of unrelated processes by validating daemon PID against local lock record during shutdown ([c25fe9c](https://github.com/agentrhq/authsome/commit/c25fe9c2cab05eabcb4707df53082f551ab8aad0))
+* warn when token refresh fails ([627d579](https://github.com/agentrhq/authsome/commit/627d579d6ef65dda58b764a43ee3705ad72344d5))
+
+
+### Reverts
+
+* expand health checks with integrity, permission, and rotation w… ([6090d69](https://github.com/agentrhq/authsome/commit/6090d699c610b786fc2674ca20aebcdf409918b4))
+
+
+### Documentation
+
+* Update README how-it-works diagram ([26dcd74](https://github.com/agentrhq/authsome/commit/26dcd74a8687c2e295bf6b4ab7df3a58b14a72e2))
+
 ## [0.2.4](https://github.com/manojbajaj95/authsome/compare/authsome-v0.2.3...authsome-v0.2.4) (2026-05-08)
 
 
