@@ -9,9 +9,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from authsome.auth import AuthService
 from authsome.auth.sessions import AuthSessionStore
 from authsome.errors import AuthsomeError
-from authsome.server.dependencies import create_auth_service, get_server_base_url
+from authsome.identity.proof import ReplayCache
+from authsome.server.dependencies import create_vault, get_server_base_url
 from authsome.server.routes.auth import router as auth_router
 from authsome.server.routes.connections import router as connections_router
 from authsome.server.routes.health import router as health_router
@@ -23,8 +25,11 @@ from authsome.server.routes.ui import router as ui_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage daemon lifecycle."""
-    app.state.auth_service = await create_auth_service()
+    app.state.vault = await create_vault()
+    config = await app.state.vault.get_config()
+    app.state.auth_service = AuthService(vault=app.state.vault, identity=config.default_profile)
     app.state.auth_sessions = AuthSessionStore()
+    app.state.proof_replay_cache = ReplayCache()
     app.state.server_base_url = get_server_base_url()
     yield
 

@@ -2,9 +2,25 @@
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+
+def current_spec_version() -> int:
+    """Return the config spec version derived from authsome's minor package version."""
+    try:
+        package_version = version("authsome")
+    except PackageNotFoundError:
+        return 0
+    parts = package_version.split(".")
+    if len(parts) < 2:
+        return 0
+    try:
+        return int(parts[1])
+    except ValueError:
+        return 0
 
 
 class EncryptionConfig(BaseModel):
@@ -22,7 +38,7 @@ class EncryptionConfig(BaseModel):
 class GlobalConfig(BaseModel):
     """Global configuration stored in ~/.authsome/config.json."""
 
-    spec_version: int = 1
+    spec_version: int = Field(default_factory=current_spec_version)
     default_profile: str = "default"
     encryption: EncryptionConfig | None = Field(default_factory=EncryptionConfig)
 

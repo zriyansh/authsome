@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from authsome import __version__
 from authsome.auth import AuthService
-from authsome.server.routes._deps import get_auth_service
+from authsome.auth.models.config import current_spec_version
+from authsome.server.routes._deps import get_auth_service, get_protected_auth_service, get_server_base_url
 from authsome.server.schemas import HealthResponse, ReadyResponse
 
 router = APIRouter()
@@ -28,8 +29,7 @@ async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
         config = await auth.vault.get_config()
         checks["config"] = "ok"
 
-        # Verify spec_version matches standard expected version (1)
-        expected_spec_version = 1
+        expected_spec_version = current_spec_version()
         if getattr(config, "spec_version", None) != expected_spec_version:
             issues.append(
                 f"config: spec_version mismatch (got {config.spec_version}, expected {expected_spec_version})"
@@ -99,7 +99,11 @@ async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
 
 
 @router.get("/whoami")
-async def whoami(auth: AuthService = Depends(get_auth_service)) -> dict[str, str]:
+async def whoami(
+    request: Request,
+    auth: AuthService = Depends(get_protected_auth_service),
+    server_base_url: str = Depends(get_server_base_url),
+) -> dict[str, str]:
     config = await auth.vault.get_config()
     enc_mode = config.encryption.mode if config.encryption else "local_key"
     if enc_mode == "local_key":
@@ -111,6 +115,10 @@ async def whoami(auth: AuthService = Depends(get_auth_service)) -> dict[str, str
     return {
         "version": __version__,
         "home": str(auth.vault.home),
+        "identity": auth.identity,
         "active_identity": auth.identity,
+        "did": getattr(request.state, "did", ""),
+        "registration_status": "local",
+        "daemon_url": server_base_url,
         "encryption_backend": enc_desc,
     }

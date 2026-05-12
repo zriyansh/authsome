@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 import requests
 
+from authsome.identity import ensure_default_identity, load_identity, load_private_key
+from authsome.identity.proof import POP_AUTH_SCHEME, create_proof_jwt
 from authsome.server.urls import DEFAULT_SERVER_BASE_URL
+from authsome.store.local import LocalAppStore
 
 DEFAULT_DAEMON_URL = DEFAULT_SERVER_BASE_URL
 
@@ -70,31 +75,74 @@ class AuthsomeApiClient:
 
     def __init__(self, base_url: str | None = None) -> None:
         self._base_url = (base_url or resolve_daemon_url()).rstrip("/")
+        self._home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
 
     @property
     def base_url(self) -> str:
         return self._base_url
 
-    async def _get(self, path: str) -> dict[str, Any]:
-        response = await asyncio.to_thread(requests.get, f"{self._base_url}{path}", timeout=10)
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        body: dict[str, Any] | None = None,
+        timeout: int = 30,
+        protected: bool = True,
+    ) -> dict[str, Any]:
+        body_bytes = b""
+        headers: dict[str, str] = {}
+        if body is not None:
+            body_bytes = json.dumps(body, separators=(",", ":"), sort_keys=True).encode("utf-8")
+            headers["Content-Type"] = "application/json"
+        if protected:
+            headers.update(await self._proof_headers(method, path, body_bytes))
+        response = await asyncio.to_thread(
+            requests.request,
+            method,
+            f"{self._base_url}{path}",
+            data=body_bytes if body is not None else None,
+            headers=headers,
+            timeout=timeout,
+        )
         raise_for_error(response)
         return response.json()
 
-    async def _post(self, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
-        response = await asyncio.to_thread(requests.post, f"{self._base_url}{path}", json=body or {}, timeout=30)
-        raise_for_error(response)
-        return response.json()
+    async def _proof_headers(self, method: str, path: str, body: bytes) -> dict[str, str]:
+        store = LocalAppStore(self._home)
+        await store.ensure_initialized()
+        config = await store.get_config()
+        original_default = config.default_profile
+        config, identity = await ensure_default_identity(self._home, config)
+        if config.default_profile != original_default:
+            await store.save_config(config)
+        else:
+            identity = load_identity(self._home, config.default_profile)
+        private_key = load_private_key(self._home, identity.handle)
+        token = create_proof_jwt(
+            private_key=private_key,
+            issuer=identity.did,
+            subject=identity.handle,
+            method=method,
+            path_query=path,
+            body=body,
+        )
+        return {"Authorization": f"{POP_AUTH_SCHEME} {token}"}
 
-    async def _delete(self, path: str) -> dict[str, Any]:
-        response = await asyncio.to_thread(requests.delete, f"{self._base_url}{path}", timeout=30)
-        raise_for_error(response)
-        return response.json()
+    async def _get(self, path: str, *, protected: bool = True) -> dict[str, Any]:
+        return await self._request("GET", path, timeout=10, protected=protected)
+
+    async def _post(self, path: str, body: dict[str, Any] | None = None, *, protected: bool = True) -> dict[str, Any]:
+        return await self._request("POST", path, body=body or {}, timeout=30, protected=protected)
+
+    async def _delete(self, path: str, *, protected: bool = True) -> dict[str, Any]:
+        return await self._request("DELETE", path, timeout=30, protected=protected)
 
     async def health(self) -> dict[str, Any]:
-        return await self._get("/health")
+        return await self._get("/health", protected=False)
 
     async def ready(self) -> dict[str, Any]:
-        return await self._get("/ready")
+        return await self._get("/ready", protected=False)
 
     async def start_login(self, **kwargs: Any) -> dict[str, Any]:
         return await self._post("/auth/sessions", kwargs)

@@ -785,7 +785,10 @@ async def whoami(ctx_obj: ContextObj) -> None:
     data = {
         "authsome_version": whoami_data["version"],
         "home_directory": whoami_data["home"],
-        "active_identity": whoami_data["active_identity"],
+        "identity": whoami_data.get("identity", whoami_data.get("active_identity")),
+        "did": whoami_data.get("did"),
+        "registration_status": whoami_data.get("registration_status"),
+        "daemon_url": whoami_data.get("daemon_url", actx.runtime_client.base_url),
         "encryption_backend": whoami_data["encryption_backend"],
         "vault_status": vault_status,
         "connected_providers_count": len(connected_providers),
@@ -797,7 +800,12 @@ async def whoami(ctx_obj: ContextObj) -> None:
     else:
         ctx_obj.echo(f"Authsome Version:  {data['authsome_version']}")
         ctx_obj.echo(f"Home Directory:    {data['home_directory']}")
-        ctx_obj.echo(f"Active Identity:   {data['active_identity']}")
+        ctx_obj.echo(f"Identity:          {data['identity']}")
+        if data["did"]:
+            ctx_obj.echo(f"DID:               {data['did']}")
+        if data["registration_status"]:
+            ctx_obj.echo(f"Registration:      {data['registration_status']}")
+        ctx_obj.echo(f"Daemon URL:        {data['daemon_url']}")
         status_color = "green" if vault_status == "OK" else "red"
         ctx_obj.echo(f"Encryption:        {data['encryption_backend']} [", nl=False)
         ctx_obj.echo(vault_status, color=status_color, nl=False)

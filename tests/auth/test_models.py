@@ -1,6 +1,6 @@
 """Tests for authsome data models."""
 
-from authsome.auth.models.config import GlobalConfig
+from authsome.auth.models.config import GlobalConfig, current_spec_version
 from authsome.auth.models.connection import (
     ConnectionRecord,
     ProviderClientRecord,
@@ -39,7 +39,7 @@ class TestGlobalConfig:
 
     def test_defaults(self) -> None:
         config = GlobalConfig()
-        assert config.spec_version == 1
+        assert config.spec_version == current_spec_version()
         assert config.default_profile == "default"
         assert config.encryption is not None
         assert config.encryption.mode == "local_key"
