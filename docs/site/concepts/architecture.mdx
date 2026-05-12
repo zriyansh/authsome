@@ -1,14 +1,15 @@
 ---
 title: "Architecture"
-description: "Five layers — identity, policy, vault, auth, audit — composed by an explicit orchestrator."
+description: "Five layers · identity, policy, vault, auth, audit · composed by an explicit orchestrator."
 ---
 
-Authsome is layered. Each layer has one bounded responsibility. Layers do not reach sideways into other layers — explicit orchestrators compose them. This makes every layer independently testable and independently swappable.
+Authsome is layered. Each layer has one bounded responsibility. Layers do not reach sideways into other layers. Explicit orchestrators compose them. This makes every layer independently testable and independently swappable.
 
-Two deployment modes share the same layered architecture:
+The supported integration mode is the **sidecar**: `authsome run -- python agent.py` spawns the agent as a subprocess of authsome with an HTTP proxy injecting credentials at request time. No auth code in the agent.
 
-- **Sidecar mode** — `authsome run -- python agent.py`. Transparent credential injection through an HTTP proxy. No auth code in the agent.
-- **Library mode** — `from authsome.context import AuthsomeContext`. A direct programmatic API.
+The same layered architecture is also exposed as a Python library (`from authsome.server.dependencies import create_auth_service`) for embedding inside a larger orchestrator. The two modes share the same layers below.
+
+Sidecar-mode call graph. Identity and policy gate the vault; the auth layer refreshes when needed; the sidecar writes back, injects the Authorization header, and audits at every step.
 
 ```text
 agent
@@ -72,29 +73,26 @@ The Auth layer has two intentionally separate surfaces.
 **High level (`AuthLayer`).** A stateful orchestrator with a vault dependency. Reads the credential from the vault, calls the stateless refresh if expired, writes the result back, returns a usable token. This is what library users call.
 
 ```python
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-token = ctx.auth.get_access_token("github", connection="default")
+auth = create_auth_service()
+token = auth.get_access_token("github", connection="default")
 ```
 
-Acquisition flows shipped today: PKCE (RFC 7636), Device Authorization Grant (RFC 8628), Dynamic Client Registration + PKCE, and an API-key flow.
+Acquisition flows shipped today: <Tooltip tip="Proof Key for Code Exchange. RFC 7636. Prevents authorization-code interception by binding the code to a random code verifier the client generated.">PKCE</Tooltip>, <Tooltip tip="Device Authorization Grant. RFC 8628. Headless OAuth flow where the user enters a short code on a separate device.">Device Authorization Grant</Tooltip>, <Tooltip tip="Dynamic Client Registration. The server registers an OAuth client on the fly so the user does not need to pre-register an app.">Dynamic Client Registration</Tooltip> + PKCE, and an API-key flow.
 
-## AuthsomeContext: the orchestrator
+## AuthService: the orchestrator
 
-`AuthsomeContext` is the runtime wiring container assembled once per CLI invocation. It holds `Vault`, `AuthLayer`, and `ProxyRunner` as attributes. No business logic of its own.
+`AuthService` owns OAuth flows, token refresh, and the login/logout/revoke lifecycle. It receives a `Vault`, a `ProviderRegistry`, and an `AppStore` as dependencies. The daemon assembles one per profile; library callers build one with `create_auth_service()`.
 
 ```python
-from authsome.context import AuthsomeContext
+from authsome.server.dependencies import create_auth_service
 
-ctx = AuthsomeContext.create()
-ctx.auth         # AuthLayer
-ctx.vault        # Vault
-ctx.proxy        # ProxyRunner
-ctx.home         # Path to ~/.authsome
+auth = create_auth_service()
+token = auth.get_access_token("github", connection="default")
 ```
 
-Library callers use `AuthsomeContext` directly. The CLI creates one context per invocation.
+`AuthLayer` is a thinner facade exposing the building blocks (`vault()`, `registry()`, `identity()`, `app_store()`) for callers that need them directly. See [Python library](/reference/python-library).
 
 ## Proxy: sidecar orchestrator
 
@@ -111,19 +109,7 @@ See [Proxy injection](/concepts/proxy-injection) for the routing contract and kn
 
 ## Storage layout
 
-```text
-~/.authsome/
-  config.json         global settings, encryption mode, active profile
-  master.key          encryption key, mode 0600
-  audit.log           append-only audit events
-  providers/          user-defined provider definitions
-  profiles/
-    default/
-      store.db        per-profile credential store (SQLite)
-      lock            advisory write lock
-```
-
-Profiles isolate credential sets — for example `default`, `work`, or a profile per agent.
+State lives under `~/.authsome/`. See [Filesystem layout](/reference/file-layout) for the full tree and per-file reference.
 
 ## Standards
 

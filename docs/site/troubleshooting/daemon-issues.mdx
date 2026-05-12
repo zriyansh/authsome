@@ -1,0 +1,164 @@
+---
+title: "Daemon issues"
+sidebarTitle: "Daemon issues"
+description: "Diagnose port 7998 conflicts, lost sessions on restart, and broken daemon discovery."
+icon: "server"
+keywords: ["authsome daemon error", "port 7998 in use", "AUTHSOME_DAEMON_URL", "daemon not reachable", "authsome restart session"]
+---
+
+The authsome daemon binds to `127.0.0.1:7998` by default. Most issues are one of three shapes: port held by another process, daemon unreachable from the CLI, or in-memory state lost across a restart.
+
+## Symptom matrix
+
+| Symptom | Most likely cause |
+|---------|-------------------|
+| `Address already in use: 127.0.0.1:7998` | Another `authsome` process is running, or something else holds the port. |
+| `Could not connect to daemon at http://127.0.0.1:7998` | The daemon didn't start, the port is firewalled, or `AUTHSOME_DAEMON_URL` points somewhere wrong. |
+| Browser opens to a blank form | Daemon started but the route is missing; usually a version mismatch between CLI and daemon. |
+| Login was mid-flight, then the terminal disconnected | Daemon restarted; session is gone. |
+| `Connection refused` from `uvx authsome run` | The proxy can't reach the daemon to resolve credentials. |
+| `AUTHSOME_DAEMON_URL is set but unreachable` | Hosted daemon URL is wrong, or the host is down. |
+
+## Port 7998 in use
+
+```bash
+lsof -i :7998
+```
+
+If the holder is another `authsome` process, the CLI will reuse it. No fix needed.
+
+If it's something else, free the port or run a per-user daemon at a different home:
+
+```bash
+export AUTHSOME_HOME=/path/to/another/home
+uvx authsome doctor
+```
+
+A second `AUTHSOME_HOME` starts a separate daemon on a separate ephemeral port and uses that. The two daemons do not interfere.
+
+## Daemon won't start
+
+Run with verbose logging:
+
+```bash
+uvx authsome --verbose whoami
+```
+
+Common root causes:
+
+- `~/.authsome/` is on a filesystem that doesn't support SQLite file locks (rare; some network mounts).
+- The current user doesn't have write permission to `AUTHSOME_HOME`.
+- `master.key` has the wrong mode and the daemon refuses to start in `local_key` mode.
+
+`uvx authsome doctor` reports each of these specifically.
+
+## CLI can't find the daemon
+
+The CLI looks at `AUTHSOME_DAEMON_URL` first, then falls back to `http://127.0.0.1:7998`.
+
+```bash
+echo $AUTHSOME_DAEMON_URL
+```
+
+If it's set to a hosted URL that's currently unreachable:
+
+```bash
+unset AUTHSOME_DAEMON_URL
+uvx authsome whoami
+```
+
+The CLI will start a local daemon and verify it's reachable.
+
+If you do want a hosted daemon and it's unreachable, the fix is on the daemon host. Check that:
+
+- The daemon process is running there.
+- `AUTHSOME_SERVER_BASE_URL` on the daemon matches the URL you're calling.
+- Ingress is allowed from your client's network (private VPC, VPN, or whatever the team uses).
+
+See [Hosted deployment model](/security/hosted-deployment).
+
+## Login was interrupted by a daemon restart
+
+Active auth sessions live in the daemon's memory. A restart loses them. The provider may or may not have accepted the authorization on its side. Re-run the login:
+
+```bash
+uvx authsome login <provider> --force
+```
+
+The `--force` flag overwrites whatever partial state landed in the vault.
+
+If the provider has a partial OAuth grant on file (you authorized but the callback never landed), revoke at the provider and start over:
+
+1. Revoke the OAuth app at the provider's UI.
+2. `uvx authsome revoke <provider>` locally to clear any partial state.
+3. `uvx authsome login <provider>` to start fresh.
+
+This is rare. Most flows recover automatically by re-running the login.
+
+## Daemon health check
+
+The daemon exposes a health endpoint:
+
+```bash
+curl -s http://127.0.0.1:7998/health
+```
+
+A healthy daemon returns a JSON status with vault and provider-registry readiness. A non-200 response indicates the daemon process is up but a subsystem is unhealthy.
+
+The same information is available through:
+
+```bash
+uvx authsome doctor --json
+```
+
+which is the right call from monitoring scripts.
+
+## Inspect what the daemon is doing
+
+The daemon logs to the same loguru sink the CLI does. With verbose logging on:
+
+```bash
+LOGURU_LEVEL=DEBUG uvx authsome list
+tail -f ~/.authsome/logs/authsome.log
+```
+
+You'll see every route the CLI calls and every internal step the daemon takes.
+
+## Restart cleanly
+
+The daemon is stateless on disk except for what's already in the vault. To restart it:
+
+```bash
+# stop any local authsome processes
+pkill -f authsome
+
+# next CLI call starts a fresh daemon
+uvx authsome whoami
+```
+
+In-flight logins are lost. Stored connections are not.
+
+## When to file a bug
+
+If the daemon fails to start after `pkill` + a fresh `uvx authsome whoami`, and `doctor` reports `OK`, open an issue at [github.com/agentrhq/authsome](https://github.com/agentrhq/authsome/issues) with:
+
+- The output of `uvx authsome --verbose doctor`.
+- The tail of `~/.authsome/logs/authsome.log` covering the failed start.
+- Your OS and Python version.
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="The local daemon" icon="server" href="/concepts/the-daemon">
+    What the daemon is and which routes it exposes.
+  </Card>
+  <Card title="Daemon trust boundary" icon="shield" href="/security/daemon-trust-boundary">
+    What the loopback-only model protects against.
+  </Card>
+  <Card title="Diagnose with doctor" icon="stethoscope" href="/troubleshooting/doctor">
+    The first command to run when something looks wrong.
+  </Card>
+  <Card title="Environment variables" icon="terminal" href="/reference/environment-variables">
+    `AUTHSOME_DAEMON_URL`, `AUTHSOME_SERVER_BASE_URL`, `AUTHSOME_HOME`.
+  </Card>
+</Columns>

@@ -37,7 +37,7 @@ docs/site/
 ## Adding a page
 
 1. Create the MDX file in the right subfolder.
-2. Add it to the appropriate `pages` list in `docs.json` — pages not referenced in `docs.json` are hidden from the sidebar.
+2. Add it to the appropriate `pages` list in `docs.json` . pages not referenced in `docs.json` are hidden from the sidebar.
 3. Run `mint dev` to preview, then `mint broken-links` and `mint validate` before opening a PR.
 
 ## Style

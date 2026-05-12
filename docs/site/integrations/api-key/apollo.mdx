@@ -1,0 +1,104 @@
+---
+title: "Apollo"
+sidebarTitle: "Apollo"
+description: "Store and use your Apollo API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["apollo api key authsome", "apollo key broker", "apollo agent credentials", "authsome apollo"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Apollo uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `apollo` |
+| Display name | Apollo |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.apollo.io` |
+| Env var | `APOLLO_API_KEY` |
+| Where to get a key | [https://app.apollo.io/#/settings/api](https://app.apollo.io/#/settings/api) |
+
+## Get a key
+
+Create an API key in the Apollo dashboard at [https://app.apollo.io/#/settings/api](https://app.apollo.io/#/settings/api).
+
+## Log in
+
+```bash
+uvx authsome login apollo
+```
+
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get apollo --field status
+# → connected
+```
+
+## Use the key
+
+Run the agent under the proxy. The library tab is for embedding authsome inside a larger Python orchestrator.
+
+<CodeGroup>
+
+```bash Proxy (recommended)
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export apollo --format env)"
+echo $APOLLO_API_KEY
+```
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+key = auth.get_access_token("apollo", connection="default")
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `APOLLO_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.apollo.io`. The child process never sees the actual value.
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login apollo --connection personal
+uvx authsome login apollo --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login apollo --force          # rotate
+uvx authsome logout apollo                  # remove local credential
+uvx authsome remove apollo                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Apollo.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect apollo > ~/.authsome/providers/apollo.json
+# edit fields
+uvx authsome list   # source now shows "custom" for apollo
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

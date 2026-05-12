@@ -1,0 +1,106 @@
+---
+title: "Wistia"
+sidebarTitle: "Wistia"
+description: "Store and use your Wistia API key with authsome. Local encrypted vault, proxy injection, no key in the agent's environment."
+keywords: ["wistia api key authsome", "wistia key broker", "wistia agent credentials", "authsome wistia"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import MaskedInputNote from "/snippets/masked-input-note.mdx";
+import WhatsNextApiKey from "/snippets/whats-next-apikey.mdx";
+
+Wistia uses a long-lived API key. Authsome stores the key encrypted in the local vault, injects it at request time through the proxy, and keeps it out of shell history, process listings, and environment dumps.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `wistia` |
+| Display name | Wistia |
+| Auth type | API key |
+| Header | `Authorization: Bearer <key>` |
+| Proxy host | `api.wistia.com` |
+| Env var | `WISTIA_API_KEY` |
+| Provider docs | [https://wistia.com/support/developers/data-api](https://wistia.com/support/developers/data-api) |
+
+## Get a key
+
+See the Wistia API documentation at [https://wistia.com/support/developers/data-api](https://wistia.com/support/developers/data-api) for how to obtain a key.
+
+Wistia's API keys live at `<your-subdomain>.wistia.com/account/api`.
+
+## Log in
+
+```bash
+uvx authsome login wistia
+```
+
+A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
+
+<MaskedInputNote />
+
+Verify:
+
+```bash
+uvx authsome get wistia --field status
+# → connected
+```
+
+## Use the key
+
+Run the agent under the proxy. The library tab is for embedding authsome inside a larger Python orchestrator.
+
+<CodeGroup>
+
+```bash Proxy (recommended)
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export wistia --format env)"
+echo $WISTIA_API_KEY
+```
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+key = auth.get_access_token("wistia", connection="default")
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `WISTIA_API_KEY=authsome-proxy-managed` in the child's environment and injects the real key into outbound requests to `api.wistia.com`. The child process never sees the actual value.
+
+## Multiple keys
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login wistia --connection personal
+uvx authsome login wistia --connection team
+```
+
+## Rotate or remove the key
+
+```bash
+uvx authsome login wistia --force          # rotate
+uvx authsome logout wistia                  # remove local credential
+uvx authsome remove wistia                  # remove all local state for the provider
+```
+
+API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Wistia.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect wistia > ~/.authsome/providers/wistia.json
+# edit fields
+uvx authsome list   # source now shows "custom" for wistia
+```
+
+See [Provider schema](/reference/provider-schema) for every field.
+
+## What's next
+
+<WhatsNextApiKey />

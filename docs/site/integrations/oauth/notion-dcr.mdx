@@ -1,0 +1,95 @@
+---
+title: "Notion (DCR)"
+sidebarTitle: "Notion (DCR)"
+description: "Log in to Notion (DCR) from authsome via OAuth2. Tokens are stored locally and refreshed automatically."
+icon: "notion"
+keywords: ["notion (dcr) oauth cli", "notion (dcr) access token broker", "authsome notion_dcr", "notion_dcr agent credentials"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
+
+Notion (DCR) is a bundled OAuth2 provider in authsome. Notion via the Model Context Protocol endpoint. For the standard OAuth flow against `api.notion.com`, use [notion](/integrations/oauth/notion).
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `notion_dcr` |
+| Display name | Notion (DCR) |
+| Auth type | OAuth2 |
+| Default flow | `dcr_pkce`, Dynamic Client Registration + PKCE |
+| PKCE supported | Yes |
+| Device code supported | No |
+| DCR supported | Yes |
+| Default scopes | (none) |
+| Proxy host | `mcp.notion.com` |
+| Env var (`access_token`) | `NOTION_ACCESS_TOKEN` |
+| Env var (`refresh_token`) | `NOTION_REFRESH_TOKEN` |
+
+## Prerequisites
+
+Notion's MCP endpoint (`mcp.notion.com`) supports Dynamic Client Registration. You do **not** need to register an OAuth app. Authsome registers a client automatically.
+
+## Log in
+
+```bash
+uvx authsome login notion_dcr
+```
+
+The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://mcp.notion.com/authorize` for the authorization step.
+
+Verify:
+
+```bash
+uvx authsome get notion_dcr --field status
+# → connected
+```
+
+## Multiple accounts
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login notion_dcr --connection personal
+uvx authsome login notion_dcr --connection work
+```
+
+## Use the token
+
+Run the agent under the proxy. The library tab is for embedding authsome inside a larger Python orchestrator.
+
+<CodeGroup>
+
+```bash Proxy (recommended)
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export notion_dcr --format env)"
+```
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+token = auth.get_access_token("notion_dcr", connection="default")
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `NOTION_ACCESS_TOKEN=authsome-proxy-managed` in the child's environment and injects the real token into outbound requests to `mcp.notion.com`. The child process never sees the actual value. Refresh tokens are never exported.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect notion_dcr > ~/.authsome/providers/notion_dcr.json
+# edit scopes, base_url, or anything else
+uvx authsome list   # source now shows "custom" for notion_dcr
+```
+
+User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).
+
+## What's next
+
+<WhatsNextOauth />

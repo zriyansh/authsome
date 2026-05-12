@@ -1,0 +1,115 @@
+---
+title: "Atlassian"
+sidebarTitle: "Atlassian"
+description: "Log in to Atlassian from authsome via OAuth2. Tokens are stored locally and refreshed automatically."
+icon: "atlassian"
+keywords: ["atlassian oauth cli", "atlassian access token broker", "authsome atlassian", "atlassian agent credentials"]
+---
+
+import MultiConnectionsCta from "/snippets/multi-connections-cta.mdx";
+import WhatsNextOauth from "/snippets/whats-next-oauth.mdx";
+
+Atlassian is a bundled OAuth2 provider in authsome. Jira and Confluence Cloud APIs.
+
+## At a glance
+
+| | |
+|---|---|
+| Provider name | `atlassian` |
+| Display name | Atlassian |
+| Auth type | OAuth2 |
+| Default flow | `pkce`, PKCE browser flow |
+| PKCE supported | Yes |
+| Device code supported | No |
+| DCR supported | No |
+| Default scopes | `read:jira-work`, `write:jira-work`, `read:jira-user`, `manage:jira-project`, `manage:jira-configuration` |
+| Proxy host | `api.atlassian.com` |
+| Env var (`access_token`) | `ATLASSIAN_ACCESS_TOKEN` |
+| Env var (`refresh_token`) | `ATLASSIAN_REFRESH_TOKEN` |
+
+## Prerequisites
+
+You need to register an OAuth app with Atlassian once. Atlassian's OAuth model is per-app. Register an app at the developer console, set the callback URL, and copy the client ID and secret.
+
+The redirect URI must be:
+
+```text
+http://127.0.0.1:7998/auth/callback/oauth
+```
+
+This is the only callback URL authsome's PKCE flow listens on.
+
+Dashboard: [https://developer.atlassian.com/console/myapps/](https://developer.atlassian.com/console/myapps/).
+
+## Log in
+
+```bash
+uvx authsome login atlassian
+```
+
+The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://auth.atlassian.com/authorize` for the authorization step.
+
+Verify:
+
+```bash
+uvx authsome get atlassian --field status
+# → connected
+```
+
+## Custom scopes
+
+The bundled definition requests `read:jira-work`, `write:jira-work`, `read:jira-user`, `manage:jira-project`, `manage:jira-configuration`. Override at login time:
+
+```bash
+uvx authsome login atlassian --scopes "<comma-separated>"
+```
+
+The granted scopes are stored on the connection and visible in `uvx authsome get atlassian`.
+
+## Multiple accounts
+
+<MultiConnectionsCta />
+
+```bash
+uvx authsome login atlassian --connection personal
+uvx authsome login atlassian --connection work
+```
+
+## Use the token
+
+Run the agent under the proxy. The library tab is for embedding authsome inside a larger Python orchestrator.
+
+<CodeGroup>
+
+```bash Proxy (recommended)
+uvx authsome run -- python my_agent.py
+```
+
+```bash Environment
+eval "$(uvx authsome export atlassian --format env)"
+```
+
+```python Python library
+from authsome.server.dependencies import create_auth_service
+
+auth = create_auth_service()
+token = auth.get_access_token("atlassian", connection="default")
+```
+
+</CodeGroup>
+
+Under the proxy, authsome sets `ATLASSIAN_ACCESS_TOKEN=authsome-proxy-managed` in the child's environment and injects the real token into outbound requests to `api.atlassian.com`. The child process never sees the actual value. Refresh tokens are never exported.
+
+## Override the bundled definition
+
+```bash
+uvx authsome inspect atlassian > ~/.authsome/providers/atlassian.json
+# edit scopes, base_url, or anything else
+uvx authsome list   # source now shows "custom" for atlassian
+```
+
+User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).
+
+## What's next
+
+<WhatsNextOauth />

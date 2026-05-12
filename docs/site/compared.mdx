@@ -1,0 +1,131 @@
+---
+title: "Compared to alternatives"
+sidebarTitle: "Compared to alternatives"
+description: "Authsome vs hardcoded environment tokens, SaaS secrets managers, DIY auth code, and OS keychains. Pick the right tool."
+icon: "scale-balanced"
+keywords: ["authsome vs vault", "authsome vs dotenv", "authsome vs aws secrets manager", "authsome alternatives", "credential management for agents"]
+---
+
+Authsome is a local credential broker for AI agents. The space it competes with is crowded with tools that solve adjacent but different problems. This page is an honest comparison so you can pick the right one.
+
+## At a glance
+
+| | Authsome | Hardcoded `.env` | SaaS secrets manager (Vault, Doppler, 1Password) | DIY auth code |
+|---|:---:|:---:|:---:|:---:|
+| Automatic OAuth2 refresh | Yes | No | No (stores values, doesn't run flows) | Build it |
+| Built-in OAuth2 + API-key flows | Yes | No | No | Build it |
+| Headless agent runtime | Yes | Yes | Yes | Varies |
+| Local, no SaaS dependency | Yes | Yes | No | Yes |
+| Built-in providers, zero config | 45 bundled | None | None | None |
+| Multi-account per provider | Yes | No (one env per key) | Sometimes | Build it |
+| Encrypted at rest | Yes (AES-256-GCM) | No (plaintext file) | Yes | Varies |
+| Secrets out of child env | Yes (proxy injection) | No | No | Build it |
+| Per-account scoping (profiles) | Yes | No | Per-tenant | Build it |
+| Auditable action log | Yes (`audit.log`) | No | Yes | Build it |
+
+## Hardcoded environment tokens (`.env`, shell exports)
+
+The default state for most projects: a `.env` file or shell config with `OPENAI_API_KEY=...` lines.
+
+**Where it wins.** Zero infrastructure. Works everywhere. No new mental model.
+
+**Where it loses.**
+
+- Tokens are plaintext on disk, in shell history, in `ps`, in `/proc/<pid>/environ`, in subprocess env inheritance.
+- OAuth refresh tokens require manual handling: build a refresh loop or accept periodic re-authentication.
+- One key per project leads to credential sprawl as the number of services grows.
+- Rotation is manual. Compromise blast radius is unbounded because the token has no expiry and nothing watches it.
+
+**Use this if.** You have a single service, a single agent, and an OK threat model. Don't use it for OAuth2 services that issue refresh tokens.
+
+## SaaS secrets managers (HashiCorp Vault, Doppler, 1Password Secrets Automation, AWS Secrets Manager)
+
+Centralized secret storage in a cloud (or self-hosted) service. Pull secrets at runtime by name.
+
+**Where they win.** Centralized rotation, role-based access control, audit trails, hardware-backed key management on the enterprise tier, integration with CI/CD platforms.
+
+**Where they lose for agent workflows.**
+
+- They store values; they don't **run** OAuth flows. You still have to do the OAuth dance yourself, then put the resulting tokens in the manager. Refresh is your problem.
+- Each agent needs network access to the manager. Local-first is not the design.
+- Latency hits every agent invocation. Authsome's vault is on the same disk.
+- License cost grows with team size. Authsome is free.
+- The trust boundary is the manager's network. If the agent runs on a laptop and the manager is in your cloud, that's a network hop with all the failure modes.
+
+**Use these if.** You're managing infrastructure secrets for production services in production. Don't use them as the primary credential broker for desktop agent workflows.
+
+## OS keychains (Keychain, libsecret, Credential Manager)
+
+The macOS, Linux, and Windows keychains. Store secrets in the OS, retrieve programmatically.
+
+**Where they win.** Native, well-trusted, hardware-backed on modern OSes.
+
+**Where they lose.**
+
+- No OAuth flow runner. They store strings.
+- No provider model. Every consumer rolls its own naming convention.
+- No refresh. No expiry tracking. No multi-account semantics.
+- Headless server use is awkward. Linux without a graphical session often has no usable keychain backend.
+
+**Note.** Authsome can **use** the OS keychain as a backend for its master key when `encryption.mode = "keyring"`. The keychain holds one secret (the master key); authsome holds the rest. See [Encryption at rest](/security/encryption).
+
+## DIY auth code
+
+Write your own OAuth client, token cache, and refresh loop in every project.
+
+**Where it wins.** Maximum control. No external dependency. Fits exactly your shape.
+
+**Where it loses.**
+
+- You write the same code in every project.
+- Edge cases (token revocation mid-flow, refresh-token expiry, provider clock skew, PKCE state, device code polling intervals) are easy to get wrong.
+- Security review burden is on you. Mistakes leak credentials.
+- No standard place for other tools to find your credentials.
+
+**Use this if.** You have a single provider with an unusual flow that authsome doesn't model and likely won't. Otherwise, register it as a [custom provider](/guides/custom-providers) and let authsome run it.
+
+## Other local credential brokers
+
+There are a handful of credential-management tools in adjacent spaces. Worth a quick honest comparison:
+
+- **`pass`, `gopass`.** Excellent password managers. No OAuth flow runner. Treat them like a keychain.
+- **`aws-vault`, `awsume`.** Specific to AWS. Authsome is general-purpose.
+- **OAuth2 client libraries (`httpx-oauth`, `authlib`).** Building blocks, not a complete broker. They're what authsome uses internally.
+- **`onecli` / OneCLI.** Closest comparison: also an open-source credential vault for AI agents. Different design choices around hosting, dashboard, and the policy layer.
+
+## When authsome is the right tool
+
+You want all of:
+
+- A single command (`uvx authsome login <provider>`) to handle the OAuth flow correctly.
+- Refresh that happens silently so agents always get a valid token.
+- Credentials never appearing in the agent's environment or shell history.
+- A local-first model with no SaaS dependency.
+- Multi-account scoping for personal vs work credentials.
+- A standard place every agent on the machine looks for credentials.
+
+You're fine with the v1 trust model: the local machine and user account are trusted relative to remote services. See [Threat model](/security/threat-model).
+
+## When authsome is not the right tool
+
+- You need centralized cloud-managed secrets across a fleet of production servers with strict compliance requirements. Use a SaaS secrets manager.
+- The only credential you care about is one short-lived API key in CI. A `.env` file plus a CI secret store is enough.
+- You're managing infrastructure-as-code secrets (database passwords, TLS certs). That's not the agent space.
+- You're operating in an environment that prohibits the mitmproxy CA and you can't use the env-export fallback. Authsome's proxy needs CA trust.
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Five minutes to a working agent with injected credentials.
+  </Card>
+  <Card title="Threat model" icon="shield-halved" href="/security/threat-model">
+    What authsome's trust assumptions are.
+  </Card>
+  <Card title="Architecture" icon="layer-group" href="/concepts/architecture">
+    The layered model and what each layer owns.
+  </Card>
+  <Card title="Roadmap" icon="map" href="/roadmap">
+    What's coming.
+  </Card>
+</Columns>
