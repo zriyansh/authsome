@@ -612,6 +612,144 @@ class TestProxyRunner:
         assert "localhost" in result
         assert "::1" in result
 
+    def test_add_ca_to_macos_keychain_skips_on_non_macos(self, tmp_path: Path) -> None:
+        from authsome.proxy.runner import ProxyRunner
+
+        cert = tmp_path / "ca.pem"
+        cert.write_text("fake-cert")
+
+        with patch("authsome.proxy.runner.sys") as mock_sys:
+            mock_sys.platform = "linux"
+            added = ProxyRunner._add_ca_to_macos_keychain(cert)
+
+        assert added is False
+
+    def test_add_ca_to_macos_keychain_skips_missing_cert(self, tmp_path: Path) -> None:
+        from authsome.proxy.runner import ProxyRunner
+
+        missing = tmp_path / "nonexistent.pem"
+
+        with patch("authsome.proxy.runner.sys") as mock_sys:
+            mock_sys.platform = "darwin"
+            added = ProxyRunner._add_ca_to_macos_keychain(missing)
+
+        assert added is False
+
+    def _make_fake_keychain(self, tmp_path: Path) -> Path:
+        """Create a fake login.keychain-db under the tmp_path home structure."""
+        keychain_dir = tmp_path / "Library" / "Keychains"
+        keychain_dir.mkdir(parents=True)
+        keychain = keychain_dir / "login.keychain-db"
+        keychain.touch()
+        return keychain
+
+    def test_add_ca_to_macos_keychain_skips_when_already_present(self, tmp_path: Path) -> None:
+        from authsome.proxy.runner import ProxyRunner
+
+        cert = tmp_path / "ca.pem"
+        cert.write_text("fake-cert")
+        self._make_fake_keychain(tmp_path)
+
+        with (
+            patch("authsome.proxy.runner.sys") as mock_sys,
+            patch("authsome.proxy.runner.Path.home", return_value=tmp_path),
+            patch("authsome.proxy.runner.subprocess.run") as run_mock,
+        ):
+            mock_sys.platform = "darwin"
+            # find-certificate returns 0 → cert already present
+            run_mock.return_value = Mock(returncode=0)
+            added = ProxyRunner._add_ca_to_macos_keychain(cert)
+
+        assert added is False
+        # Only the find-certificate check should have run, not add-trusted-cert
+        assert run_mock.call_count == 1
+        assert "find-certificate" in run_mock.call_args[0][0]
+
+    def test_add_ca_to_macos_keychain_returns_true_on_success(self, tmp_path: Path) -> None:
+        from authsome.proxy.runner import ProxyRunner
+
+        cert = tmp_path / "ca.pem"
+        cert.write_text("fake-cert")
+        self._make_fake_keychain(tmp_path)
+
+        find_result = Mock(returncode=1)  # cert not present
+        add_result = Mock(returncode=0)  # add succeeded
+
+        with (
+            patch("authsome.proxy.runner.sys") as mock_sys,
+            patch("authsome.proxy.runner.Path.home", return_value=tmp_path),
+            patch("authsome.proxy.runner.subprocess.run", side_effect=[find_result, add_result]),
+        ):
+            mock_sys.platform = "darwin"
+            added = ProxyRunner._add_ca_to_macos_keychain(cert)
+
+        assert added is True
+
+    def test_add_ca_to_macos_keychain_returns_false_on_failure(self, tmp_path: Path) -> None:
+        from authsome.proxy.runner import ProxyRunner
+
+        cert = tmp_path / "ca.pem"
+        cert.write_text("fake-cert")
+        self._make_fake_keychain(tmp_path)
+
+        find_result = Mock(returncode=1)  # cert not present
+        add_result = Mock(returncode=1, stderr="denied", stdout="")  # add failed
+
+        with (
+            patch("authsome.proxy.runner.sys") as mock_sys,
+            patch("authsome.proxy.runner.Path.home", return_value=tmp_path),
+            patch("authsome.proxy.runner.subprocess.run", side_effect=[find_result, add_result]),
+        ):
+            mock_sys.platform = "darwin"
+            added = ProxyRunner._add_ca_to_macos_keychain(cert)
+
+        assert added is False
+
+    def test_remove_ca_from_macos_keychain_skips_on_non_macos(self) -> None:
+        from authsome.proxy.runner import ProxyRunner
+
+        with patch("authsome.proxy.runner.sys") as mock_sys, patch("authsome.proxy.runner.subprocess.run") as run_mock:
+            mock_sys.platform = "linux"
+            ProxyRunner._remove_ca_from_macos_keychain()
+
+        run_mock.assert_not_called()
+
+    def test_remove_ca_from_macos_keychain_calls_delete_certificate(self, tmp_path: Path) -> None:
+        from authsome.proxy.runner import ProxyRunner
+
+        self._make_fake_keychain(tmp_path)
+
+        with patch("authsome.proxy.runner.sys") as mock_sys, patch("authsome.proxy.runner.subprocess.run") as run_mock:
+            mock_sys.platform = "darwin"
+            run_mock.return_value = Mock(returncode=0)
+            ProxyRunner._remove_ca_from_macos_keychain()
+
+        run_mock.assert_called_once()
+        cmd = run_mock.call_args[0][0]
+        assert "delete-certificate" in cmd
+        assert "mitmproxy" in cmd
+
+    def test_runner_adds_keychain_cert_on_macos_and_removes_after_run(self, tmp_path: Path) -> None:
+        from authsome.proxy.runner import ProxyRunner
+
+        auth = _make_auth(tmp_path)
+        runner = ProxyRunner(auth)
+        fake_ca = tmp_path / "fake-ca.pem"
+        fake_ca.write_text("fake")
+
+        with (
+            patch("authsome.proxy.runner.subprocess.run") as run_mock,
+            patch.object(runner, "_start_proxy", return_value=("http://127.0.0.1:8899", Mock())),
+            patch.object(runner, "_build_ca_bundle", return_value=fake_ca),
+            patch.object(ProxyRunner, "_add_ca_to_macos_keychain", return_value=True) as add_mock,
+            patch.object(ProxyRunner, "_remove_ca_from_macos_keychain") as remove_mock,
+        ):
+            run_mock.return_value = Mock(returncode=0)
+            runner.run(["echo", "hello"])
+
+        add_mock.assert_called_once()
+        remove_mock.assert_called_once()
+
 
 class TestProxyServer:
     """Proxy server options and lifecycle helpers."""
