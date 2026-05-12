@@ -8,9 +8,8 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 import requests as http_client
-from loguru import logger
-
 from authlib.integrations.requests_client import OAuth2Session
+from loguru import logger
 
 from authsome.auth.models.connection import AccountInfo, ConnectionRecord, ProviderClientRecord
 from authsome.auth.models.enums import AuthType, ConnectionStatus
