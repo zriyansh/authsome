@@ -25,7 +25,7 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
     issues: list[str] = []
 
     try:
-        config = auth.app_store.get_config()
+        config = auth.vault.get_config()
         checks["config"] = "ok" if config else "ok"
     except Exception as exc:
         checks["config"] = "failed"
@@ -39,9 +39,9 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
         issues.append(f"providers: {exc}")
 
     try:
-        auth.vault.put("__ready_test__", "ok", profile=auth.identity)
-        value = auth.vault.get("__ready_test__", profile=auth.identity)
-        auth.vault.delete("__ready_test__", profile=auth.identity)
+        auth.vault.put("__ready_test__", "ok", collection=f"vault:{auth.identity}")
+        value = auth.vault.get("__ready_test__", collection=f"vault:{auth.identity}")
+        auth.vault.delete("__ready_test__", collection=f"vault:{auth.identity}")
         checks["vault"] = "ok" if value == "ok" else "failed"
         if value != "ok":
             issues.append("vault: readiness roundtrip failed")
@@ -54,17 +54,17 @@ def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
 
 @router.get("/whoami")
 def whoami(auth: AuthService = Depends(get_auth_service)) -> dict[str, str]:
-    config = auth.app_store.get_config()
+    config = auth.vault.get_config()
     enc_mode = config.encryption.mode if config.encryption else "local_key"
     if enc_mode == "local_key":
-        enc_desc = f"Local Key ({auth.app_store.home / 'master.key'})"
+        enc_desc = f"Local Key ({auth.vault.home / 'master.key'})"
     elif enc_mode == "keyring":
         enc_desc = "OS Keyring"
     else:
         enc_desc = enc_mode
     return {
         "version": __version__,
-        "home": str(auth.app_store.home),
+        "home": str(auth.vault.home),
         "active_identity": auth.identity,
         "encryption_backend": enc_desc,
     }

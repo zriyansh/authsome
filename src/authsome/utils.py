@@ -12,6 +12,18 @@ def utc_now() -> datetime:
     return datetime.now(UTC)
 
 
+def run_sync(coro: Any) -> Any:
+    """
+    Run a coroutine synchronously.
+
+    This helper uses asgiref.sync.async_to_sync to safely run coroutines
+    even when an event loop is already running (e.g., inside FastAPI).
+    """
+    from asgiref.sync import async_to_sync
+
+    return async_to_sync(lambda: coro)()
+
+
 def to_rfc3339(dt: datetime) -> str:
     """Format a datetime as RFC 3339 / ISO 8601 in UTC."""
     if dt.tzinfo is None:

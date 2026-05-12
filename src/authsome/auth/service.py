@@ -1,16 +1,17 @@
 """AuthService — authentication and credential lifecycle service.
 
 Owns OAuth flows, token refresh, login/logout/revoke.
-Receives Vault and ProviderRegistry as dependencies.
-Does not touch encryption directly — all persistence goes through the Vault.
+Receives only a Vault.  All persistence goes through the Vault.
 """
 
 from __future__ import annotations
 
+import importlib.resources
 import json
 import re
 from datetime import timedelta
 from typing import Any
+from urllib.parse import urlparse
 
 import requests as http_client
 from loguru import logger
@@ -30,20 +31,26 @@ from authsome.auth.models.connection import (
 from authsome.auth.models.enums import AuthType, ConnectionStatus, ExportFormat, FlowType
 from authsome.auth.models.profile import ProfileMetadata
 from authsome.auth.models.provider import ProviderDefinition
-from authsome.auth.providers import ProviderRegistry
 from authsome.auth.sessions import AuthSession
 from authsome.errors import (
     AuthsomeError,
     ConnectionNotFoundError,
     CredentialMissingError,
+    InvalidProviderSchemaError,
     ProfileNotFoundError,
+    ProviderAlreadyRegisteredError,
+    ProviderNotFoundError,
     RefreshFailedError,
     TokenExpiredError,
     UnsupportedFlowError,
 )
-from authsome.store.interfaces import AppStore
-from authsome.utils import build_store_key, utc_now
+from authsome.utils import build_store_key, is_filesystem_safe, utc_now
 from authsome.vault import Vault
+
+_VALID_FLOWS: dict[AuthType, set[FlowType]] = {
+    AuthType.OAUTH2: {FlowType.PKCE, FlowType.DEVICE_CODE, FlowType.DCR_PKCE},
+    AuthType.API_KEY: {FlowType.API_KEY},
+}
 
 _NEAR_EXPIRY_SECONDS = 300
 
@@ -59,57 +66,141 @@ class AuthService:
     """
     Authentication and credential lifecycle service.
 
-    All credential reads and writes go through self._vault.
+    All reads and writes go through self._vault.
     Key construction (profile:<identity>:<provider>:...) lives here.
     """
 
     def __init__(
         self,
         vault: Vault,
-        registry: ProviderRegistry,
-        app_store: AppStore,
         identity: str | None = None,
     ) -> None:
         self._vault = vault
-        self._registry = registry
-        self._app_store = app_store
         self._identity = identity or "default"
+        self._bundled: dict[str, ProviderDefinition] = self._load_bundled_providers()
+
+    @property
+    def _coll(self) -> str:
+        """Vault collection for the active identity's credentials."""
+        return f"vault:{self._identity}"
 
     @property
     def vault(self) -> Vault:
         return self._vault
 
     @property
-    def registry(self) -> ProviderRegistry:
-        return self._registry
-
-    @property
     def identity(self) -> str:
         return self._identity
 
-    @property
-    def app_store(self) -> AppStore:
-        return self._app_store
-
     # ── Provider operations ───────────────────────────────────────────────
 
+    @staticmethod
+    def _load_bundled_providers() -> dict[str, ProviderDefinition]:
+        bundled: dict[str, ProviderDefinition] = {}
+        try:
+            files = importlib.resources.files("authsome.auth.bundled_providers")
+            for file in files.iterdir():
+                if file.name.endswith(".json"):
+                    with file.open("r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        defn = ProviderDefinition.model_validate(data)
+                        bundled[defn.name] = defn
+        except Exception as e:
+            logger.warning("Error loading bundled providers: {}", e)
+        return bundled
+
+    def _load_custom_providers(self) -> dict[str, ProviderDefinition]:
+        providers: dict[str, ProviderDefinition] = {}
+        try:
+            for name in self._vault.list(collection="providers"):
+                raw = self._vault.get(name, collection="providers")
+                if raw:
+                    providers[name] = ProviderDefinition.model_validate_json(raw)
+        except Exception as exc:
+            logger.warning("Could not load custom providers: {}", exc)
+        return providers
+
     def list_providers(self) -> list[ProviderDefinition]:
-        return self._registry.list_providers()
+        providers = {**self._bundled, **self._load_custom_providers()}
+        return sorted(providers.values(), key=lambda p: p.name)
 
     def list_providers_by_source(self) -> dict[str, list[ProviderDefinition]]:
-        return self._registry.list_providers_by_source()
+        bundled_list = sorted(self._bundled.values(), key=lambda p: p.name)
+        custom_list = sorted(self._load_custom_providers().values(), key=lambda p: p.name)
+        return {"bundled": bundled_list, "custom": custom_list}
 
     def get_provider(self, name: str) -> ProviderDefinition:
-        return self._registry.get_provider(name)
+        raw = self._vault.get(name, collection="providers")
+        if raw:
+            return ProviderDefinition.model_validate_json(raw)
+        if name in self._bundled:
+            return self._bundled[name]
+        raise ProviderNotFoundError(name)
+
+    def is_local_provider(self, name: str) -> bool:
+        """Check if a provider is a custom/local provider."""
+        return self._vault.get(name, collection="providers") is not None
 
     def register_provider(self, definition: ProviderDefinition, *, force: bool = False) -> None:
-        self._registry.register_provider(definition, force=force)
+        self._validate_provider(definition)
+        has_custom = self._vault.get(definition.name, collection="providers") is not None
+        if force or not has_custom:
+            self._vault.put(
+                definition.name,
+                definition.model_dump_json(indent=2, exclude_none=True),
+                collection="providers",
+            )
+        else:
+            raise ProviderAlreadyRegisteredError(definition.name)
+        logger.info("Registered provider: {}", definition.name)
+
+    def remove_provider(self, name: str) -> bool:
+        """Remove a custom provider. Returns True if removed."""
+        return self._vault.delete(name, collection="providers")
+
+    def _validate_provider(self, definition: ProviderDefinition) -> None:
+        if not is_filesystem_safe(definition.name):
+            raise InvalidProviderSchemaError(
+                f"Provider name '{definition.name}' is not filesystem-safe", provider=definition.name
+            )
+        valid_flows = _VALID_FLOWS.get(definition.auth_type)
+        if valid_flows is None:
+            raise InvalidProviderSchemaError(
+                f"Unrecognized auth_type: {definition.auth_type}", provider=definition.name
+            )
+        if definition.flow not in valid_flows:
+            raise InvalidProviderSchemaError(
+                f"Flow '{definition.flow}' is not valid for auth_type '{definition.auth_type}'. "
+                f"Valid flows: {[f.value for f in valid_flows]}",
+                provider=definition.name,
+            )
+        if definition.auth_type == AuthType.OAUTH2 and definition.oauth is None:
+            raise InvalidProviderSchemaError(
+                "auth_type 'oauth2' requires an 'oauth' configuration section", provider=definition.name
+            )
+        if definition.auth_type == AuthType.API_KEY and definition.api_key is None:
+            raise InvalidProviderSchemaError(
+                "auth_type 'api_key' requires an 'api_key' configuration section", provider=definition.name
+            )
+        if definition.oauth:
+            for field_name in ("authorization_url", "token_url"):
+                url = getattr(definition.oauth, field_name, None)
+                if url:
+                    self._validate_url(url, field_name, definition.name)
+
+    @staticmethod
+    def _validate_url(url: str, field_name: str, provider_name: str) -> None:
+        if "{base_url}" in url:
+            return
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            raise InvalidProviderSchemaError(f"Invalid URL for '{field_name}': {url}", provider=provider_name)
 
     # ── Connection operations ─────────────────────────────────────────────
 
     def list_connections(self) -> list[dict[str, Any]]:
         prefix = f"profile:{self._identity}:"
-        keys = self._vault.list(prefix, profile=self._identity)
+        keys = self._vault.list(prefix, collection=self._coll)
 
         providers: dict[str, list[dict[str, Any]]] = {}
         defaults: dict[str, str] = {}
@@ -120,14 +211,14 @@ class AuthService:
                 connection_name = parts[4]
                 if provider_name not in defaults:
                     meta_key = build_store_key(profile=self._identity, provider=provider_name, record_type="metadata")
-                    meta_json = self._vault.get(meta_key, profile=self._identity)
+                    meta_json = self._vault.get(meta_key, collection=self._coll)
                     if meta_json:
                         defaults[provider_name] = ProviderMetadataRecord.model_validate_json(
                             meta_json
                         ).default_connection
                     else:
                         defaults[provider_name] = "default"
-                record_json = self._vault.get(key, profile=self._identity)
+                record_json = self._vault.get(key, collection=self._coll)
                 if record_json:
                     record = self._load_connection_record(record_json, key)
                     if record is None:
@@ -161,9 +252,9 @@ class AuthService:
         key = build_store_key(
             profile=self._identity, provider=provider, record_type="connection", connection=connection
         )
-        record_json = self._vault.get(key, profile=self._identity)
+        record_json = self._vault.get(key, collection=self._coll)
         if not record_json:
-            raise ConnectionNotFoundError(provider=provider, connection=connection, profile=self._identity)
+            raise ConnectionNotFoundError(provider=provider, connection=connection)
         record = self._load_connection_record(record_json, key)
         if record is None:
             raise AuthsomeError(
@@ -177,7 +268,7 @@ class AuthService:
         if connection:
             return connection
         meta_key = build_store_key(profile=self._identity, provider=provider, record_type="metadata")
-        existing_json = self._vault.get(meta_key, profile=self._identity)
+        existing_json = self._vault.get(meta_key, collection=self._coll)
         if existing_json:
             metadata = ProviderMetadataRecord.model_validate_json(existing_json)
             return metadata.default_connection
@@ -195,7 +286,7 @@ class AuthService:
         """Set the default connection for a provider."""
         self.get_connection(provider, connection)
         meta_key = build_store_key(profile=self._identity, provider=provider, record_type="metadata")
-        existing_json = self._vault.get(meta_key, profile=self._identity)
+        existing_json = self._vault.get(meta_key, collection=self._coll)
         if existing_json:
             metadata = ProviderMetadataRecord.model_validate_json(existing_json)
         else:
@@ -204,7 +295,7 @@ class AuthService:
             metadata.connection_names.append(connection)
         metadata.default_connection = connection
         metadata.last_used_connection = connection
-        self._vault.put(meta_key, metadata.model_dump_json(), profile=self._identity)
+        self._vault.put(meta_key, metadata.model_dump_json(), collection=self._coll)
 
     # ── Authentication ────────────────────────────────────────────────────
 
@@ -562,26 +653,26 @@ class AuthService:
         key = build_store_key(
             profile=self._identity, provider=provider, record_type="connection", connection=connection
         )
-        self._vault.delete(key, profile=self._identity)
+        self._vault.delete(key, collection=self._coll)
         self._remove_from_provider_metadata(provider, connection)
 
     def revoke(self, provider: str) -> None:
         self.get_provider(provider)
         meta_key = build_store_key(profile=self._identity, provider=provider, record_type="metadata")
-        existing_json = self._vault.get(meta_key, profile=self._identity)
+        existing_json = self._vault.get(meta_key, collection=self._coll)
         if existing_json:
             metadata = ProviderMetadataRecord.model_validate_json(existing_json)
             for conn_name in list(metadata.connection_names):
                 self.logout(provider, connection=conn_name)
-        self._vault.delete(meta_key, profile=self._identity)
+        self._vault.delete(meta_key, collection=self._coll)
         client_key = build_store_key(profile=self._identity, provider=provider, record_type="client")
-        self._vault.delete(client_key, profile=self._identity)
+        self._vault.delete(client_key, collection=self._coll)
 
     def remove(self, provider: str) -> None:
         """Revoke all tokens and remove the provider definition if it is local."""
         self.revoke(provider)
-        if self._registry.is_local(provider):
-            self._registry._app_store.delete_provider(provider)
+        if self.is_local_provider(provider):
+            self._vault.delete(provider, collection="providers")
             logger.info("Removed local provider definition: {}", provider)
         else:
             logger.info("Revoked bundled provider: {} (definition kept)", provider)
@@ -667,23 +758,29 @@ class AuthService:
     # ── Profile operations ────────────────────────────────────────────────
 
     def list_profiles(self) -> list[ProfileMetadata]:
-        return self._app_store.list_profiles()
+        profiles = []
+        for name in self._vault.list(collection="profiles"):
+            try:
+                profiles.append(self.get_profile(name))
+            except Exception as e:
+                logger.warning("Failed to load profile {}: {}", name, e)
+        return sorted(profiles, key=lambda p: p.name)
 
     def get_profile(self, name: str) -> ProfileMetadata:
-        return self._app_store.get_profile(name)
+        raw = self._vault.get(name, collection="profiles")
+        if raw is None:
+            raise ProfileNotFoundError(name)
+        return ProfileMetadata.model_validate_json(raw)
 
     def set_default_profile(self, name: str) -> None:
-        self._app_store.get_profile(name)
-        config = self._app_store.get_config()
+        self.get_profile(name)  # validate existence
+        config = self._vault.get_config()
         config.default_profile = name
-        self._app_store.save_config(config)
+        self._vault.save_config(config)
 
     def create_profile(self, name: str, description: str = "") -> ProfileMetadata:
-        try:
-            self._app_store.get_profile(name)
+        if self._vault.get(name, collection="profiles") is not None:
             raise ValueError(f"Profile {name} already exists")
-        except ProfileNotFoundError:
-            pass
 
         now = utc_now()
         metadata = ProfileMetadata(
@@ -692,7 +789,7 @@ class AuthService:
             updated_at=now,
             description=description,
         )
-        self._app_store.save_profile(metadata)
+        self._vault.put(name, metadata.model_dump_json(indent=2), collection="profiles")
         return metadata
 
     # ── Internal helpers ──────────────────────────────────────────────────
@@ -717,22 +814,22 @@ class AuthService:
             record_type="connection",
             connection=record.connection_name,
         )
-        self._vault.put(key, record.model_dump_json(), profile=self._identity)
+        self._vault.put(key, record.model_dump_json(), collection=self._coll)
 
     def _get_provider_client_credentials(self, provider: str) -> ProviderClientRecord | None:
         key = build_store_key(profile=self._identity, provider=provider, record_type="client")
-        record_json = self._vault.get(key, profile=self._identity)
+        record_json = self._vault.get(key, collection=self._coll)
         if record_json:
             return ProviderClientRecord.model_validate_json(record_json)
         return None
 
     def _save_provider_client_credentials(self, record: ProviderClientRecord) -> None:
         key = build_store_key(profile=self._identity, provider=record.provider, record_type="client")
-        self._vault.put(key, record.model_dump_json(), profile=self._identity)
+        self._vault.put(key, record.model_dump_json(), collection=self._coll)
 
     def _update_provider_metadata(self, provider: str, connection_name: str) -> None:
         meta_key = build_store_key(profile=self._identity, provider=provider, record_type="metadata")
-        existing_json = self._vault.get(meta_key, profile=self._identity)
+        existing_json = self._vault.get(meta_key, collection=self._coll)
         if existing_json:
             metadata = ProviderMetadataRecord.model_validate_json(existing_json)
         else:
@@ -740,18 +837,18 @@ class AuthService:
         if connection_name not in metadata.connection_names:
             metadata.connection_names.append(connection_name)
         metadata.last_used_connection = connection_name
-        self._vault.put(meta_key, metadata.model_dump_json(), profile=self._identity)
+        self._vault.put(meta_key, metadata.model_dump_json(), collection=self._coll)
 
     def _remove_from_provider_metadata(self, provider: str, connection_name: str) -> None:
         meta_key = build_store_key(profile=self._identity, provider=provider, record_type="metadata")
-        existing_json = self._vault.get(meta_key, profile=self._identity)
+        existing_json = self._vault.get(meta_key, collection=self._coll)
         if existing_json:
             metadata = ProviderMetadataRecord.model_validate_json(existing_json)
             if connection_name in metadata.connection_names:
                 metadata.connection_names.remove(connection_name)
             if metadata.last_used_connection == connection_name:
                 metadata.last_used_connection = metadata.connection_names[0] if metadata.connection_names else None
-            self._vault.put(meta_key, metadata.model_dump_json(), profile=self._identity)
+            self._vault.put(meta_key, metadata.model_dump_json(), collection=self._coll)
 
     def _get_api_key(self, record: ConnectionRecord) -> str:
         if record.api_key is None:
@@ -861,11 +958,11 @@ class AuthService:
 
     def _get_or_create_provider_state(self, provider: str) -> ProviderStateRecord:
         key = build_store_key(profile=self._identity, provider=provider, record_type="state")
-        existing = self._vault.get(key, profile=self._identity)
+        existing = self._vault.get(key, collection=self._coll)
         if existing:
             return ProviderStateRecord.model_validate_json(existing)
         return ProviderStateRecord(provider=provider, profile=self._identity)
 
     def _save_provider_state(self, state: ProviderStateRecord) -> None:
         key = build_store_key(profile=self._identity, provider=state.provider, record_type="state")
-        self._vault.put(key, state.model_dump_json(), profile=self._identity)
+        self._vault.put(key, state.model_dump_json(), collection=self._coll)

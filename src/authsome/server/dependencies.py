@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from authsome.auth import AuthService
 
-from authsome.auth.providers.registry import ProviderRegistry
 from authsome.identity import current
 from authsome.server.urls import build_server_base_url
 from authsome.store.local import LocalAppStore
@@ -41,6 +40,6 @@ def create_auth_service(home: Path | None = None) -> AuthService:
         crypto_mode=crypto_mode,
         master_key_path=resolved_home / "master.key",
     )
-    registry = ProviderRegistry(app_store)
+
     identity = current()
-    return AuthService(vault=vault, registry=registry, app_store=app_store, identity=identity.name)
+    return AuthService(vault=vault, identity=identity.name)
