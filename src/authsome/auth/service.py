@@ -12,7 +12,6 @@ import re
 from datetime import timedelta
 from typing import Any
 
-import requests as http_client
 from loguru import logger
 
 from authsome import audit
