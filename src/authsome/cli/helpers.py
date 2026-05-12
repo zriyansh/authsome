@@ -21,7 +21,12 @@ def handle_errors(func):
 
     @functools.wraps(func)
     def wrapper(ctx_obj: ContextObj, *args, **kwargs):
+        import asyncio
+        import inspect
+
         try:
+            if inspect.iscoroutinefunction(func):
+                return asyncio.run(func(ctx_obj, *args, **kwargs))
             return func(ctx_obj, *args, **kwargs)
         except Exception as exc:
             if ctx_obj.json_output:

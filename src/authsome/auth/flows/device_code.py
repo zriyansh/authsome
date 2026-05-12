@@ -27,7 +27,7 @@ _MAX_POLL_DURATION = 900
 class DeviceCodeFlow(AuthFlow):
     """OAuth2 Device Authorization Grant — headless flow."""
 
-    def begin(
+    async def begin(
         self,
         provider: ProviderDefinition,
         profile: str,
@@ -46,7 +46,7 @@ class DeviceCodeFlow(AuthFlow):
             )
 
         effective_scopes = list(scopes) if scopes is not None else list(provider.oauth.scopes or [])
-        device_data = self._request_device_code(provider=provider, client_id=client_id, scopes=effective_scopes)
+        device_data = await self._request_device_code(provider=provider, client_id=client_id, scopes=effective_scopes)
 
         device_code = device_data.get("device_code")
         user_code = device_data.get("user_code")
@@ -71,7 +71,7 @@ class DeviceCodeFlow(AuthFlow):
         runtime_session.payload["expires_in"] = str(expires_in)
         runtime_session.payload["internal_scopes"] = json.dumps(effective_scopes)
 
-    def resume(
+    async def resume(
         self,
         provider: ProviderDefinition,
         profile: str,
@@ -88,7 +88,7 @@ class DeviceCodeFlow(AuthFlow):
         interval = int(runtime_session.payload.get("internal_interval", 5))
         expires_in = int(runtime_session.payload.get("expires_in", 300))
 
-        data = self.poll_for_token(
+        data = await self.poll_for_token(
             provider=provider,
             client_id=client_id,
             client_secret=client_secret,
@@ -137,7 +137,7 @@ class DeviceCodeFlow(AuthFlow):
                 provider=provider.name,
             )
 
-    def _request_device_code(
+    async def _request_device_code(
         self, provider: ProviderDefinition, client_id: str | None, scopes: list[str]
     ) -> dict[str, Any]:
         assert provider.oauth is not None
@@ -165,7 +165,7 @@ class DeviceCodeFlow(AuthFlow):
                 "Device authorization response was not valid JSON", provider=provider.name
             ) from exc
 
-    def poll_for_token(
+    async def poll_for_token(
         self,
         provider: ProviderDefinition,
         client_id: str | None,
@@ -174,6 +174,8 @@ class DeviceCodeFlow(AuthFlow):
         interval: int,
         expires_in: int,
     ) -> dict[str, Any]:
+        import asyncio
+
         assert provider.oauth is not None
         poll_interval = max(interval, 1)
 
@@ -184,7 +186,7 @@ class DeviceCodeFlow(AuthFlow):
         use_json = provider.oauth.device_token_request == "json"
 
         while time.monotonic() < deadline:
-            time.sleep(poll_interval)
+            await asyncio.sleep(poll_interval)
 
             try:
                 if use_json:

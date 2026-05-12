@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from importlib.resources import files
 
 from fastapi import FastAPI, Request
@@ -19,12 +20,18 @@ from authsome.server.routes.proxy import router as proxy_router
 from authsome.server.routes.ui import router as ui_router
 
 
-def create_app(auth_service=None, server_base_url: str | None = None) -> FastAPI:
-    """Create the local daemon FastAPI app."""
-    app = FastAPI(title="Authsome Daemon", version="0.1")
-    app.state.auth_service = auth_service or create_auth_service()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage daemon lifecycle."""
+    app.state.auth_service = await create_auth_service()
     app.state.auth_sessions = AuthSessionStore()
-    app.state.server_base_url = server_base_url or get_server_base_url()
+    app.state.server_base_url = get_server_base_url()
+    yield
+
+
+def create_app() -> FastAPI:
+    """Create the local daemon FastAPI app."""
+    app = FastAPI(title="Authsome Daemon", version="0.1", lifespan=lifespan)
 
     @app.exception_handler(AuthsomeError)
     def authsome_error_handler(request: Request, exc: AuthsomeError) -> JSONResponse:

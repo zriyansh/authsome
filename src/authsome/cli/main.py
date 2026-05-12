@@ -50,10 +50,10 @@ def cli(ctx: click.Context, verbose: bool, log_file: str) -> None:
 
 @cli.command(name="list")
 @auth_command
-def list_cmd(ctx_obj: ContextObj) -> None:
+async def list_cmd(ctx_obj: ContextObj) -> None:
     """List providers and connection states."""
-    actx = ctx_obj.initialize()
-    data = actx.runtime_client.list_connections()
+    actx = await ctx_obj.initialize()
+    data = await actx.runtime_client.list_connections()
     raw_list = data["connections"]
     by_source = data["by_source"]
 
@@ -210,9 +210,9 @@ def list_cmd(ctx_obj: ContextObj) -> None:
 @cli.command(name="log")
 @click.option("-n", "--lines", default=50, help="Number of lines to show.")
 @auth_command
-def log_cmd(ctx_obj: ContextObj, lines: int) -> None:
+async def log_cmd(ctx_obj: ContextObj, lines: int) -> None:
     """View the authsome audit log."""
-    actx = ctx_obj.initialize()
+    actx = await ctx_obj.initialize()
     audit_file = actx.home / "audit.log"
     if not audit_file.exists():
         if ctx_obj.json_output:
@@ -249,7 +249,7 @@ def log_cmd(ctx_obj: ContextObj, lines: int) -> None:
 @click.option("--base-url", help="Base URL for the provider (e.g. for GitHub Enterprise).")
 @click.option("--force", is_flag=True, help="Overwrite an existing connection if it already exists.")
 @auth_command
-def login(
+async def login(
     ctx_obj: ContextObj,
     provider: str,
     connection: str,
@@ -259,7 +259,7 @@ def login(
     force: bool,
 ) -> None:
     """Authenticate with a provider using its configured flow."""
-    actx = ctx_obj.initialize()
+    actx = await ctx_obj.initialize()
     flow_value = FlowType(flow).value if flow else None
     scope_list = [s.strip() for s in scopes.split(",")] if scopes else None
 
@@ -269,7 +269,7 @@ def login(
         ctx_obj.echo(f"Starting login for {provider}...", color="cyan")
 
     try:
-        session_info = actx.runtime_client.start_login(
+        session_info = await actx.runtime_client.start_login(
             provider=provider,
             connection=connection,
             flow=flow_value,
@@ -340,7 +340,7 @@ def login(
 @click.option("--connection", default="default", help="Connection name.")
 @click.option("--import", "auto_import", is_flag=True, help="Import detected keys without interactive prompt.")
 @auth_command
-def scan(ctx_obj: ContextObj, connection: str, auto_import: bool) -> None:
+async def scan(ctx_obj: ContextObj, connection: str, auto_import: bool) -> None:
     """Scan env files and process env for provider API keys.
 
     Use ``--json`` for a drift report only unless ``--import`` is also passed.
@@ -348,11 +348,11 @@ def scan(ctx_obj: ContextObj, connection: str, auto_import: bool) -> None:
     if ctx_obj.quiet:
         raise click.UsageError("'scan' does not support --quiet. Use --json for report-only or --import to apply.")
 
-    actx = ctx_obj.initialize()
+    actx = await ctx_obj.initialize()
     scanned_env = _scan_env_sources()
 
     provider_defs: list[ProviderDefinition] = []
-    connections = actx.runtime_client.list_connections()
+    connections = await actx.runtime_client.list_connections()
     by_source = connections.get("by_source", {})
     for source in ("bundled", "custom"):
         for provider_data in by_source.get(source, []):
@@ -366,7 +366,7 @@ def scan(ctx_obj: ContextObj, connection: str, auto_import: bool) -> None:
 
         existing_record: dict[str, Any] | None = None
         try:
-            existing_record = actx.runtime_client.get_connection(definition.name, connection)
+            existing_record = await actx.runtime_client.get_connection(definition.name, connection)
         except Exception:
             existing_record = None
 
@@ -432,14 +432,14 @@ def scan(ctx_obj: ContextObj, connection: str, auto_import: bool) -> None:
                 )
                 continue
 
-            session_info = actx.runtime_client.start_login(
+            session_info = await actx.runtime_client.start_login(
                 provider=provider_name,
                 connection=connection,
                 flow=FlowType.API_KEY.value,
                 force=True,
             )
             session_id = session_info["id"]
-            resume_info = actx.runtime_client.resume_login_session(session_id, api_key=api_key_value)
+            resume_info = await actx.runtime_client.resume_login_session(session_id, api_key=api_key_value)
             if resume_info.get("status") != "completed":
                 session_status = resume_info.get("status")
                 raise RuntimeError(
@@ -484,10 +484,10 @@ def scan(ctx_obj: ContextObj, connection: str, auto_import: bool) -> None:
 @click.argument("provider")
 @click.option("--connection", default="default", help="Connection name.")
 @auth_command
-def logout(ctx_obj: ContextObj, provider: str, connection: str) -> None:
+async def logout(ctx_obj: ContextObj, provider: str, connection: str) -> None:
     """Log out of a connection and remove local state."""
-    actx = ctx_obj.initialize()
-    actx.runtime_client.logout(provider, connection)
+    actx = await ctx_obj.initialize()
+    await actx.runtime_client.logout(provider, connection)
     audit.log("logout", provider=provider, connection=connection)
 
     if ctx_obj.json_output:
@@ -500,10 +500,10 @@ def logout(ctx_obj: ContextObj, provider: str, connection: str) -> None:
 @click.argument("provider")
 @click.argument("connection")
 @auth_command
-def set_default_connection(ctx_obj: ContextObj, provider: str, connection: str) -> None:
+async def set_default_connection(ctx_obj: ContextObj, provider: str, connection: str) -> None:
     """Set the default connection for a provider."""
-    actx = ctx_obj.initialize()
-    actx.runtime_client.set_default_connection(provider, connection)
+    actx = await ctx_obj.initialize()
+    await actx.runtime_client.set_default_connection(provider, connection)
     if ctx_obj.json_output:
         ctx_obj.print_json({"status": "ok", "provider": provider, "default_connection": connection})
     else:
@@ -513,10 +513,10 @@ def set_default_connection(ctx_obj: ContextObj, provider: str, connection: str) 
 @cli.command()
 @click.argument("provider")
 @auth_command
-def revoke(ctx_obj: ContextObj, provider: str) -> None:
+async def revoke(ctx_obj: ContextObj, provider: str) -> None:
     """Complete reset of the provider, removing all connections and client secrets."""
-    actx = ctx_obj.initialize()
-    actx.runtime_client.revoke(provider)
+    actx = await ctx_obj.initialize()
+    await actx.runtime_client.revoke(provider)
     audit.log("revoke", provider=provider, connection="all")
 
     if ctx_obj.json_output:
@@ -528,10 +528,10 @@ def revoke(ctx_obj: ContextObj, provider: str) -> None:
 @cli.command()
 @click.argument("provider")
 @auth_command
-def remove(ctx_obj: ContextObj, provider: str) -> None:
+async def remove(ctx_obj: ContextObj, provider: str) -> None:
     """Delete a custom provider definition."""
-    actx = ctx_obj.initialize()
-    actx.runtime_client.remove(provider)
+    actx = await ctx_obj.initialize()
+    await actx.runtime_client.remove(provider)
     audit.log("remove", provider=provider, connection="all")
 
     if ctx_obj.json_output:
@@ -546,12 +546,12 @@ def remove(ctx_obj: ContextObj, provider: str) -> None:
 @click.option("--field", help="Return only a specific field.")
 @click.option("--show-secret", is_flag=True, help="Reveal encrypted secrets.")
 @auth_command
-def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, show_secret: bool) -> None:
+async def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, show_secret: bool) -> None:
     """Return provider connection metadata by default."""
-    actx = ctx_obj.initialize()
+    actx = await ctx_obj.initialize()
     # Verify provider exists first to raise ProviderNotFoundError if unknown
-    actx.runtime_client.get_provider(provider)
-    record_dict = actx.runtime_client.get_connection(provider, connection)
+    await actx.runtime_client.get_provider(provider)
+    record_dict = await actx.runtime_client.get_connection(provider, connection)
     from authsome.auth.models.connection import ConnectionRecord
 
     record = ConnectionRecord.model_validate(record_dict)
@@ -603,13 +603,13 @@ def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | None, 
 @cli.command()
 @click.argument("provider")
 @auth_command
-def inspect(ctx_obj: ContextObj, provider: str) -> None:
+async def inspect(ctx_obj: ContextObj, provider: str) -> None:
     """Return provider definition and local connection summary."""
-    actx = ctx_obj.initialize()
-    definition_dict = actx.runtime_client.get_provider(provider)
+    actx = await ctx_obj.initialize()
+    definition_dict = await actx.runtime_client.get_provider(provider)
     data = definition_dict
     data["connections"] = []
-    connections_data = actx.runtime_client.list_connections()
+    connections_data = await actx.runtime_client.list_connections()
     for provider_group in connections_data["connections"]:
         if provider_group["name"] == provider:
             data["connections"] = provider_group["connections"]
@@ -622,20 +622,20 @@ def inspect(ctx_obj: ContextObj, provider: str) -> None:
         ctx_obj.echo(json_lib.dumps(data, indent=2))
 
 
-@cli.command()
+@cli.command(name="export")
 @click.argument("provider", required=False)
 @click.option("--connection", default="default", help="Connection name.")
 @click.option("--format", "export_format", type=click.Choice(["env", "json", "shell"]), default="env")
 @auth_command
-def export(ctx_obj: ContextObj, provider: str | None, connection: str, export_format: str) -> None:
+async def export(ctx_obj: ContextObj, provider: str | None, connection: str, export_format: str) -> None:
     """Export credential material in selected format."""
-    actx = ctx_obj.initialize()
+    actx = await ctx_obj.initialize()
     fmt = ExportFormat(export_format)
-    output = actx.runtime_client.export(provider, connection, format=fmt.value)
+    output = await actx.runtime_client.export(provider, connection, format=fmt.value)
     audit.log("export", provider=provider, connection=connection, format=fmt.value)
     if ctx_obj.json_output:
         # Call with format=json and parse the result to properly wrap with version info
-        output_str = actx.runtime_client.export(provider, connection, format="json")
+        output_str = await actx.runtime_client.export(provider, connection, format="json")
         try:
             data = json_lib.loads(output_str)
         except Exception:
@@ -656,10 +656,10 @@ def export(ctx_obj: ContextObj, provider: str | None, connection: str, export_fo
 @cli.command(context_settings=dict(ignore_unknown_options=True))
 @click.argument("command", nargs=-1, required=True)
 @auth_command
-def run(ctx_obj: ContextObj, command: tuple[str]) -> None:
+async def run(ctx_obj: ContextObj, command: tuple[str]) -> None:
     """Run a subprocess behind the local auth proxy."""
-    actx = ctx_obj.initialize()
-    result = actx.require_local_proxy().run(list(command))
+    actx = await ctx_obj.initialize()
+    result = await actx.require_local_proxy().run(list(command))
     sys.exit(result.returncode)
 
 
@@ -668,10 +668,10 @@ def run(ctx_obj: ContextObj, command: tuple[str]) -> None:
 @click.option("--force", is_flag=True, help="Force overwrite if provider exists.")
 @click.option("--yes", is_flag=True, help="Skip the registration confirmation prompt.")
 @auth_command
-def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> None:
+async def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> None:
     """Register a provider definition from a local JSON file path."""
 
-    actx = ctx_obj.initialize()
+    actx = await ctx_obj.initialize()
     filepath = pathlib.Path(path)
     if not filepath.exists():
         ctx_obj.echo(f"File not found: {path}", err=True, color="red")
@@ -703,7 +703,7 @@ def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> None:
                 ctx_obj.echo("Registration aborted.", color="yellow")
                 sys.exit(0)
 
-        actx.runtime_client.register_provider(definition.model_dump(mode="json"), force=force)
+        await actx.runtime_client.register_provider(definition.model_dump(mode="json"), force=force)
 
         endpoints = [ep for _, ep, _ in endpoints_to_check]
         audit.log("register", provider=definition.name, endpoints=endpoints)
@@ -742,19 +742,19 @@ def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> None:
 
 @cli.command()
 @auth_command
-def whoami(ctx_obj: ContextObj) -> None:
+async def whoami(ctx_obj: ContextObj) -> None:
     """Show basic local context."""
-    actx = ctx_obj.initialize()
+    actx = await ctx_obj.initialize()
 
     # Get info from daemon
-    whoami_data = actx.runtime_client.whoami()
-    doctor_results = actx.doctor()
+    whoami_data = await actx.runtime_client.whoami()
+    doctor_results = await actx.doctor()
 
     vault_status = "OK" if doctor_results.get("checks", {}).get("vault") == "ok" else "ERROR"
 
     # Connected providers with counts
     connected_providers = []
-    connections_data = actx.runtime_client.list_connections()
+    connections_data = await actx.runtime_client.list_connections()
     for provider_group in connections_data["connections"]:
         active_conns = [c["connection_name"] for c in provider_group["connections"] if connection_is_active(c)]
         if active_conns:
@@ -796,10 +796,10 @@ def whoami(ctx_obj: ContextObj) -> None:
 
 @cli.command()
 @auth_command
-def doctor(ctx_obj: ContextObj) -> None:
+async def doctor(ctx_obj: ContextObj) -> None:
     """Run health checks on directory layout and encryption."""
-    actx = ctx_obj.initialize()
-    results = actx.doctor()
+    actx = await ctx_obj.initialize()
+    results = await actx.doctor()
 
     if ctx_obj.json_output:
         ctx_obj.print_json(results)
@@ -828,9 +828,9 @@ def doctor(ctx_obj: ContextObj) -> None:
 @cli.command()
 @click.option("--no-browser", is_flag=True, help="Print the URL instead of opening a browser.")
 @auth_command
-def ui(ctx_obj: ContextObj, no_browser: bool) -> None:
+async def ui(ctx_obj: ContextObj, no_browser: bool) -> None:
     """Open the daemon dashboard in the browser."""
-    actx = ctx_obj.initialize()
+    actx = await ctx_obj.initialize()
     url = f"{actx.runtime_client.base_url}/ui/"
     if no_browser:
         ctx_obj.echo(url)
@@ -860,7 +860,7 @@ def daemon_serve(host: str, port: int, reload: bool) -> None:
 
 @daemon.command(name="start")
 @auth_command
-def daemon_start(ctx_obj: ContextObj) -> None:
+async def daemon_start(ctx_obj: ContextObj) -> None:
     """Start the local daemon in the background."""
     start_daemon()
     ctx_obj.echo("Daemon start requested.", color="green")
@@ -868,26 +868,26 @@ def daemon_start(ctx_obj: ContextObj) -> None:
 
 @daemon.command(name="stop")
 @auth_command
-def daemon_stop(ctx_obj: ContextObj) -> None:
+async def daemon_stop(ctx_obj: ContextObj) -> None:
     """Stop the local daemon."""
-    stop_daemon()
+    await stop_daemon()
     ctx_obj.echo("Daemon stopped.", color="green")
 
 
 @daemon.command(name="restart")
 @auth_command
-def daemon_restart(ctx_obj: ContextObj) -> None:
+async def daemon_restart(ctx_obj: ContextObj) -> None:
     """Restart the local daemon."""
-    stop_daemon()
+    await stop_daemon()
     start_daemon()
     ctx_obj.echo("Daemon restart requested.", color="green")
 
 
 @daemon.command(name="status")
 @auth_command
-def daemon_status_cmd(ctx_obj: ContextObj) -> None:
+async def daemon_status_cmd(ctx_obj: ContextObj) -> None:
     """Show daemon status."""
-    status = daemon_status()
+    status = await daemon_status()
     if ctx_obj.json_output:
         ctx_obj.print_json(status)
     else:
@@ -897,7 +897,7 @@ def daemon_status_cmd(ctx_obj: ContextObj) -> None:
 @daemon.command(name="logs")
 @click.option("-n", "--lines", default=80, help="Number of lines to show.")
 @auth_command
-def daemon_logs(ctx_obj: ContextObj, lines: int) -> None:
+async def daemon_logs(ctx_obj: ContextObj, lines: int) -> None:
     """Show daemon log output."""
     from authsome.cli.daemon_control import LOG_FILE
 

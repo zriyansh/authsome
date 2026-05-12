@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 class ApiKeyFlow(AuthFlow):
     """Stores a user-provided API key as a connection record."""
 
-    def begin(
+    async def begin(
         self,
         provider: ProviderDefinition,
         profile: str,
@@ -36,7 +36,7 @@ class ApiKeyFlow(AuthFlow):
         runtime_session.state = "waiting_for_user"
         runtime_session.payload["input_required"] = "api_key"
 
-    def resume(
+    async def resume(
         self,
         provider: ProviderDefinition,
         profile: str,

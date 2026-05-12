@@ -15,6 +15,7 @@ from authsome.errors import RefreshFailedError
 from authsome.utils import utc_now
 
 
+@pytest.mark.asyncio
 class TestAuthServiceRefreshLogs:
     """Tests validating that token refresh failure writes correct logs and audit trails."""
 
@@ -26,12 +27,10 @@ class TestAuthServiceRefreshLogs:
 
     @pytest.fixture
     def service(self) -> AuthService:
-        mock_vault = mock.Mock()
-        mock_registry = mock.Mock()
-        mock_app_store = mock.Mock()
-        return AuthService(mock_vault, mock_registry, mock_app_store, identity="test-profile")
+        mock_vault = mock.AsyncMock()
+        return AuthService(mock_vault, identity="test-profile")
 
-    def test_refresh_failure_fallback_available(self, audit_log: Path, service: AuthService):
+    async def test_refresh_failure_fallback_available(self, audit_log: Path, service: AuthService):
         """Verify behavior when refresh fails but current token is valid (close to expiry)."""
         now = utc_now()
         # Close to expiry (<5m) triggers auto-refresh
@@ -53,7 +52,7 @@ class TestAuthServiceRefreshLogs:
         ):
             with mock.patch("loguru.logger.warning") as mock_logger:
                 # Exercise
-                token = service._get_oauth_token(record, provider="github", connection="default")
+                token = await service._get_oauth_token(record, provider="github", connection="default")
 
                 # 1. Should yield fallback token
                 assert token == "original-token"
@@ -73,7 +72,7 @@ class TestAuthServiceRefreshLogs:
                 assert entry["fallback_available"] is True
                 assert "API down" in entry["error"]
 
-    def test_refresh_failure_expired(self, audit_log: Path, service: AuthService):
+    async def test_refresh_failure_expired(self, audit_log: Path, service: AuthService):
         """Verify behavior when refresh fails and current token is already expired."""
         now = utc_now()
         # Already expired
@@ -96,7 +95,7 @@ class TestAuthServiceRefreshLogs:
             with mock.patch("loguru.logger.warning") as mock_logger:
                 # Exercise - should re-raise exception as there is no fallback
                 with pytest.raises(RefreshFailedError):
-                    service._get_oauth_token(record, provider="github", connection="default")
+                    await service._get_oauth_token(record, provider="github", connection="default")
 
                 # 1. Warning still emitted even without fallback
                 mock_logger.assert_called_once()

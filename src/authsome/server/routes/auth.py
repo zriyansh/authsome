@@ -28,14 +28,14 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/sessions", response_model=AuthSessionResponse)
-def start_session(
+async def start_session(
     body: StartAuthSessionRequest,
     background_tasks: BackgroundTasks,
     auth: AuthService = Depends(get_auth_service),
     sessions: AuthSessionStore = Depends(get_auth_sessions),
     server_base_url: str = Depends(get_server_base_url),
 ) -> AuthSessionResponse:
-    definition = auth.get_provider(body.provider)
+    definition = await auth.get_provider(body.provider)
     flow = FlowType(body.flow) if body.flow else definition.flow
     session = sessions.create(
         provider=body.provider,
@@ -52,7 +52,7 @@ def start_session(
 
     if not body.force:
         try:
-            existing = auth.get_connection(body.provider, body.connection)
+            existing = await auth.get_connection(body.provider, body.connection)
             if auth._connection_is_valid(existing) and auth._requested_context_matches(
                 existing,
                 scopes=body.scopes,
@@ -64,13 +64,13 @@ def start_session(
         except Exception:
             pass
 
-    fields = auth.get_required_inputs(session, scopes=body.scopes, base_url=body.base_url)
+    fields = await auth.get_required_inputs(session, scopes=body.scopes, base_url=body.base_url)
     if fields:
         session.state = AuthSessionStatus.WAITING_FOR_USER
         session.payload["input_fields"] = [_field_to_payload(field) for field in fields]
         return _session_response(session, server_base_url)
 
-    auth.begin_login_flow(
+    await auth.begin_login_flow(
         session=session,
         scopes=body.scopes,
         force=body.force,
@@ -84,7 +84,7 @@ def start_session(
 
 
 @router.get("/sessions/{session_id}", response_model=AuthSessionResponse)
-def get_session(
+async def get_session(
     session_id: str,
     sessions: AuthSessionStore = Depends(get_auth_sessions),
     server_base_url: str = Depends(get_server_base_url),
@@ -93,7 +93,7 @@ def get_session(
 
 
 @router.post("/sessions/{session_id}/resume", response_model=AuthSessionResponse)
-def resume_session(
+async def resume_session(
     session_id: str,
     body: ResumeAuthSessionRequest,
     auth: AuthService = Depends(get_auth_service),
@@ -102,7 +102,7 @@ def resume_session(
 ) -> AuthSessionResponse:
     session = sessions.get(session_id)
     try:
-        record = auth.resume_login_flow(session, body.data)
+        record = await auth.resume_login_flow(session, body.data)
         if record is None:
             session.state = AuthSessionStatus.WAITING_FOR_USER
         else:
@@ -116,7 +116,7 @@ def resume_session(
 
 
 @router.get("/callback/oauth", response_class=HTMLResponse)
-def oauth_callback(
+async def oauth_callback(
     request: Request,
     auth: AuthService = Depends(get_auth_service),
     sessions: AuthSessionStore = Depends(get_auth_sessions),
@@ -133,7 +133,7 @@ def oauth_callback(
         )
     callback_data = dict(request.query_params)
     try:
-        auth.resume_login_flow(session, callback_data)
+        await auth.resume_login_flow(session, callback_data)
         session.state = AuthSessionStatus.COMPLETED
         session.status_message = "Login successful"
     except Exception as exc:
@@ -146,7 +146,7 @@ def oauth_callback(
 
 
 @router.get("/sessions/{session_id}/input", response_class=HTMLResponse)
-def input_page(
+async def input_page(
     session_id: str,
     auth: AuthService = Depends(get_auth_service),
     sessions: AuthSessionStore = Depends(get_auth_sessions),
@@ -158,13 +158,13 @@ def input_page(
             pages.message_page("Authentication session expired", "Please run authsome login again."),
             status_code=404,
         )
-    definition = auth.get_provider(session.provider)
+    definition = await auth.get_provider(session.provider)
     fields = session.payload.get("input_fields", [])
     return HTMLResponse(pages.input_page(session.session_id, definition.display_name, definition.docs, fields))
 
 
 @router.get("/sessions/{session_id}/device", response_class=HTMLResponse)
-def device_page(
+async def device_page(
     session_id: str,
     auth: AuthService = Depends(get_auth_service),
     sessions: AuthSessionStore = Depends(get_auth_sessions),
@@ -183,7 +183,7 @@ def device_page(
         return HTMLResponse(
             pages.message_page("Invalid session", "This session does not have a device code."), status_code=400
         )
-    definition = auth.get_provider(session.provider)
+    definition = await auth.get_provider(session.provider)
     return HTMLResponse(
         pages.device_code_page(definition.display_name, user_code, verification_uri, verification_uri_complete)
     )
@@ -202,11 +202,11 @@ async def submit_input(
     form = await request.form()
     inputs = {key: str(value) for key, value in form.items()}
 
-    auth.save_inputs(session, inputs)
+    await auth.save_inputs(session, inputs)
 
     flow = FlowType(session.flow_type)
     if flow == FlowType.API_KEY:
-        auth.resume_login_flow(session, {})
+        await auth.resume_login_flow(session, {})
         session.state = AuthSessionStatus.COMPLETED
         session.status_message = "Login successful"
         if return_url := session.payload.get("return_url"):
@@ -214,7 +214,7 @@ async def submit_input(
         return HTMLResponse(pages.message_page("Authentication successful", "You can close this window."))
 
     session.payload["callback_url_override"] = build_callback_url(server_base_url)
-    auth.begin_login_flow(
+    await auth.begin_login_flow(
         session=session,
         scopes=session.payload.get("requested_scopes"),
         force=bool(session.payload.get("force", False)),

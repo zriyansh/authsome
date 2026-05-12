@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import signal
@@ -30,26 +31,27 @@ class DaemonUnavailableError(RuntimeError):
     """Raised when the local daemon cannot be started or reached."""
 
 
-def ensure_daemon() -> AuthsomeApiClient:
+async def ensure_daemon() -> AuthsomeApiClient:
     """Return a ready daemon client, starting/restarting the daemon if needed."""
     client = AuthsomeApiClient(DEFAULT_DAEMON_URL)
-    if _is_ready(client):
+    if await _is_ready(client):
         return client
-    stop_daemon()
+    await stop_daemon()
     start_daemon()
+
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
-        if _is_ready(client):
+        if await _is_ready(client):
             return client
-        time.sleep(0.2)
+        await asyncio.sleep(0.2)
     raise DaemonUnavailableError(_startup_error())
 
 
-def resolve_runtime_client() -> AuthsomeApiClient:
+async def resolve_runtime_client() -> AuthsomeApiClient:
     """Return the configured runtime client, auto-starting only for local mode."""
     client = AuthsomeApiClient(resolve_daemon_url())
     if is_managed_local_daemon_url(client.base_url):
-        return ensure_daemon()
+        return await ensure_daemon()
     return client
 
 
@@ -73,7 +75,7 @@ def start_daemon() -> None:
     )
 
 
-def stop_daemon() -> None:
+async def stop_daemon() -> None:
     pid = _read_pid()
     if pid is None:
         # We do not have a local management record for a daemon.
@@ -85,12 +87,13 @@ def stop_daemon() -> None:
     except ProcessLookupError:
         _clear_daemon_files()
         return
+
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
         if not _process_alive(pid):
             _clear_daemon_files()
             return
-        time.sleep(0.2)
+        await asyncio.sleep(0.2)
     try:
         os.kill(pid, signal.SIGKILL)
     except ProcessLookupError:
@@ -98,19 +101,19 @@ def stop_daemon() -> None:
     _clear_daemon_files()
 
 
-def daemon_status() -> dict[str, Any]:
+async def daemon_status() -> dict[str, Any]:
     client = AuthsomeApiClient(DEFAULT_DAEMON_URL)
     try:
-        health = client.health()
-        ready = client.ready()
+        health = await client.health()
+        ready = await client.ready()
         return {"running": True, "health": health, "ready": ready, "pid_file": str(PID_FILE), "log_file": str(LOG_FILE)}
     except Exception as exc:
         return {"running": False, "error": str(exc), "pid_file": str(PID_FILE), "log_file": str(LOG_FILE)}
 
 
-def _is_ready(client: AuthsomeApiClient) -> bool:
+async def _is_ready(client: AuthsomeApiClient) -> bool:
     try:
-        health = client.health()
+        health = await client.health()
         from authsome import __version__
 
         if health.get("version") != __version__:
@@ -118,7 +121,7 @@ def _is_ready(client: AuthsomeApiClient) -> bool:
 
         if health.get("status") != "ok":
             return False
-        client.ready()
+        await client.ready()
         return True
     except Exception:
         return False

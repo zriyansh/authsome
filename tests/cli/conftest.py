@@ -9,7 +9,7 @@ seam between the CLI and the daemon API.
 """
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from click.testing import CliRunner
@@ -22,9 +22,9 @@ def runner() -> CliRunner:
 
 
 @pytest.fixture
-def mock_client() -> MagicMock:
+def mock_client() -> AsyncMock:
     """Pre-configured mock of AuthsomeApiClient with sane defaults."""
-    client = MagicMock()
+    client = AsyncMock()
     client.base_url = "http://127.0.0.1:7998"
 
     # Default whoami response
@@ -52,7 +52,7 @@ def mock_client() -> MagicMock:
 
 
 @pytest.fixture(autouse=True)
-def _patch_runtime(mock_client: MagicMock, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def _patch_runtime(mock_client: AsyncMock, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Replace resolve_runtime_client so CLI commands get the mock client.
 
     Also patch audit.setup and audit.log to prevent real file writes,
@@ -60,14 +60,16 @@ def _patch_runtime(mock_client: MagicMock, monkeypatch: pytest.MonkeyPatch, tmp_
     """
     monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
 
+    from unittest import mock
+
     import authsome.cli.daemon_control as dc
 
-    monkeypatch.setattr(dc, "resolve_runtime_client", lambda: mock_client)
+    monkeypatch.setattr(dc, "resolve_runtime_client", mock.AsyncMock(return_value=mock_client))
 
     import authsome.cli.context as context_mod
     import authsome.cli.main as main_mod
 
-    monkeypatch.setattr(context_mod, "resolve_runtime_client", lambda: mock_client)
+    monkeypatch.setattr(context_mod, "resolve_runtime_client", mock.AsyncMock(return_value=mock_client))
     monkeypatch.setattr(main_mod.audit, "setup", lambda *a, **kw: None)
     monkeypatch.setattr(main_mod.audit, "log", lambda *a, **kw: None)
 
