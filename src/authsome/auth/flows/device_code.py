@@ -192,8 +192,8 @@ class DeviceCodeFlow(AuthFlow):
                     f"Token endpoint error: {exc.description or exc.error}",
                     provider=provider.name,
                 ) from exc
-            except requests.RequestException as exc:
-                logger.warning("Token poll request failed: {}, retrying...", exc)
+            except (requests.RequestException, json.JSONDecodeError) as exc:
+                logger.warning("Token poll failed ({}), retrying...", exc)
                 continue
 
             return token
@@ -202,6 +202,14 @@ class DeviceCodeFlow(AuthFlow):
 
     @staticmethod
     def _fetch_token_json(client: OAuth2Session, provider: ProviderDefinition, device_code: str) -> dict[str, Any]:
+        """Poll the token endpoint with a JSON body (GitHub variant).
+
+        authlib's session only encodes form bodies, so this routes the request
+        manually but still funnels the response through
+        :meth:`OAuth2Session.parse_response_token`, which raises ``OAuthError``
+        on the standard error codes (``authorization_pending``, ``slow_down``,
+        etc.) so the caller's loop can react uniformly.
+        """
         assert provider.oauth is not None
         resp = requests.post(
             provider.oauth.token_url,
@@ -209,8 +217,4 @@ class DeviceCodeFlow(AuthFlow):
             headers={"Accept": "application/json", "Content-Type": "application/json"},
             timeout=30,
         )
-        try:
-            return dict(client.parse_response_token(resp))
-        except json.JSONDecodeError:
-            logger.warning("Token poll response was not JSON, retrying...")
-            raise requests.RequestException("Non-JSON token response") from None
+        return dict(client.parse_response_token(resp))

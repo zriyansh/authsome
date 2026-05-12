@@ -6,9 +6,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urlencode
 
-import requests as http_client
+from authlib.integrations.requests_client import OAuth2Session
 from loguru import logger
 
 from authsome.auth.models.connection import AccountInfo, ConnectionRecord, ProviderClientRecord
@@ -89,34 +88,35 @@ class AuthFlow(ABC):
         """Revoke stored credentials on the remote server (RFC 7009).
 
         Attempts to revoke the access token first, then the refresh token.
-        Supplied client credentials will be included in the payload if provided.
-        All exceptions are swallowed and logged as warnings to avoid disrupting the logout flow.
+        All exceptions are swallowed and logged as warnings so revocation
+        failures cannot block the rest of the logout flow.
         """
         revocation_url = provider.oauth.revocation_url if provider.oauth else None
         if not revocation_url:
             return
 
-        def _do_revoke(token: str, token_type: str) -> None:
-            payload = {"token": token}
-            if client_id:
-                payload["client_id"] = client_id
-            if client_secret:
-                payload["client_secret"] = client_secret
+        client = OAuth2Session(
+            client_id=client_id,
+            client_secret=client_secret,
+            revocation_endpoint_auth_method="client_secret_post" if client_secret else "none",
+        )
 
+        def _do_revoke(token: str, token_type_hint: str) -> None:
             try:
-                http_client.post(
+                client.revoke_token(
                     revocation_url,
-                    data=payload,
+                    token=token,
+                    token_type_hint=token_type_hint,
                     timeout=15,
                 )
             except Exception as exc:
-                logger.warning(f"{token_type.capitalize()} token revocation failed (continuing): {{}}", exc)
+                logger.warning(f"{token_type_hint} revocation failed (continuing): {{}}", exc)
 
         if record.access_token:
-            _do_revoke(record.access_token, "access")
+            _do_revoke(record.access_token, "access_token")
 
         if record.refresh_token:
-            _do_revoke(record.refresh_token, "refresh")
+            _do_revoke(record.refresh_token, "refresh_token")
 
 
 def token_to_connection_record(
@@ -127,7 +127,11 @@ def token_to_connection_record(
     connection_name: str,
     scopes: list[str],
 ) -> ConnectionRecord:
-    """Build a ConnectionRecord from an authlib OAuth2Token dict."""
+    """Build a ConnectionRecord from an OAuth2 token response.
+
+    Accepts the dict-shaped token returned by ``OAuth2Session.fetch_token``
+    or any equivalent token response with the standard RFC 6749 fields.
+    """
     now = utc_now()
     expires_in = token.get("expires_in")
     return ConnectionRecord(
@@ -145,11 +149,3 @@ def token_to_connection_record(
         obtained_at=now,
         account=AccountInfo(),
     )
-
-
-def build_authorization_response(callback_data: dict[str, Any], redirect_uri: str) -> str:
-    """Build a callback URL for authlib authorization_response parsing."""
-    params = {k: v for k, v in callback_data.items() if v is not None}
-    query = urlencode(params, doseq=True)
-    sep = "&" if "?" in redirect_uri else "?"
-    return f"{redirect_uri}{sep}{query}" if query else redirect_uri
