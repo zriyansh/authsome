@@ -53,25 +53,61 @@ def input_page(
     callback_hint = ""
     if callback_url:
         callback_hint = f"""
-        <p style="margin: -12px 0 24px; font-size: 12px; line-height: 1.5; color: var(--muted);">
-          OAuth Redirect URI:<br>
-          <code style="
-            font-family: ui-monospace, monospace;
-            background: #111;
-            border: 1px solid var(--line);
-            padding: 2px 4px;
-            border-radius: 4px;
-            color: var(--accent);
-            word-break: break-all;
-            display: inline-block;
-            margin-top: 4px;
-          ">{html.escape(callback_url)}</code>
-        </p>
+        <div style="margin: -8px 0 24px;">
+          <label style="font-size: 12px; color: var(--muted); margin-bottom: 6px; display: block;">
+            OAuth Redirect URI
+          </label>
+          <div style="display: flex; gap: 6px; align-items: stretch;">
+            <input type="text" id="cb-uri" value="{html.escape(callback_url)}" readonly style="
+              flex: 1;
+              min-width: 0;
+              font-family: ui-monospace, monospace;
+              font-size: 13px;
+              background: #111;
+              color: var(--accent);
+              padding: 8px 10px;
+              border: 1px solid var(--line);
+              border-radius: 6px;
+            ">
+            <button type="button" onclick="copyUri(this)" style="
+              width: auto;
+              margin: 0;
+              padding: 0 14px;
+              font-size: 13px;
+              font-weight: 500;
+              background: var(--panel);
+              border: 1px solid var(--line);
+              color: var(--text);
+              border-radius: 6px;
+              cursor: pointer;
+              white-space: nowrap;
+            ">Copy</button>
+          </div>
+        </div>
         """
 
     optional = ""
     if optional_rows:
         optional = f"<details><summary>Advanced options</summary>{''.join(optional_rows)}</details>"
+
+    script = ""
+    if callback_url:
+        script = """
+    <script>
+      function copyUri(btn) {
+        var el = document.getElementById("cb-uri");
+        el.select();
+        el.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(el.value);
+        var orig = btn.innerText;
+        btn.innerText = "Copied!";
+        btn.style.borderColor = "var(--accent)";
+        setTimeout(function() {
+          btn.innerText = orig;
+          btn.style.borderColor = "var(--line)";
+        }, 2000);
+      }
+    </script>"""
 
     return f"""<!doctype html>
 <html>
@@ -91,7 +127,7 @@ def input_page(
         {optional}
         <button type="submit">Continue</button>
       </form>
-    </main>
+    </main>{script}
   </body>
 </html>"""
 
