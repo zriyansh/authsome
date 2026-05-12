@@ -52,6 +52,7 @@ a {
   text-decoration: none;
 }
 a:hover { color: var(--accent); }
+form { margin-top: 16px; }
 .field-group { margin-bottom: 16px; }
 label {
   display: block;

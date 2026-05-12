@@ -53,7 +53,7 @@ def input_page(
     callback_hint = ""
     if callback_url:
         callback_hint = f"""
-        <div style="margin: -8px 0 24px;">
+        <div style="margin: 16px 0 24px;">
           <label style="font-size: 12px; color: var(--muted); margin-bottom: 6px; display: block;">
             OAuth Redirect URI
           </label>
