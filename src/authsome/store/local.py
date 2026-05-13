@@ -93,9 +93,6 @@ def _ensure_macos_keychain_ca() -> None:
     """
     if sys.platform != "darwin":
         return
-    if os.environ.get("AUTHSOME_SKIP_KEYCHAIN", "").lower() in ("1", "true", "yes"):
-        logger.debug("Skipping macOS keychain integration due to AUTHSOME_SKIP_KEYCHAIN")
-        return
 
     keychain = Path.home() / "Library/Keychains/login.keychain-db"
     if not keychain.exists():
