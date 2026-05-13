@@ -11,6 +11,8 @@ description: |
 
 ## Usage
 
+Authsome is a local credential broker. It stores OAuth tokens and API keys encrypted on disk, then injects them as HTTP headers via a local proxy — commands running under `authsome run` never see the actual credentials.
+
 ```bash
 authsome run -- <command>
 ```
