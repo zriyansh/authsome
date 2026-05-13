@@ -60,7 +60,7 @@ class ProxyRunner:
             # NODE_EXTRA_CA_CERTS adds to (not replaces) Node's built-in CAs
             env["NODE_EXTRA_CA_CERTS"] = str(server.ca_cert_path)
             logger.debug("CA bundle injected: {}", ca_bundle_path)
-            
+
             # On macOS, Go's crypto/x509 ignores SSL_CERT_FILE and delegates to
             # the native Security framework, so we must add the CA to the login
             # keychain for tools like gh, terraform, and kubectl to trust it.
@@ -68,8 +68,17 @@ class ProxyRunner:
             # to avoid unnecessary keychain prompts.
             cmd_name = Path(command[0]).name.lower() if command else ""
             skip_keychain_cmds = {
-                "curl", "wget", "git", "python", "python3", 
-                "node", "npm", "npx", "yarn", "pnpm", "uv"
+                "curl",
+                "wget",
+                "git",
+                "python",
+                "python3",
+                "node",
+                "npm",
+                "npx",
+                "yarn",
+                "pnpm",
+                "uv",
             }
             if cmd_name not in skip_keychain_cmds:
                 self._add_ca_to_macos_keychain(server.ca_cert_path)
