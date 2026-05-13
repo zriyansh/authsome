@@ -754,9 +754,6 @@ class AuthService:
             counter += 1
         return candidate
 
-    def _export_name_part(self, value: str) -> str:
-        return re.sub(r"[^A-Z0-9]+", "_", value.upper()).strip("_")
-
     # ── Identity operations ───────────────────────────────────────────────
 
     async def get_identity(self, name: str) -> str:
