@@ -15,12 +15,19 @@ Authsome connects your agent to external services with zero secret handling. The
 
 ## Step 0 — Setup
 
-Use `uvx` for the fastest, isolated setup. In your commands, `authsome` refers to the executable (e.g., `uvx authsome@latest` or `pipx run authsome`).
+Install authsome once as a persistent tool so `authsome` is available directly in your shell without reinstalling on every invocation:
 
 ```bash
-# Recommended
-alias authsome="uvx authsome@latest"
+uv tool install authsome
 ```
+
+Verify the installation:
+
+```bash
+authsome --version
+```
+
+> **Fallback:** If `uv` is unavailable, use `pipx install authsome`. For a one-off run without installing, use `uvx authsome@latest <command>`.
 
 ---
 
