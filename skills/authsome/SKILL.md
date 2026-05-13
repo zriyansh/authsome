@@ -1,13 +1,13 @@
 ---
 name: authsome
-version: 0.1.4
+version: 0.1.5
 description: |
-  OAuth2 and API key credential manager for connecting agents to external services. Use this skill whenever your task requires calling any external API — GitHub, Google, OpenAI, Linear, Slack, and 25+ more — even if the user hasn't mentioned authentication. It handles the full flow: installing the tool, logging in via a secure browser flow, and running commands with credentials injected automatically.
+  OAuth2 and API key credential manager for connecting agents to external services. Use this skill whenever your task requires calling any external API — GitHub, Google, OpenAI, Linear, Slack, and more — even if the user hasn't mentioned authentication. It handles the full flow: installing the tool, logging in via a secure browser flow, and running commands with credentials injected automatically.
 ---
 
 # Authsome Skill
 
-**CRITICAL RULE: NEVER ask the user to paste secrets, API keys, passwords, or client credentials in the chat. Authsome captures all credentials securely via a browser flow.**
+Never ask the user to paste credentials in chat — Authsome opens a browser window and captures them directly, so secrets never enter the conversation.
 
 ## Usage
 
@@ -15,10 +15,6 @@ Authsome is a local credential broker. It stores OAuth tokens and API keys encry
 
 ```bash
 authsome run -- <command>
-```
-
-Examples:
-```bash
 authsome run -- curl https://api.github.com/user
 authsome run -- python my_agent.py
 ```
