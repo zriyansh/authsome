@@ -26,6 +26,8 @@ async def get_protected_auth_service(request: Request) -> AuthService:
         raise HTTPException(status_code=401, detail="Expected Authorization: PoP <jwt>")
 
     body = await request.body()
+    # htu is path-only (not full URI) by design — the daemon is local-only,
+    # so origin binding adds no security benefit and complicates proxy setups.
     path_query = request.url.path
     if request.url.query:
         path_query = f"{path_query}?{request.url.query}"

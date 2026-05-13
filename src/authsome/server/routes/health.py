@@ -42,15 +42,7 @@ async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
         checks["version_compatibility"] = "failed"
         issues.append(f"config: {exc}")
 
-    # 2. Profiles Count Check
-    try:
-        await auth.list_profiles()
-        checks["profiles"] = "ok"
-    except Exception as exc:
-        checks["profiles"] = "failed"
-        issues.append(f"profiles: {exc}")
-
-    # 3. Providers List Check
+    # 2. Providers List Check
     try:
         await auth.list_providers()
         checks["providers"] = "ok"

@@ -760,12 +760,21 @@ async def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> No
 @auth_command
 async def init(ctx_obj: ContextObj) -> None:
     """Initialize local storage and register a fresh identity."""
-    from authsome.identity import ensure_local_identity
+    from authsome.identity import ensure_local_identity, mark_registered
+    from authsome.store.local import LocalAppStore
 
     home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
-    identity = ensure_local_identity(home)
+    store = LocalAppStore(home)
+    await store.ensure_initialized()
+    config = await store.get_config()
+    identity = ensure_local_identity(home, active_handle=config.active_identity)
+
     actx = await ctx_obj.initialize()
     await actx.runtime_client.register_identity(identity.handle, identity.did)
+    identity = mark_registered(home, identity.handle)
+
+    config = config.model_copy(update={"active_identity": identity.handle})
+    await store.save_config(config)
 
     data = {
         "status": "initialized",

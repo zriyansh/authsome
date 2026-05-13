@@ -54,15 +54,9 @@ class IdentityMetadata(BaseModel):
 
     handle: str
     did: str
-    name: str | None = None
-    description: str | None = None
-    owner_email: str | None = None
     registered: bool = False
-    registration_status: str = "local"
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-
-    model_config = {"extra": "allow"}
 
 
 def identities_dir(home: Path) -> Path:
@@ -168,7 +162,6 @@ def create_identity(home: Path, handle: str | None = None) -> IdentityMetadata:
     metadata = IdentityMetadata(
         handle=resolved_handle,
         did=did,
-        name=resolved_handle,
         created_at=now,
         updated_at=now,
     )
@@ -193,15 +186,30 @@ def remove_legacy_default_identity(home: Path) -> None:
             pass
 
 
-def ensure_local_identity(home: Path) -> IdentityMetadata:
-    """Ensure a non-default local identity exists."""
+def mark_registered(home: Path, handle: str) -> IdentityMetadata:
+    """Persist registered=True for a local identity after daemon registration."""
+    metadata = load_identity(home, handle)
+    updated = metadata.model_copy(update={"registered": True, "updated_at": datetime.now(UTC)})
+    identity_metadata_path(home, handle).write_text(updated.model_dump_json(indent=2), encoding="utf-8")
+    return updated
+
+
+def ensure_local_identity(home: Path, active_handle: str | None = None) -> IdentityMetadata:
+    """Return the active local identity, creating one if none exists.
+
+    If *active_handle* is provided (from GlobalConfig.active_identity) it must
+    exist on disk — a missing key file is a hard error rather than a silent
+    re-creation, because the old profile's credentials would become inaccessible
+    with no explanation.
+    """
     remove_legacy_default_identity(home)
-    directory = identities_dir(home)
-    if directory.exists():
-        for metadata_path in sorted(directory.glob("*.json")):
-            handle = metadata_path.stem
-            if handle != "default" and identity_exists(home, handle):
-                return load_identity(home, handle)
+    if active_handle:
+        if not identity_exists(home, active_handle):
+            raise FileNotFoundError(
+                f"Configured identity '{active_handle}' not found at {identities_dir(home)}. "
+                "Run 'authsome init' to create and register a new identity."
+            )
+        return load_identity(home, active_handle)
     return create_identity(home)
 
 

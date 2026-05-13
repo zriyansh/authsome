@@ -29,7 +29,6 @@ from authsome.auth.models.connection import (
     ProviderStateRecord,
 )
 from authsome.auth.models.enums import AuthType, ConnectionStatus, ExportFormat, FlowType
-from authsome.auth.models.profile import ProfileMetadata
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.auth.sessions import AuthSession
 from authsome.errors import (
@@ -37,7 +36,6 @@ from authsome.errors import (
     ConnectionNotFoundError,
     CredentialMissingError,
     InvalidProviderSchemaError,
-    ProfileNotFoundError,
     ProviderAlreadyRegisteredError,
     ProviderNotFoundError,
     RefreshFailedError,
@@ -778,39 +776,6 @@ class AuthService:
         return re.sub(r"[^A-Z0-9]+", "_", value.upper()).strip("_")
 
     # ── Profile operations ────────────────────────────────────────────────
-
-    async def list_profiles(self) -> list[ProfileMetadata]:
-        profiles = []
-        for name in await self._vault.list(collection="profiles"):
-            try:
-                profiles.append(await self.get_profile(name))
-            except Exception as e:
-                logger.warning("Failed to load profile {}: {}", name, e)
-        return sorted(profiles, key=lambda p: p.name)
-
-    async def get_profile(self, name: str) -> ProfileMetadata:
-        raw = await self._vault.get(name, collection="profiles")
-        if raw is None:
-            raise ProfileNotFoundError(name)
-        return ProfileMetadata.model_validate_json(raw)
-
-    async def set_default_profile(self, name: str) -> None:
-        _ = name
-        raise AuthsomeError("Implicit default profiles have been removed; use a registered identity handle")
-
-    async def create_profile(self, name: str, description: str = "") -> ProfileMetadata:
-        if (await self._vault.get(name, collection="profiles")) is not None:
-            raise ValueError(f"Profile {name} already exists")
-
-        now = utc_now()
-        metadata = ProfileMetadata(
-            name=name,
-            created_at=now,
-            updated_at=now,
-            description=description,
-        )
-        await self._vault.put(name, metadata.model_dump_json(indent=2), collection="profiles")
-        return metadata
 
     # ── Internal helpers ──────────────────────────────────────────────────
 

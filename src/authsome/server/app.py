@@ -44,7 +44,7 @@ def create_app() -> FastAPI:
     def authsome_error_handler(request: Request, exc: AuthsomeError) -> JSONResponse:
         status_code = 400
         exc_name = exc.__class__.__name__
-        if exc_name in ("ConnectionNotFoundError", "ProviderNotFoundError", "ProfileNotFoundError"):
+        if exc_name in ("ConnectionNotFoundError", "ProviderNotFoundError"):
             status_code = 404
         elif exc_name == "CredentialMissingError":
             status_code = 401

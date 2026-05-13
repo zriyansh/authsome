@@ -9,7 +9,6 @@ from authsome.auth.models.connection import (
     Sensitive,
 )
 from authsome.auth.models.enums import AuthType, ConnectionStatus, ExportFormat, FlowType
-from authsome.auth.models.profile import ProfileMetadata
 from authsome.auth.models.provider import ApiKeyConfig, OAuthConfig, ProviderDefinition
 
 
@@ -50,30 +49,9 @@ class TestGlobalConfig:
         assert restored.spec_version == 1
 
     def test_extra_fields_preserved(self) -> None:
-        config = GlobalConfig.model_validate({"spec_version": 1, "default_profile": "x", "custom": "val"})
+        config = GlobalConfig.model_validate({"spec_version": 1, "custom": "val"})
         dumped = config.model_dump()
-        assert dumped.get("default_profile") == "x"
         assert dumped.get("custom") == "val"
-
-
-class TestProfileMetadata:
-    """Profile metadata model tests."""
-
-    def test_required_fields(self) -> None:
-        meta = ProfileMetadata(name="test")
-        assert meta.name == "test"
-        assert meta.created_at is not None
-        assert meta.updated_at is not None
-
-    def test_json_roundtrip(self) -> None:
-        meta = ProfileMetadata(
-            name="work",
-            description="Work profile",
-        )
-        json_str = meta.model_dump_json()
-        restored = ProfileMetadata.model_validate_json(json_str)
-        assert restored.name == "work"
-        assert restored.description == "Work profile"
 
 
 class TestProviderDefinition:

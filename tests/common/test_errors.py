@@ -8,7 +8,6 @@ from authsome.errors import (
     DiscoveryError,
     EncryptionUnavailableError,
     InvalidProviderSchemaError,
-    ProfileNotFoundError,
     ProviderNotFoundError,
     RefreshFailedError,
     StoreUnavailableError,
@@ -77,11 +76,6 @@ def test_provider_not_found_error():
 def test_invalid_provider_schema_error():
     err = InvalidProviderSchemaError("bad json", provider="github")
     assert "Invalid provider schema: bad json" in str(err)
-
-
-def test_profile_not_found_error():
-    err = ProfileNotFoundError("work")
-    assert "Profile 'work' not found" in str(err)
 
 
 def test_connection_not_found_error():
