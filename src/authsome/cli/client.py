@@ -193,9 +193,11 @@ class AuthsomeApiClient:
         return result["output"]
 
     async def proxy_routes(self) -> dict[str, Any]:
+        """Return proxy routes from a PoP-protected daemon endpoint."""
         return await self._get("/proxy/routes")
 
     async def resolve_credentials(self, **kwargs: Any) -> dict[str, Any]:
+        """Resolve proxy credentials from a PoP-protected daemon endpoint."""
         return await self._post("/credentials/resolve", kwargs)
 
     async def whoami(self) -> dict[str, Any]:

@@ -782,6 +782,64 @@ async def init(ctx_obj: ContextObj) -> None:
         ctx_obj.echo(f"DID: {identity.did}")
 
 
+@cli.group()
+def identity() -> None:
+    """Manage local identities and server registration."""
+
+
+@identity.command(name="create")
+@click.option("--handle", default=None, metavar="HANDLE", help="Create or reuse a specific local identity handle.")
+@auth_command
+async def identity_create(ctx_obj: ContextObj, handle: str | None) -> None:
+    """Create a local identity keypair."""
+    from authsome.identity.keys import create_identity
+
+    home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
+    identity_meta = create_identity(home, handle)
+
+    data = {
+        "status": "created",
+        "home": str(home),
+        "identity": identity_meta.handle,
+        "did": identity_meta.did,
+        "registration_status": identity_meta.registration_status,
+    }
+    if ctx_obj.json_output:
+        ctx_obj.print_json(data)
+    else:
+        ctx_obj.echo(f"Created local identity {identity_meta.handle}", color="green")
+        ctx_obj.echo(f"DID: {identity_meta.did}")
+
+
+@identity.command(name="register")
+@click.argument("handle", required=False)
+@auth_command
+async def identity_register(ctx_obj: ContextObj, handle: str | None) -> None:
+    """Register a local identity with the daemon."""
+    from authsome.identity import ensure_local_identity
+    from authsome.identity.keys import load_identity
+
+    home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
+    if handle:
+        identity_meta = load_identity(home, handle)
+    else:
+        identity_meta = ensure_local_identity(home)
+
+    actx = await ctx_obj.initialize()
+    result = await actx.runtime_client.register_identity(identity_meta.handle, identity_meta.did)
+
+    data = {
+        "status": result.get("status", "registered"),
+        "identity": result.get("identity", identity_meta.handle),
+        "did": result.get("did", identity_meta.did),
+    }
+    if ctx_obj.json_output:
+        ctx_obj.print_json(data)
+    else:
+        ctx_obj.echo(f"Registered identity {data['identity']}", color="green")
+        ctx_obj.echo(f"DID: {data['did']}")
+
+
 @cli.command()
 @auth_command
 async def whoami(ctx_obj: ContextObj) -> None:

@@ -29,7 +29,7 @@ async def _save_connection_record(
 ) -> None:
     record = ConnectionRecord(
         provider=provider_name,
-        profile=auth._identity,
+        identity=auth._identity,
         connection_name=connection_name,
         auth_type=AuthType.API_KEY,
         status=ConnectionStatus.CONNECTED,

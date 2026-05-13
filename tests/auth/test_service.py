@@ -38,7 +38,7 @@ class TestAuthServiceRefreshLogs:
 
         record = ConnectionRecord(
             provider="github",
-            profile="test-profile",
+            identity="test-profile",
             connection_name="default",
             auth_type=AuthType.OAUTH2,
             status=ConnectionStatus.CONNECTED,
@@ -80,7 +80,7 @@ class TestAuthServiceRefreshLogs:
 
         record = ConnectionRecord(
             provider="github",
-            profile="test-profile",
+            identity="test-profile",
             connection_name="default",
             auth_type=AuthType.OAUTH2,
             status=ConnectionStatus.CONNECTED,

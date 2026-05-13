@@ -42,13 +42,13 @@ async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
         checks["version_compatibility"] = "failed"
         issues.append(f"config: {exc}")
 
-    # 2. Profiles Count Check
+    # 2. Active Identity Check
     try:
-        await auth.list_profiles()
-        checks["profiles"] = "ok"
+        await auth.get_identity(auth.identity)
+        checks["identity"] = "ok"
     except Exception as exc:
-        checks["profiles"] = "failed"
-        issues.append(f"profiles: {exc}")
+        checks["identity"] = "failed"
+        issues.append(f"identity: {exc}")
 
     # 3. Providers List Check
     try:
@@ -81,7 +81,7 @@ async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
         else:
             checks["vault"] = "ok"
 
-        if not await auth.vault.check_integrity(profile=auth.identity):
+        if not await auth.vault.check_integrity(identity=auth.identity):
             issues.append("vault: store failed integrity check")
             checks["integrity"] = "failed"
         else:

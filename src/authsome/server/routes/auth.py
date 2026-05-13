@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from authsome.auth import AuthService
@@ -44,7 +44,7 @@ async def start_session(
     flow = FlowType(body.flow) if body.flow else definition.flow
     session = sessions.create(
         provider=body.provider,
-        profile=auth.identity,
+        identity=auth.identity,
         connection_name=body.connection,
         flow_type=flow.value,
     )
@@ -95,8 +95,10 @@ async def get_session(
     sessions: AuthSessionStore = Depends(get_auth_sessions),
     server_base_url: str = Depends(get_server_base_url),
 ) -> AuthSessionResponse:
-    _ = auth
-    return _session_response(sessions.get(session_id), server_base_url)
+    session = sessions.get(session_id)
+    if session.identity != auth.identity:
+        raise HTTPException(status_code=404, detail="Authentication session not found")
+    return _session_response(session, server_base_url)
 
 
 @router.post("/sessions/{session_id}/resume", response_model=AuthSessionResponse)
@@ -108,6 +110,8 @@ async def resume_session(
     server_base_url: str = Depends(get_server_base_url),
 ) -> AuthSessionResponse:
     session = sessions.get(session_id)
+    if session.identity != auth.identity:
+        raise HTTPException(status_code=404, detail="Authentication session not found")
     try:
         record = await auth.resume_login_flow(session, body.data)
         if record is None:
@@ -138,7 +142,7 @@ async def oauth_callback(
             status_code=400,
         )
     callback_data = dict(request.query_params)
-    auth = get_auth_service_for_identity(request, session.profile)
+    auth = get_auth_service_for_identity(request, session.identity)
     try:
         await auth.resume_login_flow(session, callback_data)
         session.state = AuthSessionStatus.COMPLETED
@@ -166,7 +170,7 @@ async def input_page(
             pages.message_page("Authentication session expired", "Please run authsome login again."),
             status_code=404,
         )
-    auth = get_auth_service_for_identity(request, session.profile)
+    auth = get_auth_service_for_identity(request, session.identity)
     definition = await auth.get_provider(session.provider)
     fields = session.payload.get("input_fields", [])
 
@@ -205,7 +209,7 @@ async def device_page(
         return HTMLResponse(
             pages.message_page("Invalid session", "This session does not have a device code."), status_code=400
         )
-    auth = get_auth_service_for_identity(request, session.profile)
+    auth = get_auth_service_for_identity(request, session.identity)
     definition = await auth.get_provider(session.provider)
     return HTMLResponse(
         pages.device_code_page(definition.display_name, user_code, verification_uri, verification_uri_complete)
@@ -221,7 +225,7 @@ async def submit_input(
     server_base_url: str = Depends(get_server_base_url),
 ):
     session = sessions.get(session_id)
-    auth = get_auth_service_for_identity(request, session.profile)
+    auth = get_auth_service_for_identity(request, session.identity)
     form = await request.form()
     inputs = {key: str(value) for key, value in form.items()}
 
