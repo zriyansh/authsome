@@ -6,8 +6,12 @@ from fastapi import HTTPException, Request
 
 from authsome.auth import AuthService
 from authsome.auth.sessions import AuthSessionStore
+from authsome.identity import current_from_home
 from authsome.identity.proof import POP_AUTH_SCHEME, ProofValidationError, validate_proof_jwt
 from authsome.server.dependencies import get_deployment_mode
+from authsome.server.ui_sessions import UiSessionStore
+
+UI_SESSION_COOKIE_NAME = "authsome_ui_session"
 
 
 def get_auth_service(request: Request) -> AuthService:
@@ -65,3 +69,28 @@ def get_auth_sessions(request: Request) -> AuthSessionStore:
 
 def get_server_base_url(request: Request) -> str:
     return request.app.state.server_base_url
+
+
+def get_ui_sessions(request: Request) -> UiSessionStore:
+    return request.app.state.ui_sessions
+
+
+async def resolve_ui_request_identity(request: Request) -> str | None:
+    """Resolve the identity bound to a browser UI request."""
+    if get_deployment_mode() != "hosted":
+        identity = await current_from_home(request.app.state.vault.home)
+        request.state.ui_identity = identity.handle
+        return identity.handle
+
+    cookie_value = request.cookies.get(UI_SESSION_COOKIE_NAME)
+    if not cookie_value:
+        return None
+
+    try:
+        session = request.app.state.ui_sessions.get_session(cookie_value)
+    except KeyError:
+        return None
+
+    request.state.ui_identity = session.identity
+    request.state.ui_session_id = session.session_id
+    return session.identity

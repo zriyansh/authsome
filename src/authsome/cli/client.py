@@ -211,3 +211,6 @@ class AuthsomeApiClient:
 
     async def doctor(self) -> dict[str, Any]:
         return await self.ready()
+
+    async def start_ui_session(self) -> dict[str, Any]:
+        return await self._post("/ui/session")

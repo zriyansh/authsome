@@ -939,7 +939,8 @@ async def doctor(ctx_obj: ContextObj) -> None:
 async def ui(ctx_obj: ContextObj, no_browser: bool) -> None:
     """Open the daemon dashboard in the browser."""
     actx = await ctx_obj.initialize()
-    url = f"{actx.runtime_client.base_url}/ui/"
+    session = await actx.runtime_client.start_ui_session()
+    url = session["url"]
     if no_browser:
         ctx_obj.echo(url)
         return

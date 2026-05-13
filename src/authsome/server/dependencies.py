@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import os
+import secrets
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from authsome.auth import AuthService
 
+from authsome.identity import current_from_home
 from authsome.identity.registry import IdentityRegistry
 from authsome.server.urls import build_server_base_url
 from authsome.store.local import LocalAppStore
@@ -23,6 +25,11 @@ def get_authsome_home() -> Path:
 def get_server_home(home: Path | None = None) -> Path:
     """Return the daemon-owned state directory."""
     return (home or get_authsome_home()) / "server"
+
+
+def get_ui_session_secret_path(home: Path | None = None) -> Path:
+    """Return the hosted UI session signing-secret path."""
+    return get_server_home(home) / "ui_session_secret.key"
 
 
 def get_server_base_url() -> str:
@@ -40,6 +47,25 @@ def list_registered_identity_handles(home: Path | None = None) -> list[str]:
     """Return identity handles registered with this daemon."""
     registry = IdentityRegistry(get_server_home(home))
     return registry.list_handles()
+
+
+def load_ui_session_signing_secret(home: Path | None = None) -> str:
+    """Load or create the hosted UI session signing secret."""
+    path = get_ui_session_secret_path(home)
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        secret = secrets.token_hex(32)
+        path.write_text(secret, encoding="utf-8")
+        os.chmod(path, 0o600)
+        return secret
+
+
+async def get_local_ui_identity(home: Path | None = None) -> str:
+    """Resolve the local active identity handle for the server-rendered UI."""
+    identity = await current_from_home(home or get_authsome_home())
+    return identity.handle
 
 
 async def create_vault(home: Path | None = None) -> Vault:
