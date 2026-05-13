@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from authsome.auth import AuthService
 
+from authsome.identity.registry import IdentityRegistry
 from authsome.server.urls import build_server_base_url
 from authsome.store.local import LocalAppStore
 from authsome.vault import Vault
@@ -27,6 +28,18 @@ def get_server_home(home: Path | None = None) -> Path:
 def get_server_base_url() -> str:
     """Return the daemon's canonical external base URL."""
     return build_server_base_url()
+
+
+def get_deployment_mode() -> str:
+    """Return the daemon deployment mode."""
+    mode = os.environ.get("AUTHSOME_DEPLOYMENT_MODE", "local").strip().lower()
+    return "hosted" if mode == "hosted" else "local"
+
+
+def list_registered_identity_handles(home: Path | None = None) -> list[str]:
+    """Return identity handles registered with this daemon."""
+    registry = IdentityRegistry(get_server_home(home))
+    return registry.list_handles()
 
 
 async def create_vault(home: Path | None = None) -> Vault:
@@ -54,4 +67,4 @@ async def create_auth_service(home: Path | None = None, identity: str | None = N
     if not identity:
         raise ValueError("create_auth_service requires an explicit identity handle")
     vault = await create_vault(home)
-    return AuthService(vault=vault, identity=identity)
+    return AuthService(vault=vault, identity=identity, deployment_mode=get_deployment_mode())

@@ -10,6 +10,7 @@ from authsome.auth.models.connection import (
 )
 from authsome.auth.models.enums import AuthType, ConnectionStatus, ExportFormat, FlowType
 from authsome.auth.models.provider import ApiKeyConfig, OAuthConfig, ProviderDefinition
+from authsome.errors import OperationNotAllowedError
 from authsome.identity.keys import IdentityMetadata
 
 
@@ -196,7 +197,6 @@ class TestSensitiveAnnotation:
         from authsome.utils import redact
 
         record = ProviderClientRecord(
-            identity="default",
             provider="github",
             client_id="public-cid",
             client_secret="secret-csec",
@@ -204,6 +204,31 @@ class TestSensitiveAnnotation:
         data = redact(record)
         assert data["client_secret"] == "***REDACTED***"
         assert data["client_id"] == "public-cid"
+
+    def test_provider_client_record_is_server_owned(self) -> None:
+        record = ProviderClientRecord(
+            provider="github",
+            client_id="public-cid",
+            client_secret="secret-csec",
+        )
+
+        data = record.model_dump(mode="json")
+
+        assert "identity" not in data
+        assert data["provider"] == "github"
+
+
+class TestErrors:
+    """Typed error model tests."""
+
+    def test_operation_not_allowed_error_includes_context(self) -> None:
+        error = OperationNotAllowedError(
+            "revoke",
+            "Hosted deployments cannot revoke providers.",
+            provider="github",
+        )
+
+        assert str(error) == ("OperationNotAllowedError: [github] (revoke) Hosted deployments cannot revoke providers.")
 
 
 class TestConnectionRecord:

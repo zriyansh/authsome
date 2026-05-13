@@ -62,6 +62,10 @@ class IdentityRegistry:
             return None
         return IdentityRegistration.model_validate(raw)
 
+    def list_handles(self) -> list[str]:
+        """Return all registered identity handles."""
+        return sorted(self._load().keys())
+
     def _load(self) -> dict[str, dict[str, object]]:
         try:
             data = json.loads(self._path.read_text(encoding="utf-8"))

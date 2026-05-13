@@ -37,12 +37,14 @@ from authsome.errors import (
     CredentialMissingError,
     IdentityNotFoundError,
     InvalidProviderSchemaError,
+    OperationNotAllowedError,
     ProviderAlreadyRegisteredError,
     ProviderNotFoundError,
     RefreshFailedError,
     TokenExpiredError,
     UnsupportedFlowError,
 )
+from authsome.server.dependencies import list_registered_identity_handles
 from authsome.utils import build_store_key, format_duration, is_filesystem_safe, parse_store_key, utc_now
 from authsome.vault import Vault
 
@@ -73,17 +75,24 @@ class AuthService:
         self,
         vault: Vault,
         identity: str,
+        deployment_mode: str = "local",
     ) -> None:
         if not identity:
             raise ValueError("AuthService requires an explicit identity handle")
         self._vault = vault
         self._identity = identity
+        self._deployment_mode = "hosted" if deployment_mode == "hosted" else "local"
         self._bundled: dict[str, ProviderDefinition] = self._load_bundled_providers()
 
     @property
     def _coll(self) -> str:
         """Vault collection for the active identity's credentials."""
         return f"vault:{self._identity}"
+
+    @property
+    def _server_coll(self) -> str:
+        """Vault collection for server-scoped provider client records."""
+        return "server"
 
     @property
     def vault(self) -> Vault:
@@ -220,6 +229,26 @@ class AuthService:
     async def remove_provider(self, name: str) -> bool:
         """Remove a custom provider. Returns True if removed."""
         return await self._vault.delete(name, collection="providers")
+
+    def _iter_registered_identity_handles(self) -> list[str]:
+        handles = list_registered_identity_handles(self._vault.home)
+        return handles or [self._identity]
+
+    def _ensure_local_provider_admin_operation_allowed(self, operation: str, provider: str) -> None:
+        if self._deployment_mode == "hosted":
+            raise OperationNotAllowedError(
+                operation,
+                f"{operation} is not allowed in hosted deployments",
+                provider=provider,
+            )
+
+    def _ensure_provider_client_mutation_allowed(self, provider: str) -> None:
+        if self._deployment_mode == "hosted":
+            raise OperationNotAllowedError(
+                "login",
+                "provider client configuration is not allowed in hosted deployments",
+                provider=provider,
+            )
 
     def _validate_provider(self, definition: ProviderDefinition) -> None:
         if not is_filesystem_safe(definition.name):
@@ -441,21 +470,30 @@ class AuthService:
         client_record = await self._get_provider_client_credentials(provider)
 
         if flow_type in (FlowType.PKCE, FlowType.DEVICE_CODE, FlowType.DCR_PKCE):
-            if client_record is None:
-                client_record = ProviderClientRecord(identity=self._identity, provider=provider)
-            if inputs.get("base_url"):
-                client_record.base_url = inputs["base_url"]
-                session.payload["base_url"] = inputs["base_url"]
-            if inputs.get("host_url"):
-                client_record.host_url = inputs["host_url"]
-            if inputs.get("client_id"):
-                client_record.client_id = inputs["client_id"]
-            if inputs.get("client_secret"):
-                client_record.client_secret = inputs["client_secret"]
-            if "scopes" in inputs:
-                scopes_input = inputs["scopes"].strip()
-                client_record.scopes = [s.strip() for s in scopes_input.split(",") if s.strip()] if scopes_input else []
-            await self._save_provider_client_credentials(client_record)
+            if inputs:
+                self._ensure_provider_client_mutation_allowed(provider)
+
+            if client_record is None and inputs:
+                client_record = ProviderClientRecord(provider=provider)
+
+            if client_record is not None:
+                if base_url := inputs.get("base_url"):
+                    client_record.base_url = base_url
+                    session.payload["base_url"] = base_url
+                if host_url := inputs.get("host_url"):
+                    client_record.host_url = host_url
+                if client_id := inputs.get("client_id"):
+                    client_record.client_id = client_id
+                if client_secret := inputs.get("client_secret"):
+                    client_record.client_secret = client_secret
+                if "scopes" in inputs:
+                    scopes_input = inputs["scopes"].strip()
+                    client_record.scopes = (
+                        [s.strip() for s in scopes_input.split(",") if s.strip()] if scopes_input else []
+                    )
+
+            if client_record is not None and inputs:
+                await self._save_provider_client_credentials(client_record)
         elif flow_type == FlowType.API_KEY:
             api_key = inputs.get("api_key")
             if api_key:
@@ -543,8 +581,9 @@ class AuthService:
             return None
 
         if result.client_record is not None:
+            self._ensure_provider_client_mutation_allowed(provider)
             if client_record is None:
-                client_record = ProviderClientRecord(identity=self._identity, provider=provider)
+                client_record = ProviderClientRecord(provider=provider)
             client_record.client_id = result.client_record.client_id
             client_record.client_secret = result.client_record.client_secret
             client_record.base_url = result.client_record.base_url or client_record.base_url
@@ -658,19 +697,31 @@ class AuthService:
         await self._remove_from_provider_metadata(provider, connection)
 
     async def revoke(self, provider: str) -> None:
+        self._ensure_local_provider_admin_operation_allowed("revoke", provider)
         await self.get_provider(provider)
-        meta_key = build_store_key(identity=self._identity, provider=provider, record_type="metadata")
-        existing_json = await self._vault.get(meta_key, collection=self._coll)
-        if existing_json:
+        for identity in self._iter_registered_identity_handles():
+            identity_service = AuthService(
+                vault=self._vault,
+                identity=identity,
+                deployment_mode=self._deployment_mode,
+            )
+            meta_key = build_store_key(identity=identity, provider=provider, record_type="metadata")
+            existing_json = await self._vault.get(meta_key, collection=identity_service._coll)
+            if not existing_json:
+                continue
+
             metadata = ProviderMetadataRecord.model_validate_json(existing_json)
             for conn_name in list(metadata.connection_names):
-                await self.logout(provider, connection=conn_name)
-        await self._vault.delete(meta_key, collection=self._coll)
-        client_key = build_store_key(identity=self._identity, provider=provider, record_type="client")
-        await self._vault.delete(client_key, collection=self._coll)
+                await identity_service.logout(provider, connection=conn_name)
+
+            await self._vault.delete(meta_key, collection=identity_service._coll)
+
+        client_key = build_store_key(provider=provider, record_type="server")
+        await self._vault.delete(client_key, collection=self._server_coll)
 
     async def remove(self, provider: str) -> None:
         """Revoke all tokens and remove the provider definition if it is local."""
+        self._ensure_local_provider_admin_operation_allowed("remove", provider)
         await self.revoke(provider)
         if await self.is_local_provider(provider):
             await self._vault.delete(provider, collection="providers")
@@ -786,15 +837,15 @@ class AuthService:
         await self._vault.put(key, record.model_dump_json(), collection=self._coll)
 
     async def _get_provider_client_credentials(self, provider: str) -> ProviderClientRecord | None:
-        key = build_store_key(identity=self._identity, provider=provider, record_type="client")
-        record_json = await self._vault.get(key, collection=self._coll)
+        key = build_store_key(provider=provider, record_type="server")
+        record_json = await self._vault.get(key, collection=self._server_coll)
         if record_json:
             return ProviderClientRecord.model_validate_json(record_json)
         return None
 
     async def _save_provider_client_credentials(self, record: ProviderClientRecord) -> None:
-        key = build_store_key(identity=self._identity, provider=record.provider, record_type="client")
-        await self._vault.put(key, record.model_dump_json(), collection=self._coll)
+        key = build_store_key(provider=record.provider, record_type="server")
+        await self._vault.put(key, record.model_dump_json(), collection=self._server_coll)
 
     async def _update_provider_metadata(self, provider: str, connection_name: str) -> None:
         meta_key = build_store_key(identity=self._identity, provider=provider, record_type="metadata")

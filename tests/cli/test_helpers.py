@@ -15,6 +15,7 @@ from authsome.errors import (
     ConnectionNotFoundError,
     CredentialMissingError,
     EndpointUnreachableError,
+    OperationNotAllowedError,
     ProviderAlreadyRegisteredError,
     ProviderNotFoundError,
     RefreshFailedError,
@@ -155,6 +156,10 @@ def test_format_error_code_daemon_unavailable() -> None:
 
 def test_format_error_code_provider_not_found() -> None:
     assert format_error_code(ProviderNotFoundError("x")) == 4
+
+
+def test_format_error_code_operation_not_allowed() -> None:
+    assert format_error_code(OperationNotAllowedError("revoke", "blocked", provider="x")) == 4
 
 
 def test_format_error_code_authentication_failed() -> None:
