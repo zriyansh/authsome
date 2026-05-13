@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Protocol
@@ -60,28 +59,6 @@ class ProxyRunner:
             # NODE_EXTRA_CA_CERTS adds to (not replaces) Node's built-in CAs
             env["NODE_EXTRA_CA_CERTS"] = str(server.ca_cert_path)
             logger.debug("CA bundle injected: {}", ca_bundle_path)
-
-            # On macOS, Go's crypto/x509 ignores SSL_CERT_FILE and delegates to
-            # the native Security framework, so we must add the CA to the login
-            # keychain for tools like gh, terraform, and kubectl to trust it.
-            # We skip this for common tools that respect standard environment variables
-            # to avoid unnecessary keychain prompts.
-            cmd_name = Path(command[0]).name.lower() if command else ""
-            skip_keychain_cmds = {
-                "curl",
-                "wget",
-                "git",
-                "python",
-                "python3",
-                "node",
-                "npm",
-                "npx",
-                "yarn",
-                "pnpm",
-                "uv",
-            }
-            if cmd_name not in skip_keychain_cmds:
-                self._add_ca_to_macos_keychain(server.ca_cert_path)
 
         try:
             return subprocess.run(command, env=env, capture_output=False, text=True, check=False)
@@ -153,66 +130,6 @@ class ProxyRunner:
             return None
 
         return path
-
-    @staticmethod
-    def _add_ca_to_macos_keychain(ca_cert_path: Path) -> None:
-        """Add the mitmproxy CA to the macOS login keychain.
-
-        Go's crypto/x509 on macOS uses the native Security framework and
-        ignores SSL_CERT_FILE, so the only reliable way to make Go binaries
-        (gh, terraform, kubectl, …) trust the mitmproxy CA is to add it to
-        the login keychain directly.
-
-        The certificate is added persistently once to avoid repeated OS password
-        prompts. It will skip addition on subsequent calls if already present.
-        """
-        if sys.platform != "darwin":
-            return
-        if os.environ.get("AUTHSOME_SKIP_KEYCHAIN", "").lower() in ("1", "true", "yes"):
-            logger.debug("Skipping macOS keychain integration due to AUTHSOME_SKIP_KEYCHAIN")
-            return
-        if not ca_cert_path.exists():
-            return
-
-        keychain = Path.home() / "Library/Keychains/login.keychain-db"
-        if not keychain.exists():
-            return
-
-        # Avoid double-adding: if the user already has a cert with CN=mitmproxy
-        # in their keychain (e.g. from a manual mitmproxy install), don't touch it.
-        check = subprocess.run(
-            ["security", "find-certificate", "-c", "mitmproxy", str(keychain)],
-            capture_output=True,
-            text=True,
-        )
-        if check.returncode == 0:
-            logger.debug("mitmproxy CA already present in macOS login keychain; skipping add")
-            return
-
-        result = subprocess.run(
-            [
-                "security",
-                "add-trusted-cert",
-                "-d",
-                "-r",
-                "trustRoot",
-                "-k",
-                str(keychain),
-                str(ca_cert_path),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        if result.returncode == 0:
-            logger.debug("Added mitmproxy CA to macOS login keychain")
-            return
-
-        logger.warning(
-            "Could not add mitmproxy CA to macOS login keychain"
-            " (Go-based tools like gh/terraform/kubectl may fail with TLS errors): {}",
-            result.stderr.strip() or result.stdout.strip(),
-        )
 
     @staticmethod
     def _merge_no_proxy(existing: str) -> str:
