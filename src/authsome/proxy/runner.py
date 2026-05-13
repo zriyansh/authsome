@@ -52,25 +52,32 @@ class ProxyRunner:
 
         # Build a combined CA bundle so subprocesses trust the mitmproxy CA
         ca_bundle_path = self._build_ca_bundle(server)
-        keychain_cert_added = False
         if ca_bundle_path:
             env["SSL_CERT_FILE"] = str(ca_bundle_path)
             env["REQUESTS_CA_BUNDLE"] = str(ca_bundle_path)
             env["CURL_CA_BUNDLE"] = str(ca_bundle_path)
+            env["GIT_SSL_CAINFO"] = str(ca_bundle_path)
             # NODE_EXTRA_CA_CERTS adds to (not replaces) Node's built-in CAs
             env["NODE_EXTRA_CA_CERTS"] = str(server.ca_cert_path)
             logger.debug("CA bundle injected: {}", ca_bundle_path)
+            
             # On macOS, Go's crypto/x509 ignores SSL_CERT_FILE and delegates to
             # the native Security framework, so we must add the CA to the login
             # keychain for tools like gh, terraform, and kubectl to trust it.
-            keychain_cert_added = self._add_ca_to_macos_keychain(server.ca_cert_path)
+            # We skip this for common tools that respect standard environment variables
+            # to avoid unnecessary keychain prompts.
+            cmd_name = Path(command[0]).name.lower() if command else ""
+            skip_keychain_cmds = {
+                "curl", "wget", "git", "python", "python3", 
+                "node", "npm", "npx", "yarn", "pnpm", "uv"
+            }
+            if cmd_name not in skip_keychain_cmds:
+                self._add_ca_to_macos_keychain(server.ca_cert_path)
 
         try:
             return subprocess.run(command, env=env, capture_output=False, text=True, check=False)
         finally:
             server.shutdown()
-            if keychain_cert_added:
-                self._remove_ca_from_macos_keychain()
             # Clean up the temporary CA bundle
             if ca_bundle_path and ca_bundle_path.exists():
                 try:
@@ -139,7 +146,7 @@ class ProxyRunner:
         return path
 
     @staticmethod
-    def _add_ca_to_macos_keychain(ca_cert_path: Path) -> bool:
+    def _add_ca_to_macos_keychain(ca_cert_path: Path) -> None:
         """Add the mitmproxy CA to the macOS login keychain.
 
         Go's crypto/x509 on macOS uses the native Security framework and
@@ -147,18 +154,20 @@ class ProxyRunner:
         (gh, terraform, kubectl, …) trust the mitmproxy CA is to add it to
         the login keychain directly.
 
-        Returns True if the cert was newly added (caller must remove it on exit).
-        Returns False on non-macOS, if the cert was already present, or if the
-        add fails (the subprocess proceeds anyway — TLS errors may still occur).
+        The certificate is added persistently once to avoid repeated OS password
+        prompts. It will skip addition on subsequent calls if already present.
         """
         if sys.platform != "darwin":
-            return False
+            return
+        if os.environ.get("AUTHSOME_SKIP_KEYCHAIN", "").lower() in ("1", "true", "yes"):
+            logger.debug("Skipping macOS keychain integration due to AUTHSOME_SKIP_KEYCHAIN")
+            return
         if not ca_cert_path.exists():
-            return False
+            return
 
         keychain = Path.home() / "Library/Keychains/login.keychain-db"
         if not keychain.exists():
-            return False
+            return
 
         # Avoid double-adding: if the user already has a cert with CN=mitmproxy
         # in their keychain (e.g. from a manual mitmproxy install), don't touch it.
@@ -169,7 +178,7 @@ class ProxyRunner:
         )
         if check.returncode == 0:
             logger.debug("mitmproxy CA already present in macOS login keychain; skipping add")
-            return False
+            return
 
         result = subprocess.run(
             [
@@ -188,32 +197,13 @@ class ProxyRunner:
         )
         if result.returncode == 0:
             logger.debug("Added mitmproxy CA to macOS login keychain")
-            return True
+            return
 
         logger.warning(
             "Could not add mitmproxy CA to macOS login keychain"
             " (Go-based tools like gh/terraform/kubectl may fail with TLS errors): {}",
             result.stderr.strip() or result.stdout.strip(),
         )
-        return False
-
-    @staticmethod
-    def _remove_ca_from_macos_keychain() -> None:
-        """Remove the mitmproxy CA previously added by _add_ca_to_macos_keychain."""
-        if sys.platform != "darwin":
-            return
-
-        keychain = Path.home() / "Library/Keychains/login.keychain-db"
-        try:
-            subprocess.run(
-                ["security", "delete-certificate", "-c", "mitmproxy", str(keychain)],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            logger.debug("Removed mitmproxy CA from macOS login keychain")
-        except Exception as exc:
-            logger.warning("Could not remove mitmproxy CA from macOS login keychain: {}", exc)
 
     @staticmethod
     def _merge_no_proxy(existing: str) -> str:
