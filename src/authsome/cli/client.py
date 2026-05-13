@@ -95,7 +95,7 @@ class AuthsomeApiClient:
         protected: bool = True,
     ) -> dict[str, Any]:
         body_bytes = b""
-        headers: dict[str, str] = {}
+        headers: dict[str, str | bytes] = {}
         if body is not None:
             body_bytes = json.dumps(body, separators=(",", ":"), sort_keys=True).encode("utf-8")
             headers["Content-Type"] = "application/json"
@@ -112,7 +112,7 @@ class AuthsomeApiClient:
         raise_for_error(response)
         return response.json()
 
-    async def _proof_headers(self, method: str, path: str, body: bytes) -> dict[str, str]:
+    async def _proof_headers(self, method: str, path: str, body: bytes) -> dict[str, str | bytes]:
         identity = await self.ensure_identity_registered()
         private_key = load_private_key(self._home, identity.handle)
         token = create_proof_jwt(
