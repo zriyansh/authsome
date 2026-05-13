@@ -30,7 +30,7 @@ class PkceFlow(AuthFlow):
     async def begin(
         self,
         provider: ProviderDefinition,
-        profile: str,
+        identity: str,
         connection_name: str,
         runtime_session: AuthSession,
         scopes: list[str] | None = None,
@@ -72,7 +72,7 @@ class PkceFlow(AuthFlow):
     async def resume(
         self,
         provider: ProviderDefinition,
-        profile: str,
+        identity: str,
         connection_name: str,
         runtime_session: AuthSession,
         callback_data: dict[str, Any],
@@ -121,7 +121,7 @@ class PkceFlow(AuthFlow):
             connection=ConnectionRecord(
                 schema_version=2,
                 provider=provider.name,
-                profile=profile,
+                identity=identity,
                 connection_name=connection_name,
                 auth_type=AuthType.OAUTH2,
                 status=ConnectionStatus.CONNECTED,
