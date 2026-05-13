@@ -59,20 +59,24 @@ class TestIdentityMetadata:
     """Identity metadata model tests."""
 
     def test_required_fields(self) -> None:
-        meta = IdentityMetadata(name="test")
-        assert meta.name == "test"
+        meta = IdentityMetadata(handle="steady-wisely-boldly-0042", did="did:key:z6MkTest")
+        assert meta.handle == "steady-wisely-boldly-0042"
+        assert meta.did == "did:key:z6MkTest"
+        assert meta.registered is False
         assert meta.created_at is not None
         assert meta.updated_at is not None
 
     def test_json_roundtrip(self) -> None:
         meta = IdentityMetadata(
-            name="work",
-            description="Work identity",
+            handle="steady-wisely-boldly-0042",
+            did="did:key:z6MkTest",
+            registered=True,
         )
         json_str = meta.model_dump_json()
         restored = IdentityMetadata.model_validate_json(json_str)
-        assert restored.name == "work"
-        assert restored.description == "Work identity"
+        assert restored.handle == "steady-wisely-boldly-0042"
+        assert restored.did == "did:key:z6MkTest"
+        assert restored.registered is True
 
 
 class TestProviderDefinition:

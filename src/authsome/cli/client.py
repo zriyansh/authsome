@@ -12,7 +12,11 @@ from urllib.parse import urlparse
 
 import requests
 
-from authsome.identity import ensure_local_identity, load_private_key, mark_registered
+from authsome.identity import (
+    ensure_local_identity,
+    load_private_key,
+    mark_registered,
+)
 from authsome.identity.keys import IdentityMetadata
 from authsome.identity.proof import POP_AUTH_SCHEME, create_proof_jwt
 from authsome.server.urls import DEFAULT_SERVER_BASE_URL
@@ -123,18 +127,13 @@ class AuthsomeApiClient:
 
     async def ensure_identity_registered(self) -> IdentityMetadata:
         """Bootstrap a local identity and register it with the daemon."""
-        from authsome.store.local import LocalAppStore
-
-        store = LocalAppStore(self._home)
-        await store.ensure_initialized()
-        config = await store.get_config()
-        identity = ensure_local_identity(self._home, active_handle=config.active_identity)
-        await self._post(
-            "/identities/register",
-            {"handle": identity.handle, "did": identity.did},
-            protected=False,
-        )
+        identity = ensure_local_identity(self._home)
         if not identity.registered:
+            await self._post(
+                "/identities/register",
+                {"handle": identity.handle, "did": identity.did},
+                protected=False,
+            )
             identity = mark_registered(self._home, identity.handle)
         return identity
 

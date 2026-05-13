@@ -5,6 +5,8 @@ from unittest.mock import Mock
 import pytest
 
 from authsome.cli.client import AuthsomeApiClient
+from authsome.identity.client_config import ClientConfig, load_client_config, save_client_config
+from authsome.identity.keys import create_identity, mark_registered
 
 
 @pytest.mark.asyncio
@@ -109,3 +111,45 @@ async def test_resolve_credentials_request_is_signed(monkeypatch, tmp_path: Path
     assert captured["method"] == "POST"
     assert captured["url"].endswith("/credentials/resolve")
     assert captured["headers"]["Authorization"].startswith("PoP ")
+
+
+@pytest.mark.asyncio
+async def test_registered_identity_skips_register_roundtrip(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
+    identity = create_identity(tmp_path, "steady-wisely-boldly-0042")
+    mark_registered(tmp_path, identity.handle)
+    save_client_config(tmp_path, ClientConfig(active_identity=identity.handle))
+    calls: list[tuple[str, str]] = []
+
+    def fake_request(method, url, data=None, headers=None, timeout=None):
+        calls.append((method, url))
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"connections": [], "by_source": {"bundled": [], "custom": []}}
+        return response
+
+    monkeypatch.setattr("authsome.cli.client.requests.request", fake_request)
+
+    await AuthsomeApiClient("http://127.0.0.1:7998").list_connections()
+
+    assert calls == [("GET", "http://127.0.0.1:7998/connections")]
+
+
+@pytest.mark.asyncio
+async def test_bootstrapped_identity_is_saved_as_active_profile(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
+    captured: dict = {}
+
+    def fake_request(method, url, data=None, headers=None, timeout=None):
+        captured.update({"method": method, "url": url, "data": data, "headers": headers, "timeout": timeout})
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"connections": [], "by_source": {"bundled": [], "custom": []}}
+        return response
+
+    monkeypatch.setattr("authsome.cli.client.requests.request", fake_request)
+
+    await AuthsomeApiClient("http://127.0.0.1:7998").list_connections()
+
+    config = load_client_config(tmp_path)
+    assert config.active_identity is not None

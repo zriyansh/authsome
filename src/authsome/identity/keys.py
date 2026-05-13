@@ -145,6 +145,8 @@ def identity_exists(home: Path, handle: str) -> bool:
 
 def create_identity(home: Path, handle: str | None = None) -> IdentityMetadata:
     """Create a local identity and private key, returning existing metadata if present."""
+    from authsome.identity.client_config import load_client_config, save_client_config
+
     resolved_handle = validate_handle(handle or _unique_handle(home))
     if identity_exists(home, resolved_handle):
         return load_identity(home, resolved_handle)
@@ -174,6 +176,8 @@ def create_identity(home: Path, handle: str | None = None) -> IdentityMetadata:
     except OSError:
         pass
     metadata_path.write_text(metadata.model_dump_json(indent=2), encoding="utf-8")
+    config = load_client_config(home)
+    save_client_config(home, config.model_copy(update={"active_identity": metadata.handle}))
     return metadata
 
 
@@ -197,12 +201,20 @@ def mark_registered(home: Path, handle: str) -> IdentityMetadata:
 def ensure_local_identity(home: Path, active_handle: str | None = None) -> IdentityMetadata:
     """Return the active local identity, creating one if none exists.
 
-    If *active_handle* is provided (from GlobalConfig.active_identity) it must
+    If *active_handle* is not provided, the caller-local config is consulted.
+    If the resolved active handle exists, it is loaded. Otherwise a new
+    identity is created.
+
+    If *active_handle* is provided explicitly, it must
     exist on disk — a missing key file is a hard error rather than a silent
     re-creation, because the old profile's credentials would become inaccessible
     with no explanation.
     """
+    from authsome.identity.client_config import load_client_config
+
     remove_legacy_default_identity(home)
+    if active_handle is None:
+        active_handle = load_client_config(home).active_identity
     if active_handle:
         if not identity_exists(home, active_handle):
             raise FileNotFoundError(

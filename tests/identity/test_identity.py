@@ -2,7 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from authsome.identity import current_from_home
+from authsome.identity import current_from_home, load_client_config, save_client_config
+from authsome.identity.client_config import ClientConfig
 from authsome.identity.keys import (
     create_identity,
     ensure_local_identity,
@@ -27,6 +28,7 @@ def test_create_identity_writes_private_key_mode_0600(tmp_path: Path) -> None:
 
     assert key_path.exists()
     assert key_path.stat().st_mode & 0o777 == 0o600
+    assert load_client_config(tmp_path).active_identity == identity.handle
 
 
 def test_did_key_roundtrip(tmp_path: Path) -> None:
@@ -44,3 +46,14 @@ def test_invalid_did_key_rejected() -> None:
 def test_ensure_local_identity_errors_when_configured_handle_missing(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError, match="brisk-boldly-clearly-1234"):
         ensure_local_identity(tmp_path, active_handle="brisk-boldly-clearly-1234")
+
+
+@pytest.mark.asyncio
+async def test_current_from_home_uses_client_side_active_identity(tmp_path: Path) -> None:
+    first = create_identity(tmp_path, "steady-wisely-boldly-0042")
+    create_identity(tmp_path, "rapid-brightly-firmly-0007")
+    save_client_config(tmp_path, ClientConfig(active_identity=first.handle))
+
+    identity = await current_from_home(tmp_path)
+
+    assert identity.handle == first.handle

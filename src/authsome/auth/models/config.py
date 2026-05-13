@@ -36,11 +36,10 @@ class EncryptionConfig(BaseModel):
 
 
 class GlobalConfig(BaseModel):
-    """Global configuration for the local Authsome install."""
+    """Daemon configuration for the local Authsome install."""
 
     spec_version: int = Field(default_factory=current_spec_version)
     encryption: EncryptionConfig | None = Field(default_factory=EncryptionConfig)
-    active_identity: str | None = None
 
     extra_fields: dict[str, Any] = Field(default_factory=dict, exclude=True)
 

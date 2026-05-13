@@ -43,6 +43,7 @@ class TestWhoamiCommand:
         assert result.exit_code == 0, result.output
         data = json.loads(result.output)
         assert data["authsome_version"] == "1.2.3"
+        assert data["profile"] == "steady-wisely-boldly-0042"
         assert data["vault_status"] == "OK"
         assert "connected_providers_count" in data
         assert "connected_providers" in data

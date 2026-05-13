@@ -1,4 +1,4 @@
-"""Tests for `authsome identity` commands."""
+"""Tests for `authsome profile` commands."""
 
 from __future__ import annotations
 
@@ -9,46 +9,56 @@ from unittest.mock import MagicMock
 from click.testing import CliRunner
 
 from authsome.cli.main import cli
+from authsome.identity.client_config import load_client_config
 from authsome.identity.keys import load_identity
 
 
-class TestIdentityCommands:
-    """Tests for local identity management commands."""
+class TestProfileCommands:
+    """Tests for local profile management commands."""
 
-    def test_identity_create_writes_local_keypair(
+    def test_profile_create_writes_local_keypair(
         self, runner: CliRunner, mock_client: MagicMock, tmp_path: Path
     ) -> None:
         result = runner.invoke(
             cli,
-            ["--log-file", "", "identity", "create", "--handle", "steady-wisely-boldly-0042", "--json"],
+            ["--log-file", "", "profile", "create", "--handle", "steady-wisely-boldly-0042", "--json"],
         )
 
         assert result.exit_code == 0, result.output
         data = json.loads(result.output)
         assert data["status"] == "created"
-        assert data["identity"] == "steady-wisely-boldly-0042"
+        assert data["profile"] == "steady-wisely-boldly-0042"
+        assert data["switched"] is True
         stored = load_identity(tmp_path, "steady-wisely-boldly-0042")
         assert stored.did == data["did"]
+        assert load_client_config(tmp_path).active_identity == stored.handle
 
-    def test_identity_register_uses_existing_local_identity(
+    def test_profile_create_switches_active_profile(
         self, runner: CliRunner, mock_client: MagicMock, tmp_path: Path
     ) -> None:
-        runner.invoke(cli, ["--log-file", "", "identity", "create", "--handle", "steady-wisely-boldly-0042"])
-        stored = load_identity(tmp_path, "steady-wisely-boldly-0042")
-        mock_client.register_identity.return_value = {
-            "status": "registered",
-            "identity": stored.handle,
-            "did": stored.did,
-        }
-
+        runner.invoke(cli, ["--log-file", "", "profile", "create", "--handle", "steady-wisely-boldly-0042"])
         result = runner.invoke(
             cli,
-            ["--log-file", "", "identity", "register", "steady-wisely-boldly-0042", "--json"],
+            ["--log-file", "", "profile", "create", "--handle", "rapid-brightly-firmly-0007", "--json"],
         )
+
+        data = json.loads(result.output)
+        assert result.exit_code == 0, result.output
+        assert data["status"] == "created"
+        assert data["profile"] == "rapid-brightly-firmly-0007"
+        assert data["switched"] is True
+        assert load_client_config(tmp_path).active_identity == "rapid-brightly-firmly-0007"
+
+    def test_profile_use_sets_active_identity(self, runner: CliRunner, mock_client: MagicMock, tmp_path: Path) -> None:
+        runner.invoke(cli, ["--log-file", "", "profile", "create", "--handle", "steady-wisely-boldly-0042"])
+        runner.invoke(cli, ["--log-file", "", "profile", "create", "--handle", "rapid-brightly-firmly-0007"])
+        stored = load_identity(tmp_path, "steady-wisely-boldly-0042")
+
+        result = runner.invoke(cli, ["--log-file", "", "profile", "use", "steady-wisely-boldly-0042", "--json"])
 
         assert result.exit_code == 0, result.output
         data = json.loads(result.output)
-        assert data["status"] == "registered"
-        assert data["identity"] == stored.handle
+        assert data["status"] == "active"
+        assert data["profile"] == stored.handle
         assert data["did"] == stored.did
-        mock_client.register_identity.assert_called_once_with(stored.handle, stored.did)
+        assert load_client_config(tmp_path).active_identity == stored.handle

@@ -98,5 +98,5 @@ def test_resume_session_rejects_other_identity(monkeypatch, tmp_path: Path) -> N
             ),
         )
 
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Authentication session not found"
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Proof JWT body hash does not match request"
