@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 
 from authsome.identity.keys import (
@@ -15,24 +14,11 @@ from authsome.identity.keys import (
     identity_metadata_path,
     load_identity,
     load_private_key,
+    mark_registered,
     public_key_from_did_key,
     public_key_to_did_key,
     remove_legacy_default_identity,
 )
-
-DEFAULT_IDENTITY = "default"
-
-
-@dataclass(frozen=True)
-class Identity:
-    """The current local identity."""
-
-    name: str = DEFAULT_IDENTITY
-
-
-def current() -> Identity:
-    """Return the current local identity."""
-    return Identity()
 
 
 async def current_from_home(home: Path) -> IdentityMetadata:
@@ -42,16 +28,12 @@ async def current_from_home(home: Path) -> IdentityMetadata:
     store = LocalAppStore(home)
     await store.ensure_initialized()
     config = await store.get_config()
-    await store.save_config(config)
-    return ensure_local_identity(home)
+    return ensure_local_identity(home, active_handle=config.active_identity)
 
 
 __all__ = [
-    "DEFAULT_IDENTITY",
-    "Identity",
     "IdentityMetadata",
     "create_identity",
-    "current",
     "current_from_home",
     "ensure_local_identity",
     "identities_dir",
@@ -60,6 +42,7 @@ __all__ = [
     "identity_metadata_path",
     "load_identity",
     "load_private_key",
+    "mark_registered",
     "public_key_from_did_key",
     "public_key_to_did_key",
     "remove_legacy_default_identity",

@@ -5,6 +5,7 @@ import pytest
 from authsome.identity import current_from_home
 from authsome.identity.keys import (
     create_identity,
+    ensure_local_identity,
     identity_key_path,
     public_key_from_did_key,
     public_key_to_did_key,
@@ -38,3 +39,8 @@ def test_did_key_roundtrip(tmp_path: Path) -> None:
 def test_invalid_did_key_rejected() -> None:
     with pytest.raises(ValueError, match="Only did:key"):
         public_key_from_did_key("did:web:example.com")
+
+
+def test_ensure_local_identity_errors_when_configured_handle_missing(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError, match="brisk-boldly-clearly-1234"):
+        ensure_local_identity(tmp_path, active_handle="brisk-boldly-clearly-1234")

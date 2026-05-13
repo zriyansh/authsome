@@ -23,16 +23,7 @@ def test_init_removes_legacy_default_state_and_registers_identity(
     (identities / "default.json").write_text("{}", encoding="utf-8")
     (identities / "default.key").write_text("legacy\n", encoding="utf-8")
 
-    async def write_legacy_config() -> None:
-        store = LocalAppStore(tmp_path)
-        await store.ensure_initialized()
-        await store.kv.put(
-            "global",
-            {"data": json.dumps({"spec_version": 1, "default_profile": "default"})},
-            collection="config",
-        )
-
-    asyncio.run(write_legacy_config())
+    asyncio.run(LocalAppStore(tmp_path).ensure_initialized())
 
     result = runner.invoke(cli, ["--log-file", "", "init", "--json"])
 
@@ -44,10 +35,10 @@ def test_init_removes_legacy_default_state_and_registers_identity(
     assert not (identities / "default.key").exists()
     mock_client.register_identity.assert_called_once_with(data["identity"], data["did"])
 
-    async def read_config_after_server_bootstrap() -> dict:
+    async def read_config_after_init() -> dict:
         store = LocalAppStore(tmp_path)
-        await store.ensure_initialized()
         config = await store.get_config()
         return config.model_dump()
 
-    assert "default_profile" not in asyncio.run(read_config_after_server_bootstrap())
+    config_data = asyncio.run(read_config_after_init())
+    assert config_data["active_identity"] == data["identity"]

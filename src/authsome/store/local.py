@@ -70,7 +70,6 @@ class LocalAppStore(AppStore):
 
     async def save_config(self, config: GlobalConfig) -> None:
         data = config.model_dump(mode="json")
-        data.pop("default_profile", None)
         await self._store.put("global", {"data": json.dumps(data, indent=2)}, collection="config")
 
     async def close(self) -> None:
