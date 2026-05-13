@@ -9,19 +9,55 @@ description: |
 
 # Authsome Skill
 
-Authsome connects your agent to external services with zero secret handling. The workflow is: **list** → **login** → **run**.
+Authsome connects your agent to external services with zero secret handling.
 
 ---
 
-## Step 0 — Setup
+## Usage
 
-Install authsome once as a persistent tool so `authsome` is available directly in your shell without reinstalling on every invocation:
+Run any command behind the Authsome proxy — it injects auth headers automatically:
+
+```bash
+authsome run -- <command>
+```
+
+**GitHub:**
+```bash
+authsome run -- curl https://api.github.com/user
+authsome run -- curl https://api.github.com/repos/owner/repo/issues
+authsome run -- gh repo list
+```
+
+**OpenAI:**
+```bash
+authsome run -- python my_agent.py
+authsome run -- python -c "import openai; print(openai.models.list())"
+```
+
+**Linear:**
+```bash
+authsome run -- curl -X POST https://api.linear.app/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query": "{ viewer { name } }"}'
+```
+
+**Multiple providers at once:**
+```bash
+authsome run -- python pipeline.py
+```
+
+If `authsome` is not found → see [Installation](#installation).
+If you get an authentication error → see [Login](#login).
+
+---
+
+## Installation
 
 ```bash
 uv tool install authsome
 ```
 
-Verify the installation:
+Verify:
 
 ```bash
 authsome --version
@@ -31,79 +67,25 @@ authsome --version
 
 ---
 
-## Step 1 — List providers
-
-Check what's available and whether you're already connected:
-
-```bash
-authsome list
-```
-
-- If the provider you need is listed and already **connected** → skip to Step 3.
-- If the provider is listed but **not connected** → proceed to Step 2.
-
----
-
-## Step 2 — Login
-
-Authsome opens a browser window and handles all credential capture securely — you do not need to pass any secrets:
+## Login
 
 ```bash
 authsome login <provider>
 ```
 
-If the provider requires specific permissions, use the `--scopes` flag. **CRITICAL:** Do NOT register a new provider just to add scopes; always use `--scopes` with the existing provider:
+To request specific scopes:
 
 ```bash
 authsome login <provider> --scopes repo,user,gist
 ```
 
-If the provider requires you to register an OAuth app manually (standard PKCE without DCR), set the redirect URI in the provider's developer console to exactly `http://127.0.0.1:7999/callback`.
-
-After login, verify the connection before proceeding:
+Verify the connection afterwards:
 
 ```bash
 authsome list
 ```
 
-If the provider does not show as **connected**, check the error output and re-run `authsome login <provider>`. Use `--flow device_code` if the browser flow is unavailable.
-
-For additional login options, run `authsome login --help` or see [cli.md](https://raw.githubusercontent.com/manojbajaj95/authsome/main/docs/cli.md).
-
----
-
-## Step 3 — Use credentials
-
-Always run commands through `authsome run -- <command>`. It starts a local proxy that intercepts outbound HTTPS requests and injects auth headers automatically — credentials are never exposed in the child environment.
-
-```bash
-authsome run -- <command>
-```
-
-**GitHub — list repos, create issues, call the REST API:**
-```bash
-authsome run -- curl https://api.github.com/user
-authsome run -- curl https://api.github.com/repos/owner/repo/issues
-authsome run -- gh repo list
-```
-
-**OpenAI — run a script that calls the API:**
-```bash
-authsome run -- python my_agent.py
-authsome run -- python -c "import openai; print(openai.models.list())"
-```
-
-**Linear — query issues:**
-```bash
-authsome run -- curl -X POST https://api.linear.app/graphql \
-  -H "Content-Type: application/json" \
-  -d '{"query": "{ viewer { name } }"}'
-```
-
-**Any provider — run a multi-provider script:**
-```bash
-authsome run -- python pipeline.py   # proxy handles all matched providers at once
-```
+If the provider does not show as **connected**, re-run `authsome login <provider>`. Use `--flow device_code` if the browser flow is unavailable.
 
 ---
 
