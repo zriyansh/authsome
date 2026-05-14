@@ -533,9 +533,7 @@ class TestAuthProxyAddon:
         flow = self._make_flow(host="example.com", path="/")
 
         with patch("authsome.proxy.server.audit.log") as log_mock:
-            addon, _router, patcher = self._make_addon(
-                auth, None, miss_reason="no_match", mode="connected_deny"
-            )
+            addon, _router, patcher = self._make_addon(auth, None, miss_reason="no_match", mode="connected_deny")
             try:
                 await addon.request(flow)
             finally:
@@ -581,9 +579,7 @@ class TestAuthProxyAddon:
         flow = self._make_flow(host="example.com", path="/")
         flow.request.method = "CONNECT"
 
-        addon, _router, patcher = self._make_addon(
-            auth, None, miss_reason="no_match", mode="connected_deny"
-        )
+        addon, _router, patcher = self._make_addon(auth, None, miss_reason="no_match", mode="connected_deny")
         try:
             await addon.request(flow)
         finally:
