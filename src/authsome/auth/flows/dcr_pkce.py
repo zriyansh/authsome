@@ -136,10 +136,10 @@ class DcrPkceFlow(AuthFlow):
         dcr_client = (
             ProviderClientRecord(
                 schema_version=2,
-                identity=identity,
                 provider=provider.name,
                 client_id=client_id,
                 client_secret=client_secret,
+                base_url=provider.oauth.base_url if provider.oauth else None,
             )
             if registered_new_client
             else None

@@ -7,6 +7,7 @@ from fastapi import HTTPException, Request
 from authsome.auth import AuthService
 from authsome.auth.sessions import AuthSessionStore
 from authsome.identity.proof import POP_AUTH_SCHEME, ProofValidationError, validate_proof_jwt
+from authsome.server.dependencies import get_deployment_mode
 
 
 def get_auth_service(request: Request) -> AuthService:
@@ -14,7 +15,11 @@ def get_auth_service(request: Request) -> AuthService:
 
 
 def get_auth_service_for_identity(request: Request, identity: str) -> AuthService:
-    return AuthService(vault=request.app.state.vault, identity=identity)
+    return AuthService(
+        vault=request.app.state.vault,
+        identity=identity,
+        deployment_mode=get_deployment_mode(),
+    )
 
 
 async def get_protected_auth_service(request: Request) -> AuthService:

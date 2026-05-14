@@ -53,6 +53,13 @@ class CredentialMissingError(AuthsomeError):
         super().__init__(message, provider=provider)
 
 
+class OperationNotAllowedError(AuthsomeError):
+    """Raised when a deployment policy forbids an operation."""
+
+    def __init__(self, operation: str, reason: str, *, provider: str | None = None) -> None:
+        super().__init__(reason, provider=provider, operation=operation)
+
+
 class InputCancelledError(AuthsomeError):
     """Raised when a user cancels an interactive credential prompt."""
 

@@ -101,13 +101,12 @@ class ProviderStateRecord(BaseModel):
 
 class ProviderClientRecord(BaseModel):
     """
-    Client credentials configured for a provider within an identity.
+    Client credentials configured for a provider at server scope.
 
-    Stored at key: identity:<identity>:<provider>:client
+    Stored at key: server:provider:<provider>:client
     """
 
     schema_version: int = 2
-    identity: str
     provider: str
     client_id: str | None = None
     client_secret: Annotated[str | None, Sensitive()] = None

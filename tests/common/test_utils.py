@@ -5,9 +5,11 @@ from datetime import UTC, datetime
 import pytest
 
 from authsome.utils import (
+    StoreKeyParts,
     build_store_key,
     is_filesystem_safe,
     parse_rfc3339,
+    parse_store_key,
     to_rfc3339,
     utc_now,
 )
@@ -75,6 +77,8 @@ def test_build_store_key():
     assert (
         build_store_key(identity="default", provider="github", record_type="client") == "identity:default:github:client"
     )
+    # Test server-scoped client key
+    assert build_store_key(provider="github", record_type="server") == "server:provider:github:client"
     # Test value error
     with pytest.raises(ValueError):
         build_store_key(identity="default", provider="github", record_type="unknown")
@@ -82,3 +86,12 @@ def test_build_store_key():
     # Test missing provider with identity
     with pytest.raises(ValueError):
         build_store_key(identity="default", record_type="metadata")
+
+
+def test_parse_store_key_server() -> None:
+    assert parse_store_key("server:provider:github:client") == StoreKeyParts(
+        identity=None,
+        provider="github",
+        record_type="server",
+        connection=None,
+    )

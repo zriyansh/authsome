@@ -40,3 +40,14 @@ class TestRevokeCommand:
         mock_client.revoke.side_effect = ProviderNotFoundError("unknown")
         result = runner.invoke(cli, ["--log-file", "", "revoke", "unknown"])
         assert result.exit_code == 4
+
+    def test_revoke_operation_not_allowed_exits_4(self, runner: CliRunner, mock_client: MagicMock) -> None:
+        from authsome.errors import OperationNotAllowedError
+
+        mock_client.revoke.side_effect = OperationNotAllowedError(
+            "revoke",
+            "revoke is not allowed in hosted deployments",
+        )
+        result = runner.invoke(cli, ["--log-file", "", "revoke", "openai"])
+        assert result.exit_code == 4
+        assert "OperationNotAllowedError" in result.output
