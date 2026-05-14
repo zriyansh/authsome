@@ -24,6 +24,8 @@ class ProxyClient(Protocol):
 
     async def list_providers_by_source(self) -> Any: ...
 
+    async def proxy_mode(self) -> str: ...
+
 
 class ProxyRunner:
     """Launch a subprocess behind the Authsome local auth proxy."""

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -35,11 +35,23 @@ class EncryptionConfig(BaseModel):
     mode: str = "local_key"
 
 
+class ProxyConfig(BaseModel):
+    """Proxy configuration block."""
+
+    mode: Literal[
+        "connected_allow",
+        "connected_deny",
+        "configured_allow",
+        "configured_deny",
+    ] = "connected_allow"
+
+
 class GlobalConfig(BaseModel):
     """Daemon configuration for the local Authsome install."""
 
     spec_version: int = Field(default_factory=current_spec_version)
     encryption: EncryptionConfig | None = Field(default_factory=EncryptionConfig)
+    proxy: ProxyConfig | None = Field(default_factory=ProxyConfig)
 
     extra_fields: dict[str, Any] = Field(default_factory=dict, exclude=True)
 

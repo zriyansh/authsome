@@ -9,6 +9,7 @@ from authsome.server.routes._deps import get_protected_auth_service
 from authsome.server.schemas import (
     CredentialResolutionRequest,
     CredentialResolutionResponse,
+    ProxyModeResponse,
     ProxyRoutesResponse,
 )
 
@@ -19,6 +20,11 @@ router = APIRouter(tags=["proxy"])
 async def proxy_routes(auth: AuthService = Depends(get_protected_auth_service)) -> ProxyRoutesResponse:
     data = await auth.proxy_routes()
     return ProxyRoutesResponse.model_validate(data)
+
+
+@router.get("/proxy/mode", response_model=ProxyModeResponse)
+async def proxy_mode(auth: AuthService = Depends(get_protected_auth_service)) -> ProxyModeResponse:
+    return ProxyModeResponse.model_validate({"mode": await auth.proxy_mode()})
 
 
 @router.post("/credentials/resolve", response_model=CredentialResolutionResponse)

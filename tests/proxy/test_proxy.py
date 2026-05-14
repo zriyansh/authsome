@@ -471,6 +471,7 @@ class TestAuthProxyAddon:
         patcher = patch("authsome.proxy.server.ProxyRouter.create", mock_create)
         patcher.start()
 
+        auth.proxy_mode.return_value = "connected_allow"
         addon = AuthProxyAddon(client=auth)
         return addon, router, patcher
 

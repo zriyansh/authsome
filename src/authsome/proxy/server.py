@@ -37,6 +37,8 @@ class ProxyClient(Protocol):
 
     async def proxy_routes(self) -> Any: ...
 
+    async def proxy_mode(self) -> str: ...
+
 
 @dataclass(frozen=True)
 class _RouteTarget:
@@ -333,22 +335,30 @@ class AuthProxyAddon:
     def __init__(self, client: ProxyClient) -> None:
         self._client = client
         self._router: ProxyRouter | None = None
+        self._mode: str | None = None
         self._header_cache: dict[tuple[str, str], _HeaderCacheEntry] = {}
         self._header_locks: dict[tuple[str, str], asyncio.Lock] = {}
 
-    async def _get_router(self) -> ProxyRouter:
+    async def _ensure_initialized(self) -> tuple[ProxyRouter, str]:
+        """Build the router and read the proxy mode once at router-build time."""
         if self._router is None:
             self._router = await ProxyRouter.create(self._client)
-        return self._router
+        if self._mode is None:
+            self._mode = await self._client.proxy_mode()
+        return self._router, self._mode
 
     async def request(self, flow: http.HTTPFlow) -> None:
-        router = await self._get_router()
+        router, mode = await self._ensure_initialized()
+        policy = mode.split("_", 1)[1]
+
         resolution = router.resolve(flow.request.scheme, flow.request.host, flow.request.port, flow.request.path)
         if resolution.match is None:
-            if resolution.miss_reason is not None:
+            if resolution.miss_reason == "no_match" and policy == "deny":
+                self._deny_request(flow, "no_match")
+            elif resolution.miss_reason is not None:
                 normalized_host = _normalize_host(flow.request.host)
                 audit.log("proxy_miss", host=normalized_host, reason=resolution.miss_reason)
-                logger.error(
+                logger.debug(
                     "Proxy miss: host={} reason={} {} {}",
                     normalized_host,
                     resolution.miss_reason,
@@ -360,12 +370,23 @@ class AuthProxyAddon:
         match = resolution.match
         try:
             headers = await self._get_auth_headers(match)
-        except Exception:
+        except Exception as exc:
+            normalized_host = _normalize_host(flow.request.host)
+            audit.log(
+                "proxy_no_credentials",
+                host=normalized_host,
+                provider=match.provider,
+                connection=match.connection,
+            )
             logger.warning(
-                "Failed to retrieve auth headers for provider={} connection={}. Forwarding unchanged.",
+                "No credentials for provider={} connection={} host={}: {}",
                 match.provider,
                 match.connection,
+                normalized_host,
+                exc,
             )
+            if policy == "deny":
+                self._deny_request(flow, "no_credentials")
             return
 
         for key, value in headers.items():
@@ -379,6 +400,15 @@ class AuthProxyAddon:
             method=flow.request.method,
             path=flow.request.path,
         )
+
+    def _deny_request(self, flow: http.HTTPFlow, reason: str) -> None:
+        host = _normalize_host(flow.request.host)
+        audit.log("proxy_deny", host=host, reason=reason)
+        logger.warning("Proxy deny: host={} reason={}", host, reason)
+        if flow.request.method.upper() == "CONNECT":
+            flow.kill()
+        else:
+            flow.response = http.Response.make(403, b"Forbidden by Authsome proxy policy")
 
     async def _get_auth_headers(self, match: RouteMatch) -> dict[str, str]:
         cache_key = (match.provider, match.connection or "")
