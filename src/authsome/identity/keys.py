@@ -145,7 +145,7 @@ def identity_exists(home: Path, handle: str) -> bool:
 
 def create_identity(home: Path, handle: str | None = None) -> IdentityMetadata:
     """Create a local identity and private key, returning existing metadata if present."""
-    from authsome.identity.client_config import load_client_config, save_client_config
+    from authsome.cli.client_config import load_client_config, save_client_config
 
     resolved_handle = validate_handle(handle or _unique_handle(home))
     if identity_exists(home, resolved_handle):
@@ -210,7 +210,7 @@ def ensure_local_identity(home: Path, active_handle: str | None = None) -> Ident
     re-creation, because the old profile's credentials would become inaccessible
     with no explanation.
     """
-    from authsome.identity.client_config import load_client_config
+    from authsome.cli.client_config import load_client_config
 
     remove_legacy_default_identity(home)
     if active_handle is None:

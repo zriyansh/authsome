@@ -230,8 +230,8 @@ class AuthService:
         """Remove a custom provider. Returns True if removed."""
         return await self._vault.delete(name, collection="providers")
 
-    def _iter_registered_identity_handles(self) -> list[str]:
-        handles = list_registered_identity_handles(self._vault.home)
+    async def _iter_registered_identity_handles(self) -> list[str]:
+        handles = await list_registered_identity_handles(self._vault.home)
         return handles or [self._identity]
 
     def _ensure_local_provider_admin_operation_allowed(self, operation: str, provider: str) -> None:
@@ -699,7 +699,7 @@ class AuthService:
     async def revoke(self, provider: str) -> None:
         self._ensure_local_provider_admin_operation_allowed("revoke", provider)
         await self.get_provider(provider)
-        for identity in self._iter_registered_identity_handles():
+        for identity in await self._iter_registered_identity_handles():
             identity_service = AuthService(
                 vault=self._vault,
                 identity=identity,
@@ -893,7 +893,7 @@ class AuthService:
                     return refreshed.access_token
                 except RefreshFailedError as exc:
                     fallback_available = record.expires_at and now < record.expires_at
-                    audit.log(
+                    await audit.alog(
                         "refresh_failed",
                         provider=provider,
                         connection=connection,

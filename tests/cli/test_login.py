@@ -76,6 +76,18 @@ class TestLoginCommand:
         kwargs = mock_client.start_login.call_args.kwargs
         assert kwargs["provider"] == "github"
 
+    def test_started_flow_submits_audit_event(self, runner: CliRunner, mock_client: MagicMock) -> None:
+        mock_client.start_login.return_value = _started_session()
+        result = runner.invoke(cli, ["--log-file", "", "login", "github"])
+        assert result.exit_code == 0, result.output
+        mock_client.submit_audit_event.assert_called_once_with(
+            event="login",
+            provider="github",
+            connection="default",
+            flow="unknown",
+            status="started",
+        )
+
     def test_connection_option_passed_through(self, runner: CliRunner, mock_client: MagicMock) -> None:
         mock_client.start_login.return_value = _started_session()
         runner.invoke(cli, ["--log-file", "", "login", "github", "--connection", "work"])

@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pytest
 
 from authsome.cli.client import AuthsomeApiClient
-from authsome.identity.client_config import ClientConfig, load_client_config, save_client_config
+from authsome.cli.client_config import ClientConfig, load_client_config, save_client_config
 from authsome.identity.keys import create_identity, mark_registered
 
 

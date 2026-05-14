@@ -1,5 +1,6 @@
 """Session ownership tests for protected auth routes."""
 
+import asyncio
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -45,11 +46,13 @@ def test_get_session_rejects_other_identity(monkeypatch, tmp_path: Path) -> None
             json={"handle": stranger.handle, "did": stranger.did},
         )
         assert stranger_registration.status_code == 200
-        session = client.app.state.auth_sessions.create(
-            provider="github",
-            identity=owner.handle,
-            connection_name="default",
-            flow_type=FlowType.PKCE.value,
+        session = asyncio.run(
+            client.app.state.auth_sessions.create(
+                provider="github",
+                identity=owner.handle,
+                connection_name="default",
+                flow_type=FlowType.PKCE.value,
+            )
         )
 
         response = client.get(
@@ -80,11 +83,13 @@ def test_resume_session_rejects_other_identity(monkeypatch, tmp_path: Path) -> N
             json={"handle": stranger.handle, "did": stranger.did},
         )
         assert stranger_registration.status_code == 200
-        session = client.app.state.auth_sessions.create(
-            provider="github",
-            identity=owner.handle,
-            connection_name="default",
-            flow_type=FlowType.PKCE.value,
+        session = asyncio.run(
+            client.app.state.auth_sessions.create(
+                provider="github",
+                identity=owner.handle,
+                connection_name="default",
+                flow_type=FlowType.PKCE.value,
+            )
         )
 
         response = client.post(
@@ -100,3 +105,31 @@ def test_resume_session_rejects_other_identity(monkeypatch, tmp_path: Path) -> N
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Proof JWT body hash does not match request"
+
+
+def test_sessions_survive_app_recreation(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
+    owner = create_identity(tmp_path, "steady-wisely-boldly-0042")
+    session_id = ""
+
+    with TestClient(create_app()) as first_client:
+        registration = first_client.post("/identities/register", json={"handle": owner.handle, "did": owner.did})
+        assert registration.status_code == 200
+        session = asyncio.run(
+            first_client.app.state.auth_sessions.create(
+                provider="github",
+                identity=owner.handle,
+                connection_name="default",
+                flow_type=FlowType.PKCE.value,
+            )
+        )
+        session_id = session.session_id
+
+    with TestClient(create_app()) as second_client:
+        response = second_client.get(
+            f"/auth/sessions/{session_id}",
+            headers=_auth_header(tmp_path, "GET", f"/auth/sessions/{session_id}", handle=owner.handle),
+        )
+
+    assert response.status_code == 200
+    assert response.json()["id"] == session_id

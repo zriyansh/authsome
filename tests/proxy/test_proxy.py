@@ -480,16 +480,15 @@ class TestAuthProxyAddon:
         flow = self._make_flow()
         auth.resolve_credentials.return_value = {"headers": {"Authorization": "Bearer sk-test"}, "expires_at": None}
 
-        with patch("authsome.proxy.server.audit.log") as log_mock:
-            addon, _router, patcher = self._make_addon(auth, RouteMatch(provider="openai", connection="default"))
-            try:
-                await addon.request(flow)
-            finally:
-                patcher.stop()
+        addon, _router, patcher = self._make_addon(auth, RouteMatch(provider="openai", connection="default"))
+        try:
+            await addon.request(flow)
+        finally:
+            patcher.stop()
 
         assert flow.request.headers["Authorization"] == "Bearer sk-test"
-        log_mock.assert_any_call(
-            "proxy_inject",
+        auth.submit_audit_event.assert_awaited_once_with(
+            event="proxy_inject",
             provider="openai",
             connection="default",
             host="api.openai.com",
@@ -516,15 +515,18 @@ class TestAuthProxyAddon:
         auth = mock.AsyncMock()
         flow = self._make_flow(host="example.com", path="/")
 
-        with patch("authsome.proxy.server.audit.log") as log_mock:
-            addon, _router, patcher = self._make_addon(auth, None, miss_reason="no_match")
-            try:
-                await addon.request(flow)
-            finally:
-                patcher.stop()
+        addon, _router, patcher = self._make_addon(auth, None, miss_reason="no_match")
+        try:
+            await addon.request(flow)
+        finally:
+            patcher.stop()
 
         auth.resolve_credentials.assert_not_called()
-        log_mock.assert_called_once_with("proxy_miss", host="example.com", reason="no_match")
+        auth.submit_audit_event.assert_awaited_once_with(
+            event="proxy_miss",
+            host="example.com",
+            reason="no_match",
+        )
 
     @pytest.mark.asyncio
     async def test_addon_continues_on_header_retrieval_failure(self) -> None:
@@ -565,15 +567,17 @@ class TestProxyRunner:
         from authsome.proxy.runner import ProxyRunner
 
         auth = await _make_auth(tmp_path)
-        runner = ProxyRunner(auth)
+        runner = ProxyRunner(auth, home=tmp_path)
 
         with patch("authsome.proxy.runner.subprocess.run") as run_mock:
             run_mock.return_value.returncode = 0
-            with patch.object(runner, "_start_proxy", return_value=("http://127.0.0.1:8899", mock.Mock())):
-                with patch.object(runner, "_build_ca_bundle", return_value=Path("/tmp/fake-ca.pem")):
-                    await runner.run(["python", "-c", "print('ok')"])
+            with patch("authsome.proxy.runner.ensure_local_proxy_ca") as ensure_ca_mock:
+                with patch.object(runner, "_start_proxy", return_value=("http://127.0.0.1:8899", mock.Mock())):
+                    with patch.object(runner, "_build_ca_bundle", return_value=Path("/tmp/fake-ca.pem")):
+                        await runner.run(["python", "-c", "print('ok')"])
 
         env = run_mock.call_args.kwargs["env"]
+        ensure_ca_mock.assert_not_called()
         assert env["HTTP_PROXY"] == "http://127.0.0.1:8899"
         assert env["HTTPS_PROXY"] == "http://127.0.0.1:8899"
         assert env["http_proxy"] == "http://127.0.0.1:8899"
@@ -591,7 +595,7 @@ class TestProxyRunner:
         auth = await _make_auth(tmp_path)
         await _save_connection_record(auth, "openai", "sk-real-padded-for-regex-12")
 
-        runner = ProxyRunner(auth)
+        runner = ProxyRunner(auth, home=tmp_path)
 
         with patch("authsome.proxy.runner.subprocess.run") as run_mock:
             run_mock.return_value.returncode = 0
@@ -608,7 +612,7 @@ class TestProxyRunner:
         from authsome.proxy.runner import ProxyRunner
 
         auth = await _make_auth(tmp_path)
-        runner = ProxyRunner(auth)
+        runner = ProxyRunner(auth, home=tmp_path)
         server = mock.Mock()
 
         with patch("authsome.proxy.runner.subprocess.run", side_effect=RuntimeError("boom")):
@@ -618,6 +622,42 @@ class TestProxyRunner:
                         await runner.run(["python", "-c", "print('ok')"])
 
         server.shutdown.assert_called_once()
+
+    def test_start_proxy_ensures_local_proxy_ca_once(self, tmp_path: Path) -> None:
+        from authsome.proxy.runner import ProxyRunner
+
+        runner = ProxyRunner(mock.Mock(), home=tmp_path)
+        server = mock.Mock(url="http://127.0.0.1:8899")
+
+        with patch("authsome.proxy.runner.ensure_local_proxy_ca") as ensure_ca_mock:
+            with patch("authsome.proxy.runner.start_proxy_server", return_value=server) as start_mock:
+                proxy_url, returned_server = runner._start_proxy()
+
+        ensure_ca_mock.assert_called_once_with(tmp_path)
+        start_mock.assert_called_once_with(runner._client)
+        assert proxy_url == "http://127.0.0.1:8899"
+        assert returned_server is server
+
+    def test_ensure_local_proxy_ca_sets_flag_after_success(self, tmp_path: Path) -> None:
+        from authsome.cli.client_config import load_client_config
+        from authsome.proxy.certs import ensure_local_proxy_ca
+
+        with patch("authsome.proxy.certs._ensure_macos_keychain_ca", return_value=True) as ensure_ca_mock:
+            ensure_local_proxy_ca(tmp_path)
+
+        ensure_ca_mock.assert_called_once_with()
+        assert load_client_config(tmp_path).proxy_ca_installed is True
+
+    def test_ensure_local_proxy_ca_skips_repeat_prompt_once_flagged(self, tmp_path: Path) -> None:
+        from authsome.cli.client_config import ClientConfig, save_client_config
+        from authsome.proxy.certs import ensure_local_proxy_ca
+
+        save_client_config(tmp_path, ClientConfig(proxy_ca_installed=True))
+
+        with patch("authsome.proxy.certs._ensure_macos_keychain_ca") as ensure_ca_mock:
+            ensure_local_proxy_ca(tmp_path)
+
+        ensure_ca_mock.assert_not_called()
 
     def test_runner_merges_existing_no_proxy(self, tmp_path: Path) -> None:
         from authsome.proxy.runner import ProxyRunner

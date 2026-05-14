@@ -3,7 +3,9 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from authsome.identity.keys import create_identity
+from authsome.server import dependencies
 from authsome.server.app import create_app
+from authsome.store.local import LocalAppStore
 from tests.server.test_pop_auth import _auth_header
 
 
@@ -16,6 +18,8 @@ def _register_identity(client: TestClient, tmp_path: Path, handle: str) -> None:
 def test_hosted_revoke_is_rejected(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
     monkeypatch.setenv("AUTHSOME_DEPLOYMENT_MODE", "hosted")
+    monkeypatch.setenv("AUTHSOME_POSTGRES_URL", "postgresql://authsome:secret@db/authsome")
+    monkeypatch.setattr(dependencies, "PostgresAppStore", lambda home, _url: LocalAppStore(home))
 
     with TestClient(create_app()) as client:
         _register_identity(client, tmp_path, "steady-wisely-boldly-0042")
@@ -32,6 +36,8 @@ def test_hosted_revoke_is_rejected(monkeypatch, tmp_path: Path) -> None:
 def test_hosted_remove_is_rejected(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
     monkeypatch.setenv("AUTHSOME_DEPLOYMENT_MODE", "hosted")
+    monkeypatch.setenv("AUTHSOME_POSTGRES_URL", "postgresql://authsome:secret@db/authsome")
+    monkeypatch.setattr(dependencies, "PostgresAppStore", lambda home, _url: LocalAppStore(home))
 
     with TestClient(create_app()) as client:
         _register_identity(client, tmp_path, "steady-wisely-boldly-0042")

@@ -1,9 +1,4 @@
-"""Unified storage interfaces for Authsome.
-
-The AppStore handles bootstrapping (config and initialization) and
-exposes the underlying async KV backend for the Vault to wrap with
-encryption.
-"""
+"""Unified storage interfaces for Authsome."""
 
 from __future__ import annotations
 
@@ -14,11 +9,13 @@ from typing import TYPE_CHECKING
 from key_value.aio.protocols.key_value import AsyncKeyValue
 
 if TYPE_CHECKING:
-    from authsome.auth.models.config import GlobalConfig
+    from authsome.audit import AuditEvent
+    from authsome.auth.sessions import AuthSession
+    from authsome.identity.registry import IdentityRegistration
 
 
 class AppStore(ABC):
-    """Storage backend — config + raw async KV access."""
+    """Storage backend exposing raw async KV plus daemon-owned records."""
 
     @property
     @abstractmethod
@@ -49,16 +46,61 @@ class AppStore(ABC):
         """Perform a health check on the storage medium."""
         ...
 
-    # ── Config (unencrypted — needed before crypto is available) ──────────
+    # ── Daemon-owned state ────────────────────────────────────────────────
 
     @abstractmethod
-    async def get_config(self) -> GlobalConfig:
-        """Get global configuration."""
+    async def save_identity_registration(self, registration: IdentityRegistration) -> None:
+        """Persist an identity registration."""
         ...
 
     @abstractmethod
-    async def save_config(self, config: GlobalConfig) -> None:
-        """Save global configuration."""
+    async def get_identity_registration(self, handle: str) -> IdentityRegistration | None:
+        """Load a persisted identity registration."""
+        ...
+
+    @abstractmethod
+    async def list_identity_registrations(self) -> list[IdentityRegistration]:
+        """List all persisted identity registrations."""
+        ...
+
+    @abstractmethod
+    async def get_auth_session(self, session_id: str) -> AuthSession | None:
+        """Load an auth session by identifier."""
+        ...
+
+    @abstractmethod
+    async def save_auth_session(self, session: AuthSession) -> None:
+        """Persist an auth session update."""
+        ...
+
+    @abstractmethod
+    async def save_auth_session_oauth_state(self, state: str, session_id: str) -> None:
+        """Persist an OAuth state to session mapping."""
+        ...
+
+    @abstractmethod
+    async def delete_auth_session(self, session_id: str) -> None:
+        """Delete an auth session."""
+        ...
+
+    @abstractmethod
+    async def get_auth_session_id_by_state(self, state: str) -> str | None:
+        """Load a persisted OAuth state to session mapping."""
+        ...
+
+    @abstractmethod
+    async def delete_auth_session_oauth_state(self, state: str) -> None:
+        """Delete a persisted OAuth state to session mapping."""
+        ...
+
+    @abstractmethod
+    async def append_audit_event(self, event: AuditEvent) -> None:
+        """Persist an audit event."""
+        ...
+
+    @abstractmethod
+    async def list_audit_events(self, *, identity: str | None = None, limit: int = 50) -> list[AuditEvent]:
+        """List recent audit events, optionally filtered by identity."""
         ...
 
     @abstractmethod

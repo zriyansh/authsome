@@ -8,7 +8,6 @@ from typing import Any
 
 import click
 
-from authsome import audit
 from authsome.cli.client import AuthsomeApiClient
 from authsome.cli.daemon_control import resolve_runtime_client
 from authsome.proxy.runner import ProxyRunner
@@ -25,7 +24,7 @@ class CliRuntime:
         return await self.runtime_client.doctor()
 
     def require_local_proxy(self) -> ProxyRunner:
-        return ProxyRunner(client=self.runtime_client)
+        return ProxyRunner(client=self.runtime_client, home=self.home)
 
 
 class ContextObj:
@@ -40,7 +39,6 @@ class ContextObj:
     async def initialize(self) -> CliRuntime:
         if self._ctx is None:
             self._ctx = CliRuntime(await resolve_runtime_client())
-            audit.setup(self._ctx.home / "audit.log")
         return self._ctx
 
     def print_json(self, data: Any) -> None:

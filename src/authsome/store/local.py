@@ -3,16 +3,24 @@
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from pathlib import Path
 
 from key_value.aio.protocols.key_value import AsyncKeyValue
 from key_value.aio.stores.disk import DiskStore
-from loguru import logger
 
-from authsome.auth.models.config import GlobalConfig
+from authsome.audit import AuditEvent
+from authsome.auth.sessions import AuthSession
+from authsome.identity.registry import IdentityRegistration
 from authsome.store.interfaces import AppStore
+
+_CONFIG_COLLECTION = "config"
+_IDENTITY_COLLECTION = "daemon:identities"
+_IDENTITY_INDEX_KEY = "__index__"
+_SESSION_COLLECTION = "daemon:auth_sessions"
+_SESSION_INDEX_KEY = "__index__"
+_SESSION_STATE_COLLECTION = "daemon:auth_session_states"
+_AUDIT_COLLECTION = "daemon:audit"
+_AUDIT_INDEX_KEY = "__index__"
 
 
 class LocalAppStore(AppStore):
@@ -45,13 +53,9 @@ class LocalAppStore(AppStore):
     # ── Initialization ────────────────────────────────────────────────────
 
     async def ensure_initialized(self) -> None:
-        _ensure_macos_keychain_ca()
-        if await self._store.get("version", collection="config") is not None:
-            config = await self.get_config()
-            await self.save_config(config)
+        if await self._store.get("version", collection=_CONFIG_COLLECTION) is not None:
             return
-        await self._store.put("version", {"data": "1"}, collection="config")
-        await self.save_config(GlobalConfig())
+        await self._store.put("version", {"data": "1"}, collection=_CONFIG_COLLECTION)
 
     async def is_healthy(self) -> bool:
         return True
@@ -59,92 +63,110 @@ class LocalAppStore(AppStore):
     async def check_integrity(self) -> bool:
         return True
 
-    # ── Config (unencrypted) ──────────────────────────────────────────────
+    async def save_identity_registration(self, registration: IdentityRegistration) -> None:
+        await self._store.put(
+            registration.handle,
+            registration.model_dump(mode="json"),
+            collection=_IDENTITY_COLLECTION,
+        )
+        await self._append_index(_IDENTITY_COLLECTION, _IDENTITY_INDEX_KEY, registration.handle)
 
-    async def get_config(self) -> GlobalConfig:
-        val = await self._store.get("global", collection="config")
-        if not val:
-            return GlobalConfig()
-        try:
-            return GlobalConfig.model_validate_json(val["data"])
-        except Exception as exc:
-            logger.warning("Failed to parse config, using defaults: {}", exc)
-            return GlobalConfig()
+    async def get_identity_registration(self, handle: str) -> IdentityRegistration | None:
+        raw = await self._store.get(handle, collection=_IDENTITY_COLLECTION)
+        if raw is None:
+            return None
+        return IdentityRegistration.model_validate(raw)
 
-    async def save_config(self, config: GlobalConfig) -> None:
-        data = config.model_dump(mode="json")
-        await self._store.put("global", {"data": json.dumps(data, indent=2)}, collection="config")
+    async def list_identity_registrations(self) -> list[IdentityRegistration]:
+        handles = await self._read_index(_IDENTITY_COLLECTION, _IDENTITY_INDEX_KEY)
+        registrations: list[IdentityRegistration] = []
+        for handle in handles:
+            registration = await self.get_identity_registration(handle)
+            if registration is not None:
+                registrations.append(registration)
+        return registrations
+
+    async def get_auth_session(self, session_id: str) -> AuthSession | None:
+        raw = await self._store.get(session_id, collection=_SESSION_COLLECTION)
+        if raw is None:
+            return None
+        return AuthSession.model_validate(raw)
+
+    async def save_auth_session(self, session: AuthSession) -> None:
+        await self._store.put(
+            session.session_id,
+            session.model_dump(mode="json"),
+            collection=_SESSION_COLLECTION,
+        )
+        await self._append_index(_SESSION_COLLECTION, _SESSION_INDEX_KEY, session.session_id)
+
+    async def save_auth_session_oauth_state(self, state: str, session_id: str) -> None:
+        await self._store.put(
+            state,
+            {"session_id": session_id},
+            collection=_SESSION_STATE_COLLECTION,
+        )
+
+    async def get_auth_session_id_by_state(self, state: str) -> str | None:
+        mapping = await self._store.get(state, collection=_SESSION_STATE_COLLECTION)
+        if mapping is None:
+            return None
+        session_id = mapping.get("session_id")
+        return session_id if isinstance(session_id, str) else None
+
+    async def delete_auth_session_oauth_state(self, state: str) -> None:
+        await self._store.delete(state, collection=_SESSION_STATE_COLLECTION)
+
+    async def delete_auth_session(self, session_id: str) -> None:
+        await self._store.delete(session_id, collection=_SESSION_COLLECTION)
+
+    async def append_audit_event(self, event: AuditEvent) -> None:
+        await self._store.put(
+            event.event_id,
+            event.model_dump(mode="json"),
+            collection=_AUDIT_COLLECTION,
+        )
+        await self._append_index(_AUDIT_COLLECTION, _AUDIT_INDEX_KEY, event.event_id)
+
+    async def list_audit_events(self, *, identity: str | None = None, limit: int = 50) -> list[AuditEvent]:
+        event_ids = await self._read_index(_AUDIT_COLLECTION, _AUDIT_INDEX_KEY)
+        events: list[AuditEvent] = []
+        for event_id in reversed(event_ids):
+            raw = await self._store.get(event_id, collection=_AUDIT_COLLECTION)
+            if raw is not None:
+                event = AuditEvent.model_validate(raw)
+                if identity is not None and event.identity != identity:
+                    continue
+                events.append(event)
+                if len(events) >= limit:
+                    break
+        return events
 
     async def close(self) -> None:
-        pass
+        close = getattr(self._store, "close", None)
+        if callable(close):
+            await close()
 
+    async def _read_index(self, collection: str, key: str) -> list[str]:
+        raw = await self._store.get(key, collection=collection)
+        if raw is None:
+            return []
 
-def _ensure_macos_keychain_ca() -> None:
-    """Ensure the mitmproxy CA is generated and trusted in the macOS login keychain.
+        data = raw.get("data")
+        if not isinstance(data, str):
+            return []
 
-    Go's crypto/x509 on macOS uses the native Security framework and
-    ignores SSL_CERT_FILE, so the only reliable way to make Go binaries
-    (gh, terraform, kubectl, …) trust the mitmproxy CA is to add it to
-    the login keychain directly.
-
-    The certificate is added persistently once to avoid repeated OS password
-    prompts. It will skip addition on subsequent calls if already present.
-    """
-    if sys.platform != "darwin":
-        return
-
-    keychain = Path.home() / "Library/Keychains/login.keychain-db"
-    if not keychain.exists():
-        return
-
-    # Avoid double-adding: if the user already has a cert with CN=mitmproxy
-    # in their keychain (e.g. from a manual mitmproxy install), don't touch it.
-    check = subprocess.run(
-        ["security", "find-certificate", "-c", "mitmproxy", str(keychain)],
-        capture_output=True,
-        text=True,
-    )
-    if check.returncode == 0:
-        logger.debug("mitmproxy CA already present in macOS login keychain; skipping add")
-        return
-
-    # Ensure CA certificate is generated so we can register it
-    confdir = Path.home() / ".mitmproxy"
-    ca_cert_path = confdir / "mitmproxy-ca-cert.pem"
-    if not ca_cert_path.exists():
         try:
-            from mitmproxy.certs import CertStore
+            values = json.loads(data)
+        except json.JSONDecodeError:
+            return []
+        if not isinstance(values, list):
+            return []
+        return [value for value in values if isinstance(value, str)]
 
-            CertStore.from_store(confdir, "mitmproxy", 2048)
-            logger.debug("Generated mitmproxy CA certificate at {}", ca_cert_path)
-        except Exception as e:
-            logger.debug("Failed to generate mitmproxy CA certificate: {}", e)
+    async def _append_index(self, collection: str, key: str, value: str) -> None:
+        values = await self._read_index(collection, key)
+        if value in values:
             return
-
-    if not ca_cert_path.exists():
-        return
-
-    result = subprocess.run(
-        [
-            "security",
-            "add-trusted-cert",
-            "-d",
-            "-r",
-            "trustRoot",
-            "-k",
-            str(keychain),
-            str(ca_cert_path),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=60,
-    )
-    if result.returncode == 0:
-        logger.debug("Added mitmproxy CA to macOS login keychain")
-        return
-
-    logger.warning(
-        "Could not add mitmproxy CA to macOS login keychain"
-        " (Go-based tools like gh/terraform/kubectl may fail with TLS errors): {}",
-        result.stderr.strip() or result.stdout.strip(),
-    )
+        values.append(value)
+        await self._store.put(key, {"data": json.dumps(values)}, collection=collection)

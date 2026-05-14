@@ -202,6 +202,15 @@ class AuthsomeApiClient:
         """Return proxy routes from a PoP-protected daemon endpoint."""
         return await self._get("/proxy/routes")
 
+    async def submit_audit_event(self, *, event: str, **kwargs: Any) -> dict[str, Any]:
+        """Submit an audit event for daemon-side persistence."""
+        body = {"event": event, **kwargs}
+        return await self._post("/audit/events", body)
+
+    async def list_audit_events(self, *, limit: int = 50) -> dict[str, Any]:
+        """Return recent audit events from the daemon."""
+        return await self._get(f"/audit/events?limit={limit}")
+
     async def resolve_credentials(self, **kwargs: Any) -> dict[str, Any]:
         """Resolve proxy credentials from a PoP-protected daemon endpoint."""
         return await self._post("/credentials/resolve", kwargs)

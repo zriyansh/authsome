@@ -42,7 +42,7 @@ async def start_session(
 ) -> AuthSessionResponse:
     definition = await auth.get_provider(body.provider)
     flow = FlowType(body.flow) if body.flow else definition.flow
-    session = sessions.create(
+    session = await sessions.create(
         provider=body.provider,
         identity=auth.identity,
         connection_name=body.connection,
@@ -65,6 +65,7 @@ async def start_session(
             ):
                 session.state = AuthSessionStatus.COMPLETED
                 session.status_message = "Already connected"
+                await sessions.save(session)
                 return _session_response(session, server_base_url)
         except Exception:
             pass
@@ -73,6 +74,7 @@ async def start_session(
     if fields:
         session.state = AuthSessionStatus.WAITING_FOR_USER
         session.payload["input_fields"] = [_field_to_payload(field) for field in fields]
+        await sessions.save(session)
         return _session_response(session, server_base_url)
 
     await auth.begin_login_flow(
@@ -84,7 +86,7 @@ async def start_session(
     if FlowType(session.flow_type) == FlowType.DEVICE_CODE:
         _update_device_code_expiry(sessions, session)
         background_tasks.add_task(auth.background_resume, session)
-    sessions.index_oauth_state(session)
+    await sessions.index_oauth_state(session)
     return _session_response(session, server_base_url)
 
 
@@ -95,7 +97,7 @@ async def get_session(
     sessions: AuthSessionStore = Depends(get_auth_sessions),
     server_base_url: str = Depends(get_server_base_url),
 ) -> AuthSessionResponse:
-    session = sessions.get(session_id)
+    session = await sessions.get(session_id)
     if session.identity != auth.identity:
         raise HTTPException(status_code=404, detail="Authentication session not found")
     return _session_response(session, server_base_url)
@@ -109,7 +111,7 @@ async def resume_session(
     sessions: AuthSessionStore = Depends(get_auth_sessions),
     server_base_url: str = Depends(get_server_base_url),
 ) -> AuthSessionResponse:
-    session = sessions.get(session_id)
+    session = await sessions.get(session_id)
     if session.identity != auth.identity:
         raise HTTPException(status_code=404, detail="Authentication session not found")
     try:
@@ -119,9 +121,11 @@ async def resume_session(
         else:
             session.state = AuthSessionStatus.COMPLETED
             session.status_message = "Login successful"
+        await sessions.save(session)
     except Exception as exc:
         session.state = AuthSessionStatus.FAILED
         session.error_message = str(exc)
+        await sessions.save(session)
         raise
     return _session_response(session, server_base_url)
 
@@ -135,7 +139,7 @@ async def oauth_callback(
     if not state:
         return HTMLResponse(pages.message_page("Authentication failed", "Missing OAuth state."), status_code=400)
     try:
-        session = sessions.get_by_oauth_state(state)
+        session = await sessions.get_by_oauth_state(state)
     except KeyError:
         return HTMLResponse(
             pages.message_page("Authentication session expired", "Please run authsome login again."),
@@ -147,9 +151,11 @@ async def oauth_callback(
         await auth.resume_login_flow(session, callback_data)
         session.state = AuthSessionStatus.COMPLETED
         session.status_message = "Login successful"
+        await sessions.save(session)
     except Exception as exc:
         session.state = AuthSessionStatus.FAILED
         session.error_message = str(exc)
+        await sessions.save(session)
         return HTMLResponse(pages.message_page("Authentication failed", str(exc)), status_code=400)
     if return_url := session.payload.get("return_url"):
         return RedirectResponse(str(return_url), status_code=303)
@@ -164,7 +170,7 @@ async def input_page(
     server_base_url: str = Depends(get_server_base_url),
 ) -> HTMLResponse:
     try:
-        session = sessions.get(session_id)
+        session = await sessions.get(session_id)
     except KeyError:
         return HTMLResponse(
             pages.message_page("Authentication session expired", "Please run authsome login again."),
@@ -196,7 +202,7 @@ async def device_page(
     sessions: AuthSessionStore = Depends(get_auth_sessions),
 ) -> HTMLResponse:
     try:
-        session = sessions.get(session_id)
+        session = await sessions.get(session_id)
     except KeyError:
         return HTMLResponse(
             pages.message_page("Authentication session expired", "Please run authsome login again."),
@@ -224,7 +230,7 @@ async def submit_input(
     sessions: AuthSessionStore = Depends(get_auth_sessions),
     server_base_url: str = Depends(get_server_base_url),
 ):
-    session = sessions.get(session_id)
+    session = await sessions.get(session_id)
     auth = get_auth_service_for_identity(request, session.identity)
     form = await request.form()
     inputs = {key: str(value) for key, value in form.items()}
@@ -236,6 +242,7 @@ async def submit_input(
         await auth.resume_login_flow(session, {})
         session.state = AuthSessionStatus.COMPLETED
         session.status_message = "Login successful"
+        await sessions.save(session)
         if return_url := session.payload.get("return_url"):
             return RedirectResponse(str(return_url), status_code=303)
         return HTMLResponse(pages.message_page("Authentication successful", "You can close this window."))
@@ -251,13 +258,16 @@ async def submit_input(
         _update_device_code_expiry(sessions, session)
         background_tasks.add_task(auth.background_resume, session)
         if session.payload.get("user_code") and session.payload.get("verification_uri"):
+            await sessions.save(session)
             return RedirectResponse(url=build_device_url(server_base_url, session.session_id), status_code=303)
 
-    sessions.index_oauth_state(session)
+    await sessions.index_oauth_state(session)
 
     auth_url = session.payload.get("auth_url")
     if auth_url:
+        await sessions.save(session)
         return RedirectResponse(str(auth_url), status_code=303)
+    await sessions.save(session)
     return HTMLResponse(pages.message_page("Authentication started", "Return to your terminal to continue."))
 
 

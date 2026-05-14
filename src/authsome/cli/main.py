@@ -10,7 +10,7 @@ from typing import Any
 import click
 import requests
 
-from authsome import AuthenticationFailedError, FlowType, __version__, audit
+from authsome import AuthenticationFailedError, FlowType, __version__
 from authsome.auth.models.enums import AuthType, ExportFormat
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.cli.context import ContextObj, common_options
@@ -217,26 +217,18 @@ async def list_cmd(ctx_obj: ContextObj) -> None:
 async def log_cmd(ctx_obj: ContextObj, lines: int) -> None:
     """View the authsome audit log."""
     actx = await ctx_obj.initialize()
-    audit_file = actx.home / "audit.log"
-    if not audit_file.exists():
-        if ctx_obj.json_output:
-            ctx_obj.print_json([])
-        else:
-            ctx_obj.echo("No audit log found.", err=True, color="yellow")
-        sys.exit(0)
-
     try:
-        with open(audit_file, encoding="utf-8") as f:
-            log_lines = f.readlines()
-
-        target_lines = [line.strip() for line in log_lines[-lines:] if line.strip()]
+        payload = await actx.runtime_client.list_audit_events(limit=lines)
+        events = payload.get("events", [])
 
         if ctx_obj.json_output:
-            parsed_lines = [json_lib.loads(line) for line in target_lines]
-            ctx_obj.print_json({"lines": parsed_lines})
+            ctx_obj.print_json({"events": events})
         else:
-            for line in target_lines:
-                ctx_obj.echo(line)
+            if not events:
+                ctx_obj.echo("No audit events found.", err=True, color="yellow")
+                sys.exit(0)
+            for event in events:
+                ctx_obj.echo(json_lib.dumps(event))
     except Exception as e:
         if ctx_obj.json_output:
             ctx_obj.print_json({"error": str(e)})
@@ -315,11 +307,20 @@ async def login(
                 )
                 ctx_obj.echo(f"Session ID: {session_id}")
 
-        audit.log(
-            "login", provider=provider, connection=connection, flow=flow or "unknown", status=login_result["status"]
+        await actx.runtime_client.submit_audit_event(
+            event="login",
+            provider=provider,
+            connection=connection,
+            flow=flow or "unknown",
+            status=login_result["status"],
         )
     except Exception:
-        audit.log("login", provider=provider, connection=connection, status="failure")
+        await actx.runtime_client.submit_audit_event(
+            event="login",
+            provider=provider,
+            connection=connection,
+            status="failure",
+        )
         raise
 
     if ctx_obj.json_output:
@@ -457,8 +458,8 @@ async def scan(ctx_obj: ContextObj, connection: str, auto_import: bool) -> None:
 
             imported += 1
             results.append({"provider": provider_name, "status": "imported", "env_var": item["env_var"]})
-            audit.log(
-                "scan",
+            await actx.runtime_client.submit_audit_event(
+                event="scan",
                 provider=provider_name,
                 connection=connection,
                 source=item["source"],
@@ -497,7 +498,11 @@ async def logout(ctx_obj: ContextObj, provider: str, connection: str) -> None:
     """Log out of the specified PROVIDER connection."""
     actx = await ctx_obj.initialize()
     await actx.runtime_client.logout(provider, connection)
-    audit.log("logout", provider=provider, connection=connection)
+    await actx.runtime_client.submit_audit_event(
+        event="logout",
+        provider=provider,
+        connection=connection,
+    )
 
     if ctx_obj.json_output:
         ctx_obj.print_json({"status": "logged_out", "provider": provider, "connection": connection})
@@ -526,7 +531,11 @@ async def revoke(ctx_obj: ContextObj, provider: str) -> None:
     """Reset and delete all stored connections and secrets for PROVIDER."""
     actx = await ctx_obj.initialize()
     await actx.runtime_client.revoke(provider)
-    audit.log("revoke", provider=provider, connection="all")
+    await actx.runtime_client.submit_audit_event(
+        event="revoke",
+        provider=provider,
+        connection="all",
+    )
 
     if ctx_obj.json_output:
         ctx_obj.print_json({"status": "revoked", "provider": provider})
@@ -541,7 +550,11 @@ async def remove(ctx_obj: ContextObj, provider: str) -> None:
     """Permanently uninstall the specified custom PROVIDER definition."""
     actx = await ctx_obj.initialize()
     await actx.runtime_client.remove(provider)
-    audit.log("remove", provider=provider, connection="all")
+    await actx.runtime_client.submit_audit_event(
+        event="remove",
+        provider=provider,
+        connection="all",
+    )
 
     if ctx_obj.json_output:
         ctx_obj.print_json({"status": "removed", "provider": provider})
@@ -570,7 +583,12 @@ async def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | 
 
         if not require_os_auth("reveal secrets"):
             raise AuthenticationFailedError("Authentication failed or cancelled.")
-        audit.log("get", provider=provider, connection=connection, field=field or "all")
+        await actx.runtime_client.submit_audit_event(
+            event="get",
+            provider=provider,
+            connection=connection,
+            field=field or "all",
+        )
 
     data = redact(record) if not show_secret else record.model_dump(mode="json")
     # Decouple from internal schema fields
@@ -648,7 +666,12 @@ async def export(ctx_obj: ContextObj, provider: str | None, connection: str, exp
     actx = await ctx_obj.initialize()
     fmt = ExportFormat(export_format)
     output = await actx.runtime_client.export(provider, connection, format=fmt.value)
-    audit.log("export", provider=provider, connection=connection, format=fmt.value)
+    await actx.runtime_client.submit_audit_event(
+        event="export",
+        provider=provider,
+        connection=connection,
+        format=fmt.value,
+    )
     if ctx_obj.json_output:
         # Call with format=json and parse the result to properly wrap with version info
         output_str = await actx.runtime_client.export(provider, connection, format="json")
@@ -722,7 +745,11 @@ async def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> No
         await actx.runtime_client.register_provider(definition.model_dump(mode="json"), force=force)
 
         endpoints = [ep for _, ep, _ in endpoints_to_check]
-        audit.log("register", provider=definition.name, endpoints=endpoints)
+        await actx.runtime_client.submit_audit_event(
+            event="register",
+            provider=definition.name,
+            endpoints=endpoints,
+        )
 
         if ctx_obj.json_output:
             ctx_obj.print_json({"status": "registered", "provider": definition.name})
@@ -821,7 +848,7 @@ async def profile_create(ctx_obj: ContextObj, handle: str | None) -> None:
 @auth_command
 async def profile_use(ctx_obj: ContextObj, handle: str) -> None:
     """Select the active local profile."""
-    from authsome.identity import load_client_config, save_client_config
+    from authsome.cli.client_config import load_client_config, save_client_config
     from authsome.identity.keys import load_identity
 
     home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))

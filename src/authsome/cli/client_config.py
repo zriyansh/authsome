@@ -1,4 +1,4 @@
-"""Client-side identity selection config."""
+"""Caller-local CLI config helpers."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ class ClientConfig(BaseModel):
     """Caller-local config that should not live in daemon-owned storage."""
 
     active_identity: str | None = None
+    proxy_ca_installed: bool = False
 
 
 def client_config_path(home: Path) -> Path:
