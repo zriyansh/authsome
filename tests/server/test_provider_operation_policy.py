@@ -55,6 +55,8 @@ def test_hosted_remove_is_rejected(monkeypatch, tmp_path: Path) -> None:
 def test_hosted_register_provider_is_rejected(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
     monkeypatch.setenv("AUTHSOME_DEPLOYMENT_MODE", "hosted")
+    monkeypatch.setenv("AUTHSOME_POSTGRES_URL", "postgresql://authsome:secret@db/authsome")
+    monkeypatch.setattr(dependencies, "PostgresAppStore", lambda home, _url: LocalAppStore(home))
     payload = {
         "definition": {
             "name": "custom-api",

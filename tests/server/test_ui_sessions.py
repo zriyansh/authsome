@@ -7,7 +7,9 @@ from fastapi.testclient import TestClient
 from authsome.auth.models.connection import ProviderClientRecord
 from authsome.identity.keys import create_identity, load_private_key
 from authsome.identity.proof import create_proof_jwt
+from authsome.server import dependencies
 from authsome.server.app import create_app
+from authsome.store.local import LocalAppStore
 from authsome.utils import build_store_key
 
 
@@ -33,6 +35,8 @@ def _register_identity(client: TestClient, tmp_path: Path, handle: str) -> None:
 def test_hosted_ui_requires_browser_session(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
     monkeypatch.setenv("AUTHSOME_DEPLOYMENT_MODE", "hosted")
+    monkeypatch.setenv("AUTHSOME_POSTGRES_URL", "postgresql://authsome:secret@db/authsome")
+    monkeypatch.setattr(dependencies, "PostgresAppStore", lambda home, _url: LocalAppStore(home))
 
     with TestClient(create_app()) as client:
         response = client.get("/ui/")
@@ -44,6 +48,8 @@ def test_hosted_ui_requires_browser_session(monkeypatch, tmp_path: Path) -> None
 def test_hosted_ui_bootstrap_sets_cookie_and_opens_dashboard(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
     monkeypatch.setenv("AUTHSOME_DEPLOYMENT_MODE", "hosted")
+    monkeypatch.setenv("AUTHSOME_POSTGRES_URL", "postgresql://authsome:secret@db/authsome")
+    monkeypatch.setattr(dependencies, "PostgresAppStore", lambda home, _url: LocalAppStore(home))
 
     with TestClient(create_app()) as client:
         _register_identity(client, tmp_path, "steady-wisely-boldly-0042")
@@ -68,6 +74,8 @@ def test_hosted_ui_bootstrap_sets_cookie_and_opens_dashboard(monkeypatch, tmp_pa
 def test_hosted_ui_hides_server_managed_oauth_client_details(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
     monkeypatch.setenv("AUTHSOME_DEPLOYMENT_MODE", "hosted")
+    monkeypatch.setenv("AUTHSOME_POSTGRES_URL", "postgresql://authsome:secret@db/authsome")
+    monkeypatch.setattr(dependencies, "PostgresAppStore", lambda home, _url: LocalAppStore(home))
 
     with TestClient(create_app()) as client:
         _register_identity(client, tmp_path, "steady-wisely-boldly-0042")
@@ -93,18 +101,23 @@ def test_hosted_ui_hides_server_managed_oauth_client_details(monkeypatch, tmp_pa
 def test_hosted_ui_auth_input_requires_matching_browser_session(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
     monkeypatch.setenv("AUTHSOME_DEPLOYMENT_MODE", "hosted")
+    monkeypatch.setenv("AUTHSOME_POSTGRES_URL", "postgresql://authsome:secret@db/authsome")
+    monkeypatch.setattr(dependencies, "PostgresAppStore", lambda home, _url: LocalAppStore(home))
 
     app = create_app()
     with TestClient(app) as client:
         _register_identity(client, tmp_path, "steady-wisely-boldly-0042")
-        session = client.app.state.auth_sessions.create(
-            provider="github",
-            identity="steady-wisely-boldly-0042",
-            connection_name="default",
-            flow_type="pkce",
+        session = asyncio.run(
+            client.app.state.auth_sessions.create(
+                provider="github",
+                identity="steady-wisely-boldly-0042",
+                connection_name="default",
+                flow_type="pkce",
+            )
         )
         session.payload["ui_session_required"] = True
         session.payload["input_fields"] = [{"name": "client_id", "label": "Client ID", "secret": False}]
+        asyncio.run(client.app.state.auth_sessions.save(session))
 
         response = client.get(f"/auth/sessions/{session.session_id}/input")
 
