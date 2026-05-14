@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 class HealthResponse(BaseModel):
     status: Literal["ok"]
     version: str
-    mode: Literal["local"] = "local"
+    mode: Literal["local", "hosted"] = "local"
 
 
 class ReadyResponse(BaseModel):
@@ -47,6 +47,10 @@ class AuthSessionResponse(BaseModel):
     created_at: datetime | None = None
     expires_at: datetime | None = None
     next_action: NextAction = Field(default_factory=NoneAction)
+
+
+class UiBootstrapResponse(BaseModel):
+    url: str
 
 
 class StartAuthSessionRequest(BaseModel):

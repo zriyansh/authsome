@@ -21,7 +21,19 @@ from authsome.auth.models.enums import AuthType, FlowType
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.auth.sessions import AuthSession, AuthSessionStore
 from authsome.errors import ConnectionNotFoundError
-from authsome.server.routes._deps import get_auth_service, get_auth_sessions, get_server_base_url
+from authsome.server.dependencies import get_deployment_mode
+from authsome.server.routes._deps import (
+    UI_SESSION_COOKIE_NAME,
+    get_auth_service_for_identity,
+    get_auth_sessions,
+    get_protected_auth_service,
+    get_server_base_url,
+    get_ui_sessions,
+    resolve_ui_request_identity,
+)
+from authsome.server.schemas import UiBootstrapResponse
+from authsome.server.ui import pages
+from authsome.server.ui_sessions import UiSessionStore
 from authsome.server.urls import build_auth_input_url, build_callback_url, build_device_url
 from authsome.utils import utc_now
 
@@ -51,6 +63,68 @@ def _update_device_code_expiry(sessions: AuthSessionStore, session: AuthSession)
 def _field_payloads(session: AuthSession) -> list[dict[str, Any]]:
     fields = session.payload.get("input_fields", [])
     return [dict(field) for field in fields]
+
+
+def _is_hosted_ui() -> bool:
+    return get_deployment_mode() == "hosted"
+
+
+def _ui_cookie_secure(server_base_url: str) -> bool:
+    return server_base_url.startswith("https://")
+
+
+def _ui_policy() -> dict[str, Any]:
+    hosted = _is_hosted_ui()
+    return {
+        "ui_mode": "hosted" if hosted else "local",
+        "show_provider_client_details": not hosted,
+        "provider_management_label": "OAuth application managed by Authsome" if hosted else "OAuth Application",
+        "show_hosted_identity": hosted,
+    }
+
+
+async def _resolve_ui_auth(request: Request) -> AuthService | None:
+    identity = await resolve_ui_request_identity(request)
+    if not identity:
+        return None
+    return get_auth_service_for_identity(request, identity)
+
+
+def _ui_session_expired_response(status_code: int = 401) -> HTMLResponse:
+    return HTMLResponse(
+        pages.message_page("Dashboard session expired", "Run 'authsome ui' to reopen the hosted dashboard."),
+        status_code=status_code,
+    )
+
+
+def _set_ui_session_cookie(
+    response: Response,
+    session_id: str,
+    ui_sessions: UiSessionStore,
+    server_base_url: str,
+) -> None:
+    response.set_cookie(
+        UI_SESSION_COOKIE_NAME,
+        ui_sessions.build_cookie_value(session_id),
+        httponly=True,
+        secure=_ui_cookie_secure(server_base_url),
+        samesite="lax",
+        path="/",
+    )
+
+
+def _clear_ui_session_cookie(response: Response) -> None:
+    response.delete_cookie(UI_SESSION_COOKIE_NAME, path="/")
+
+
+def _page_context(request: Request, page: str, **kwargs: Any) -> dict[str, Any]:
+    return {
+        "page": page,
+        "version": __version__,
+        "ui_identity": getattr(request.state, "ui_identity", None),
+        **_ui_policy(),
+        **kwargs,
+    }
 
 
 def _format_relative(when: datetime | None) -> str | None:
@@ -121,7 +195,10 @@ async def _all_provider_views(auth: AuthService) -> list[dict[str, Any]]:
 
 
 @router.get("/", response_class=HTMLResponse)
-async def overview(request: Request, auth: AuthService = Depends(get_auth_service)) -> HTMLResponse:
+async def overview(request: Request) -> HTMLResponse:
+    auth = await _resolve_ui_auth(request)
+    if auth is None:
+        return _ui_session_expired_response()
     providers = await _all_provider_views(auth)
     connected = [p for p in providers if p["status"] != "available"]
     available_count = len(providers) - len(connected)
@@ -149,38 +226,41 @@ async def overview(request: Request, auth: AuthService = Depends(get_auth_servic
     return templates.TemplateResponse(
         request,
         "overview.html",
-        {
-            "page": "overview",
-            "version": __version__,
-            "stats": {
+        _page_context(
+            request,
+            "overview",
+            stats={
                 "connected": len(connected),
                 "available": available_count,
                 "oauth": oauth_count,
                 "api_key": apikey_count,
             },
-            "last_activity": last_activity_label or "—",
-            "connected_providers": connected[:6],
-        },
+            last_activity=last_activity_label or "—",
+            connected_providers=connected[:6],
+        ),
     )
 
 
 @router.get("/connections", response_class=HTMLResponse)
-async def connections(request: Request, auth: AuthService = Depends(get_auth_service)) -> HTMLResponse:
+async def connections(request: Request) -> HTMLResponse:
+    auth = await _resolve_ui_auth(request)
+    if auth is None:
+        return _ui_session_expired_response()
     providers = await _all_provider_views(auth)
     connected_count = sum(1 for p in providers if p["status"] != "available")
     return templates.TemplateResponse(
         request,
         "connections.html",
-        {
-            "page": "connections",
-            "version": __version__,
-            "providers": providers,
-            "totals": {
+        _page_context(
+            request,
+            "connections",
+            providers=providers,
+            totals={
                 "all": len(providers),
                 "connected": connected_count,
                 "available": len(providers) - connected_count,
             },
-        },
+        ),
     )
 
 
@@ -188,9 +268,11 @@ async def connections(request: Request, auth: AuthService = Depends(get_auth_ser
 async def app_detail(
     provider_name: str,
     request: Request,
-    auth: AuthService = Depends(get_auth_service),
     server_base_url: str = Depends(get_server_base_url),
 ) -> Response:
+    auth = await _resolve_ui_auth(request)
+    if auth is None:
+        return _ui_session_expired_response()
     provider = await auth.get_provider(provider_name)
 
     connection_record = None
@@ -202,40 +284,43 @@ async def app_detail(
     client_record = await auth.get_provider_client(provider_name)
     redirect_uri = build_callback_url(server_base_url)
     host_url = provider.host_url or (provider.oauth.base_url if provider.oauth else None) or provider.name
+    policy = _ui_policy()
 
     if connection_record is None:
         return templates.TemplateResponse(
             request,
             "app_detail_disconnected.html",
-            {
-                "page": "connections",
-                "version": __version__,
-                "provider": provider,
-                "connection": None,
-                "logo_initial": _logo_initial(provider.display_name or provider.name),
-                "host_url": host_url,
-                "obtained_label": None,
-                "auth_type_label": "OAuth 2.0" if provider.auth_type == AuthType.OAUTH2 else "API Key",
-                "client_id": (client_record.client_id if client_record else None),
-                "has_client_secret": bool(client_record and client_record.client_secret),
-                "redirect_uri": redirect_uri,
-                "auth_url": provider.oauth.authorization_url if provider.oauth else None,
-                "token_url": provider.oauth.token_url if provider.oauth else None,
-                "base_url": (provider.oauth.base_url if provider.oauth else None) or provider.host_url,
-            },
+            _page_context(
+                request,
+                "connections",
+                provider=provider,
+                connection=None,
+                logo_initial=_logo_initial(provider.display_name or provider.name),
+                host_url=host_url,
+                obtained_label=None,
+                auth_type_label="OAuth 2.0" if provider.auth_type == AuthType.OAUTH2 else "API Key",
+                client_id=client_record.client_id if client_record and policy["show_provider_client_details"] else None,
+                has_client_secret=bool(
+                    client_record and client_record.client_secret and policy["show_provider_client_details"]
+                ),
+                redirect_uri=redirect_uri,
+                auth_url=provider.oauth.authorization_url if provider.oauth else None,
+                token_url=provider.oauth.token_url if provider.oauth else None,
+                base_url=(provider.oauth.base_url if provider.oauth else None) or provider.host_url,
+            ),
         )
 
-    common = {
-        "page": "connections",
-        "version": __version__,
-        "provider": provider,
-        "connection": connection_record,
-        "logo_initial": _logo_initial(provider.display_name or provider.name),
-        "host_url": host_url,
-        "expires_label": _format_relative(connection_record.expires_at),
-        "obtained_label": _format_relative(connection_record.obtained_at),
-        "scopes": connection_record.scopes or [],
-    }
+    common = _page_context(
+        request,
+        "connections",
+        provider=provider,
+        connection=connection_record,
+        logo_initial=_logo_initial(provider.display_name or provider.name),
+        host_url=host_url,
+        expires_label=_format_relative(connection_record.expires_at),
+        obtained_label=_format_relative(connection_record.obtained_at),
+        scopes=connection_record.scopes or [],
+    )
 
     if provider.auth_type == AuthType.OAUTH2:
         return templates.TemplateResponse(
@@ -243,8 +328,12 @@ async def app_detail(
             "app_detail_oauth.html",
             {
                 **common,
-                "client_id": (client_record.client_id if client_record else None),
-                "has_client_secret": bool(client_record and client_record.client_secret),
+                "client_id": (
+                    client_record.client_id if client_record and policy["show_provider_client_details"] else None
+                ),
+                "has_client_secret": bool(
+                    client_record and client_record.client_secret and policy["show_provider_client_details"]
+                ),
                 "redirect_uri": redirect_uri,
                 "auth_url": provider.oauth.authorization_url if provider.oauth else "",
                 "token_url": provider.oauth.token_url if provider.oauth else "",
@@ -271,9 +360,11 @@ async def disconnect_app(
     provider_name: str,
     connection_name: str,
     request: Request,
-    auth: AuthService = Depends(get_auth_service),
 ) -> Response:
     """Disconnect a provider connection from the dashboard."""
+    auth = await _resolve_ui_auth(request)
+    if auth is None:
+        return _redirect(request, "/ui/")
     await auth.logout(provider_name, connection_name)
     return _redirect(request, "/ui/connections")
 
@@ -283,11 +374,13 @@ async def connect_app(
     provider_name: str,
     request: Request,
     background_tasks: BackgroundTasks,
-    auth: AuthService = Depends(get_auth_service),
     sessions: AuthSessionStore = Depends(get_auth_sessions),
     server_base_url: str = Depends(get_server_base_url),
 ) -> Response:
     """Start a provider connection from the dashboard."""
+    auth = await _resolve_ui_auth(request)
+    if auth is None:
+        return _redirect(request, "/ui/")
     form = await request.form()
     connection_name = str(form.get("connection", "default") or "default")
     force = str(form.get("force", "false")).lower() in {"1", "true", "on", "yes"}
@@ -303,6 +396,8 @@ async def connect_app(
     session.payload["force"] = force
     session.payload["callback_url_override"] = build_callback_url(server_base_url)
     session.payload["return_url"] = f"{server_base_url.rstrip('/')}/ui/apps/{provider_name}"
+    if _is_hosted_ui():
+        session.payload["ui_session_required"] = True
 
     if not force:
         try:
@@ -330,3 +425,56 @@ async def connect_app(
     if auth_url:
         return _redirect(request, str(auth_url))
     return _redirect(request, f"/ui/apps/{provider_name}")
+
+
+@router.post("/session", response_model=UiBootstrapResponse)
+async def start_ui_session(
+    auth: AuthService = Depends(get_protected_auth_service),
+    ui_sessions: UiSessionStore = Depends(get_ui_sessions),
+    server_base_url: str = Depends(get_server_base_url),
+) -> UiBootstrapResponse:
+    """Return a browser URL for opening the dashboard as the authenticated identity."""
+    if not _is_hosted_ui():
+        return UiBootstrapResponse(url=f"{server_base_url.rstrip('/')}/ui/")
+
+    bootstrap = ui_sessions.create_bootstrap(identity=auth.identity)
+    return UiBootstrapResponse(url=f"{server_base_url.rstrip('/')}/ui/bootstrap/{bootstrap.token}")
+
+
+@router.get("/bootstrap/{token}", include_in_schema=False)
+async def consume_bootstrap(
+    token: str,
+    ui_sessions: UiSessionStore = Depends(get_ui_sessions),
+    server_base_url: str = Depends(get_server_base_url),
+) -> Response:
+    """Consume a one-time UI bootstrap token and set the browser session cookie."""
+    if not _is_hosted_ui():
+        return RedirectResponse(url="/ui/", status_code=303)
+
+    try:
+        session = ui_sessions.consume_bootstrap(token)
+    except KeyError:
+        return _ui_session_expired_response(status_code=404)
+
+    response = RedirectResponse(url="/ui/", status_code=303)
+    _set_ui_session_cookie(response, session.session_id, ui_sessions, server_base_url)
+    return response
+
+
+@router.post("/logout")
+async def logout_ui_session(
+    request: Request,
+    ui_sessions: UiSessionStore = Depends(get_ui_sessions),
+) -> Response:
+    """Clear the hosted dashboard browser session."""
+    response = _redirect(request, "/ui/")
+    cookie_value = request.cookies.get(UI_SESSION_COOKIE_NAME)
+    if cookie_value:
+        try:
+            session = ui_sessions.get_session(cookie_value)
+        except KeyError:
+            session = None
+        if session is not None:
+            ui_sessions.delete_session(session.session_id)
+    _clear_ui_session_cookie(response)
+    return response
