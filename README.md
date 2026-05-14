@@ -1,23 +1,36 @@
-# authsome
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/authsome-logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/authsome-logo-light.svg">
+    <img alt="Authsome" src="assets/authsome-logo-light.svg" height="60">
+  </picture>
+</p>
 
-[![PyPI version](https://img.shields.io/pypi/v/authsome.svg)](https://pypi.org/project/authsome/)
-[![Python 3.13+](https://img.shields.io/pypi/pyversions/authsome.svg)](https://pypi.org/project/authsome/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PyPI downloads](https://img.shields.io/pypi/dm/authsome.svg)](https://pypi.org/project/authsome/)
-[![Tests](https://github.com/manojbajaj95/authsome/actions/workflows/test.yml/badge.svg)](https://github.com/manojbajaj95/authsome/actions/workflows/test.yml)
-[![codecov](https://codecov.io/gh/manojbajaj95/authsome/branch/main/graph/badge.svg)](https://codecov.io/gh/manojbajaj95/authsome)
+<p align="center">
+  <a href="https://pypi.org/project/authsome/"><img src="https://img.shields.io/pypi/v/authsome.svg" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/authsome/"><img src="https://img.shields.io/pypi/pyversions/authsome.svg" alt="Python 3.13+"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://pypi.org/project/authsome/"><img src="https://img.shields.io/pypi/dm/authsome.svg" alt="PyPI downloads"></a>
+  <a href="https://github.com/agentrhq/authsome/actions/workflows/test.yml"><img src="https://github.com/agentrhq/authsome/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
+  <a href="https://discord.gg/9YP2C9tvMp"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+</p>
 
-```text
-               __  __
-  ____ ___  __/ /_/ /_  _________  ____ ___  ___
- / __ `/ / / / __/ __ \/ ___/ __ \/ __ `__ \/ _ \
-/ /_/ / /_/ / /_/ / / (__  ) /_/ / / / / / /  __/
-\__,_/\__,_/\__/_/ /_/____/\____/_/ /_/ /_/\___/
-```
+<p align="center">
+  <b>Local-first credential broker and vault for AI Agents</b>
+</p>
 
-**Local-first credential broker and vault for AI Agents**
+<p align="center">
+  <a href="https://authsome.agentr.dev/docs">Docs</a> ·
+  <a href="https://authsome.agentr.dev">Website</a> ·
+  <a href="https://discord.gg/9YP2C9tvMp">Discord</a> ·
+  <a href="https://github.com/agentrhq/authsome/issues">Issues</a>
+</p>
+
+---
 
 An open-source credential broker that sits between your agents and the services they call. Instead of sharing credentials with every agent, log in once via OAuth2 or API keys. Authsome stores credentials securely and injects them via an HTTP proxy. You get one place to manage access, rotate keys, and see what every agent is doing.
+
+**44 bundled providers** out of the box: 13 OAuth2 and 31 API key. [See the full list](https://authsome.agentr.dev/docs/reference/bundled-providers).
 
 ---
 
@@ -27,7 +40,7 @@ https://github.com/user-attachments/assets/27f9b229-baf4-4889-be9a-378a133654dc
 
 ---
 
-## Why Agents need Authsome
+## Why Agents Need Authsome
 
 Agents run beyond interactive sessions. They live in CI, over SSH, in cron jobs, in background workers, and in parallel pipelines. They need API access that survives without a human in the loop.
 
@@ -35,7 +48,7 @@ Hardcoded environment tokens leak or go stale, and building auth flow logic, tok
 
 Authsome is the local credential layer agents call at runtime.
 
-- **No credential sprawl.** One encrypted store — every provider, every agent, one place.
+- **No credential sprawl.** One encrypted store. Every provider, every agent, one place.
 - **No SaaS, no privacy trade-off.** Credentials never leave your machine. Eliminates credential exfiltration risks as agents never see them.
 - **No browser required at runtime.** Setup can use browser PKCE, device code, or a browser bridge for secure API key entry. After that, agents run headlessly.
 
@@ -83,7 +96,7 @@ Credentials are stored locally, encrypted at rest, and refreshed before expiry. 
 | Automatic token refresh | ✅ | ❌ | build it |
 | OAuth2 + API keys | ✅ | ❌ | build it |
 | Runtime headless use | ✅ | ✅ | varies |
-| Local — no SaaS dependency | ✅ | ✅ | ✅ |
+| Local, no SaaS dependency | ✅ | ✅ | ✅ |
 | Built-in providers, zero config | ✅ | ❌ | ❌ |
 | Multi-account per provider | ✅ | ❌ | build it |
 
@@ -91,26 +104,55 @@ Authsome gives agents one command for a valid token, without scattering long-liv
 
 ---
 
+## Install
+
+Requires Python 3.13+.
+
+```bash
+pip install authsome
+```
+
+Or run without installing:
+
+```bash
+uvx authsome@latest --help
+```
+
 ## Quick Start
 
 ```bash
-uvx authsome login github                  # opens browser, completes PKCE flow
+uvx authsome login github                     # opens browser, completes PKCE flow
 uvx authsome login github --flow device_code  # headless: Device Code, works over SSH and CI
-uvx authsome login openai                  # secure API key entry via browser bridge
-uvx authsome list                          # all connections + token status
+uvx authsome login openai                     # secure API key entry via browser bridge
+uvx authsome list                             # all connections + token status
 ```
+
+## Agent Integrations
+
+Authsome ships with adapters for the most common agent frameworks and CLIs:
+
+- [Claude Code](https://authsome.agentr.dev/docs/integrations/agents/claude-code)
+- [Codex](https://authsome.agentr.dev/docs/integrations/agents/codex)
+- [Cursor](https://authsome.agentr.dev/docs/integrations/agents/cursor)
+- [OpenCode](https://authsome.agentr.dev/docs/integrations/agents/opencode)
+- [LangChain](https://authsome.agentr.dev/docs/integrations/agents/langchain)
+- [LlamaIndex](https://authsome.agentr.dev/docs/integrations/agents/llamaindex)
+- [OpenAI Agents SDK](https://authsome.agentr.dev/docs/integrations/agents/openai-agents-sdk)
+- [Anthropic SDK](https://authsome.agentr.dev/docs/integrations/agents/anthropic-sdk)
+
+Full list at [authsome.agentr.dev/docs/integrations](https://authsome.agentr.dev/docs/integrations/agents/index).
 
 ## Docs
 
-The full documentation site lives in [`docs/site/`](docs/site/)
+Full documentation lives at **[authsome.agentr.dev/docs](https://authsome.agentr.dev/docs)**.
 
-- [Quickstart](docs/site/quickstart.mdx)
-- [CLI reference](docs/site/reference/cli.mdx)
-- [Architecture](docs/site/concepts/architecture.mdx)
-- [Custom providers](docs/site/guides/custom-providers.mdx)
-- [Troubleshooting](docs/site/troubleshooting/doctor.mdx)
+- [Quickstart](https://authsome.agentr.dev/docs/quickstart)
+- [CLI reference](https://authsome.agentr.dev/docs/reference/cli)
+- [Architecture](https://authsome.agentr.dev/docs/concepts/architecture)
+- [Custom providers](https://authsome.agentr.dev/docs/guides/custom-providers)
+- [Troubleshooting](https://authsome.agentr.dev/docs/troubleshooting/doctor)
 
-To preview locally:
+To preview the docs site locally:
 
 ```bash
 cd docs/site
@@ -118,12 +160,21 @@ npm i -g mint   # requires Node.js >= 20.17.0
 mint dev
 ```
 
+## Community
 
+- **[Discord](https://discord.gg/9YP2C9tvMp)** for questions, help, and showing what you're building.
+- **[GitHub Issues](https://github.com/agentrhq/authsome/issues)** for bugs and feature requests.
 
-## Specs
+## Security
 
-- [Authsome v1](docs/specs/authsome-v1.md)
+Authsome is a credential tool. If you find a vulnerability, please do **not** open a public GitHub issue.
+
+See the [responsible disclosure policy](https://authsome.agentr.dev/docs/security/disclosure) for how to report it privately.
+
+## Contributing
+
+Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and the engineering principles we follow.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
