@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from typing import Literal, cast
+
 from fastapi import APIRouter, Depends, Request
 
 from authsome import __version__
 from authsome.auth import AuthService
 from authsome.auth.models.config import current_spec_version
-from authsome.server.dependencies import get_encryption_mode
+from authsome.server.dependencies import get_deployment_mode, get_encryption_mode
 from authsome.server.routes._deps import get_auth_service, get_protected_auth_service, get_server_base_url
 from authsome.server.schemas import HealthResponse, ReadyResponse
 
@@ -16,7 +18,9 @@ router = APIRouter()
 
 @router.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    return HealthResponse(status="ok", version=__version__)
+    mode = get_deployment_mode()
+    response_mode = cast(Literal["local", "hosted"], mode if mode == "hosted" else "local")
+    return HealthResponse(status="ok", version=__version__, mode=response_mode)
 
 
 @router.get("/ready", response_model=ReadyResponse)

@@ -214,6 +214,7 @@ class AuthService:
         }
 
     async def register_provider(self, definition: ProviderDefinition, *, force: bool = False) -> None:
+        self._ensure_local_provider_admin_operation_allowed("register", definition.name)
         self._validate_provider(definition)
         has_custom = (await self._vault.get(definition.name, collection="providers")) is not None
         if force or not has_custom:

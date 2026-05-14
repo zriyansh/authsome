@@ -17,6 +17,7 @@ from authsome.server.routes._deps import (
     get_auth_sessions,
     get_protected_auth_service,
     get_server_base_url,
+    resolve_ui_request_identity,
 )
 from authsome.server.schemas import (
     AuthSessionResponse,
@@ -30,6 +31,17 @@ from authsome.server.urls import build_auth_input_url, build_callback_url, build
 from authsome.utils import utc_now
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _ui_session_required(session: AuthSession) -> bool:
+    return bool(session.payload.get("ui_session_required"))
+
+
+async def _ensure_browser_session_identity(request: Request, session: AuthSession) -> bool:
+    if not _ui_session_required(session):
+        return True
+    identity = await resolve_ui_request_identity(request)
+    return identity == session.identity
 
 
 @router.post("/sessions", response_model=AuthSessionResponse)
@@ -145,6 +157,11 @@ async def oauth_callback(
             pages.message_page("Authentication session expired", "Please run authsome login again."),
             status_code=400,
         )
+    if not await _ensure_browser_session_identity(request, session):
+        return HTMLResponse(
+            pages.message_page("Dashboard session expired", "Run 'authsome ui' to reopen the hosted dashboard."),
+            status_code=401,
+        )
     callback_data = dict(request.query_params)
     auth = get_auth_service_for_identity(request, session.identity)
     try:
@@ -175,6 +192,11 @@ async def input_page(
         return HTMLResponse(
             pages.message_page("Authentication session expired", "Please run authsome login again."),
             status_code=404,
+        )
+    if not await _ensure_browser_session_identity(request, session):
+        return HTMLResponse(
+            pages.message_page("Dashboard session expired", "Run 'authsome ui' to reopen the hosted dashboard."),
+            status_code=401,
         )
     auth = get_auth_service_for_identity(request, session.identity)
     definition = await auth.get_provider(session.provider)
@@ -208,6 +230,11 @@ async def device_page(
             pages.message_page("Authentication session expired", "Please run authsome login again."),
             status_code=404,
         )
+    if not await _ensure_browser_session_identity(request, session):
+        return HTMLResponse(
+            pages.message_page("Dashboard session expired", "Run 'authsome ui' to reopen the hosted dashboard."),
+            status_code=401,
+        )
     user_code = session.payload.get("user_code")
     verification_uri = session.payload.get("verification_uri")
     verification_uri_complete = session.payload.get("verification_uri_complete")
@@ -231,6 +258,11 @@ async def submit_input(
     server_base_url: str = Depends(get_server_base_url),
 ):
     session = await sessions.get(session_id)
+    if not await _ensure_browser_session_identity(request, session):
+        return HTMLResponse(
+            pages.message_page("Dashboard session expired", "Run 'authsome ui' to reopen the hosted dashboard."),
+            status_code=401,
+        )
     auth = get_auth_service_for_identity(request, session.identity)
     form = await request.form()
     inputs = {key: str(value) for key, value in form.items()}
