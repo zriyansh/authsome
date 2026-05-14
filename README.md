@@ -12,6 +12,7 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://pypi.org/project/authsome/"><img src="https://img.shields.io/pypi/dm/authsome.svg" alt="PyPI downloads"></a>
   <a href="https://github.com/agentrhq/authsome/actions/workflows/test.yml"><img src="https://github.com/agentrhq/authsome/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
+  <a href="https://codecov.io/gh/agentrhq/authsome"><img src="https://codecov.io/gh/agentrhq/authsome/branch/main/graph/badge.svg" alt="codecov"></a>
   <a href="https://discord.gg/9YP2C9tvMp"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
 
@@ -174,6 +175,16 @@ See the [responsible disclosure policy](https://authsome.agentr.dev/docs/securit
 ## Contributing
 
 Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and the engineering principles we follow.
+
+## Star History
+
+<a href="https://star-history.com/#agentrhq/authsome&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=agentrhq/authsome&type=Date&theme=dark">
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=agentrhq/authsome&type=Date">
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=agentrhq/authsome&type=Date">
+  </picture>
+</a>
 
 ## License
 
