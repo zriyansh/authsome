@@ -386,7 +386,7 @@ class AuthProxyAddon:
                 exc,
             )
             if policy == "deny":
-                self._deny_request(flow, "no_credentials")
+                self._deny_request(flow, "no_credentials", match=match)
             return
 
         for key, value in headers.items():
@@ -401,14 +401,20 @@ class AuthProxyAddon:
             path=flow.request.path,
         )
 
-    def _deny_request(self, flow: http.HTTPFlow, reason: str) -> None:
+    def _deny_request(
+        self,
+        flow: http.HTTPFlow,
+        reason: str,
+        *,
+        match: RouteMatch | None = None,
+    ) -> None:
         host = _normalize_host(flow.request.host)
         audit.log("proxy_deny", host=host, reason=reason)
         logger.warning("Proxy deny: host={} reason={}", host, reason)
         if flow.request.method.upper() == "CONNECT":
             flow.kill()
-        else:
-            flow.response = http.Response.make(403, b"Forbidden by Authsome proxy policy")
+            return
+        flow.response = http.Response.make(403, _deny_body(reason, match).encode("utf-8"))
 
     async def _get_auth_headers(self, match: RouteMatch) -> dict[str, str]:
         cache_key = (match.provider, match.connection or "")
@@ -446,6 +452,21 @@ class AuthProxyAddon:
                 expires_at=expires_at,
             )
             return headers
+
+
+def _deny_body(reason: str, match: RouteMatch | None) -> str:
+    """Build a human-readable 403 body for a denied proxy request.
+
+    For `no_credentials` we surface the provider name so the agent
+    can recover by running `authsome login <provider>`; other reasons
+    fall back to a generic message.
+    """
+    if reason == "no_credentials" and match is not None:
+        return (
+            f"Forbidden: provider '{match.provider}' is configured but has no "
+            f"active connection. Run `authsome login {match.provider}` to connect."
+        )
+    return "Forbidden by Authsome proxy policy"
 
 
 def _header_cache_valid(entry: _HeaderCacheEntry, now: datetime) -> bool:

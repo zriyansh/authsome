@@ -461,7 +461,7 @@ class TestAuthProxyAddon:
         flow.request.headers = headers if headers is not None else {}
         return flow
 
-    def _make_addon(self, auth, match, *, miss_reason=None):
+    def _make_addon(self, auth, match, *, miss_reason=None, mode="connected_allow"):
         router = mock.Mock()
         router.resolve.return_value = RouteResolution(match=match, miss_reason=miss_reason)
 
@@ -471,7 +471,7 @@ class TestAuthProxyAddon:
         patcher = patch("authsome.proxy.server.ProxyRouter.create", mock_create)
         patcher.start()
 
-        auth.proxy_mode.return_value = "connected_allow"
+        auth.proxy_mode.return_value = mode
         addon = AuthProxyAddon(client=auth)
         return addon, router, patcher
 
@@ -526,6 +526,70 @@ class TestAuthProxyAddon:
 
         auth.resolve_credentials.assert_not_called()
         log_mock.assert_called_once_with("proxy_miss", host="example.com", reason="no_match")
+
+    @pytest.mark.asyncio
+    async def test_addon_denies_no_match_with_generic_body_in_connected_deny(self) -> None:
+        auth = mock.AsyncMock()
+        flow = self._make_flow(host="example.com", path="/")
+
+        with patch("authsome.proxy.server.audit.log") as log_mock:
+            addon, _router, patcher = self._make_addon(
+                auth, None, miss_reason="no_match", mode="connected_deny"
+            )
+            try:
+                await addon.request(flow)
+            finally:
+                patcher.stop()
+
+        assert flow.response.status_code == 403
+        assert flow.response.content == b"Forbidden by Authsome proxy policy"
+        log_mock.assert_called_once_with("proxy_deny", host="example.com", reason="no_match")
+        auth.resolve_credentials.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_addon_denies_no_credentials_with_provider_hint_in_configured_deny(self) -> None:
+        auth = mock.AsyncMock()
+        auth.resolve_credentials.side_effect = RuntimeError("no connection for openai")
+        flow = self._make_flow()
+
+        with patch("authsome.proxy.server.audit.log") as log_mock:
+            addon, _router, patcher = self._make_addon(
+                auth,
+                RouteMatch(provider="openai", connection="default"),
+                mode="configured_deny",
+            )
+            try:
+                await addon.request(flow)
+            finally:
+                patcher.stop()
+
+        assert flow.response.status_code == 403
+        body = flow.response.content.decode("utf-8")
+        assert "openai" in body
+        assert "authsome login openai" in body
+        log_mock.assert_any_call(
+            "proxy_no_credentials",
+            host="api.openai.com",
+            provider="openai",
+            connection="default",
+        )
+        log_mock.assert_any_call("proxy_deny", host="api.openai.com", reason="no_credentials")
+
+    @pytest.mark.asyncio
+    async def test_addon_kills_connect_tunnel_on_deny(self) -> None:
+        auth = mock.AsyncMock()
+        flow = self._make_flow(host="example.com", path="/")
+        flow.request.method = "CONNECT"
+
+        addon, _router, patcher = self._make_addon(
+            auth, None, miss_reason="no_match", mode="connected_deny"
+        )
+        try:
+            await addon.request(flow)
+        finally:
+            patcher.stop()
+
+        flow.kill.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_addon_continues_on_header_retrieval_failure(self) -> None:
