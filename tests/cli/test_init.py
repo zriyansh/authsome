@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 
 from click.testing import CliRunner
 
+from authsome import __version__
 from authsome.cli.client_config import ClientConfig, load_client_config, save_client_config
 from authsome.cli.main import cli
 from authsome.identity import mark_registered
@@ -39,6 +40,7 @@ def test_init_removes_legacy_default_state_and_registers_identity(
     mock_client.register_identity.assert_called_once_with(data["profile"], data["did"])
 
     config_data = load_client_config(tmp_path)
+    assert config_data.version == __version__
     assert config_data.active_identity == data["profile"]
 
 

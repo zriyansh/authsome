@@ -6,12 +6,14 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from authsome import __version__
 from authsome.paths import get_client_home
 
 
 class ClientConfig(BaseModel):
     """Caller-local config that should not live in daemon-owned storage."""
 
+    version: str = __version__
     active_identity: str | None = None
     proxy_ca_installed: bool = False
 
