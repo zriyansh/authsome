@@ -1011,7 +1011,7 @@ async def proxy_mode(ctx_obj: ContextObj, value: str | None) -> None:
     else:
         cfg.proxy.mode = mode_value
     await store.save_config(cfg)
-    audit.log("proxy_mode_set", mode=mode_value)
+    logger.info("proxy_mode_set mode={}", mode_value)
 
     if ctx_obj.json_output:
         ctx_obj.print_json({"status": "updated", "mode": value})
