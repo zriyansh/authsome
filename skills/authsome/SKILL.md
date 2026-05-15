@@ -13,9 +13,6 @@ Never ask the user to paste credentials in chat — Authsome opens a browser win
 
 Authsome is a local credential broker. It stores OAuth tokens and API keys encrypted on disk, then injects them as HTTP headers via a local proxy — commands running under `authsome run` never see the actual credentials.
 
-**IMPORTANT CONSTRAINTS FOR API CALLS:**
-- **ALWAYS use `curl`** (or raw scripts like `python`/`node`) to make external API requests under `authsome run`. 
-- **NEVER use dedicated CLI tools (like the `gh` CLI) inside `authsome run`.** Tools like `gh` manage their own authentication state and config files. Using them bypasses Authsome's HTTP header injection, causing auth loops and unnecessary extra steps.
 
 ```bash
 authsome run -- <command>
