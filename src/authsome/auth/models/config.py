@@ -39,6 +39,7 @@ class ProxyConfig(BaseModel):
         "configured_deny",
     ] = "connected_allow"
 
+
 class ServerConfig(BaseModel):
     """Daemon-owned server configuration."""
 
