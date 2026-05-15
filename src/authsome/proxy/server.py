@@ -457,14 +457,20 @@ class AuthProxyAddon:
 def _deny_body(reason: str, match: RouteMatch | None) -> str:
     """Build a human-readable 403 body for a denied proxy request.
 
-    For `no_credentials` we surface the provider name so the agent
-    can recover by running `authsome login <provider>`; other reasons
-    fall back to a generic message.
+    For `no_credentials` we surface the provider name plus a CLI command
+    and a dashboard URL so the agent (or human) can recover; other
+    reasons fall back to a generic message.
+
+    The dashboard URL assumes the default local daemon on
+    `127.0.0.1:7998`. It still requires an active dashboard session
+    (`authsome ui`) to land on the connect screen directly.
     """
     if reason == "no_credentials" and match is not None:
+        provider = match.provider
         return (
-            f"Forbidden: provider '{match.provider}' is configured but has no "
-            f"active connection. Run `authsome login {match.provider}` to connect."
+            f"Forbidden: provider '{provider}' is configured but has no "
+            f"active connection. Run `authsome login {provider}` to connect, "
+            f"or visit http://127.0.0.1:7998/ui/apps/{provider}."
         )
     return "Forbidden by Authsome proxy policy"
 
