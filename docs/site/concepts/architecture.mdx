@@ -43,9 +43,13 @@ audit        ←  append-only log entry at every step
 | Auth | Token refresh, OAuth acquisition flows | Persistent storage, access decisions |
 | Audit | Append-only event log | Decisions, credentials, request flow |
 
-<Note>
-  Identity, Policy, and Audit are part of the long-term architecture. The current alpha implementation focuses on Vault and Auth. The CLI emits audit events to `~/.authsome/audit.log` today; identity and policy enforcement are planned.
-</Note>
+| Layer | Status |
+|-------|--------|
+| Vault | <Badge color="green">Shipped</Badge> Encrypted SQLite KV store at `~/.authsome/server/kv_store/`. |
+| Auth | <Badge color="green">Shipped</Badge> OAuth2 PKCE / device code / DCR + PKCE, API-key flow, automatic refresh. |
+| Identity | <Badge color="green">Shipped</Badge> Ed25519 keys, `did:key` DIDs, and PoP JWTs validated by the daemon on every protected request. |
+| Audit | <Badge color="green">Shipped</Badge> Append-only structured JSON events in `~/.authsome/audit.log`. |
+| Policy | <Badge color="amber">Planned</Badge> Access control evaluation. See the [roadmap](/roadmap). |
 
 ## Vault: minimal storage
 
@@ -60,7 +64,7 @@ vault.list(prefix)
 
 Vault does not know about OAuth, providers, token expiry, refresh, policy, audit, or principal-chain semantics. It stores and retrieves credential records by key. Orchestrators decide which keys to read, whether access is allowed, whether a token must be refreshed, and what should be audited.
 
-The local backend uses encrypted SQLite under `~/.authsome/profiles/<name>/store.db`. Field-level encryption uses AES-256-GCM with a 256-bit data key and a 96-bit nonce per encryption. The data key is wrapped by either a local file (`~/.authsome/master.key`, mode `0600`) or the OS keyring.
+The local backend uses an encrypted KV store under `~/.authsome/server/kv_store/`. Field-level encryption uses AES-256-GCM with a 256-bit data key and a 96-bit nonce per encryption. The data key is wrapped by either a local file (`~/.authsome/server/master.key`, mode `0600`) or the OS keyring.
 
 See [Credential storage](/concepts/credential-storage) for the storage model and key namespace.
 

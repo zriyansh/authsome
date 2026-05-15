@@ -11,7 +11,7 @@ A curated summary of authsome releases. For the full per-commit log, see [CHANGE
 <Update label="0.2.4" description="2026-05-08">
   **Interactive dashboard.** The local daemon now serves an interactive dashboard at `/ui/`. Lime-themed UI matching the marketing site palette. Per-provider detail panes for OAuth and API-key connections.
 
-  **Hosted daemon deployment.** Added `AUTHSOME_DAEMON_URL` (client-side) and `AUTHSOME_SERVER_BASE_URL` (server-side) for shared internal deployments. See [Hosted deployment model](/security/hosted-deployment).
+  **Hosted daemon deployment.** Added `AUTHSOME_DAEMON_URL` (client-side) and `AUTHSOME_SERVER_BASE_URL` (server-side) for shared internal deployments. Approved only behind VPN or a private overlay network; the v1 daemon has no per-user authentication or tenant isolation and is not safe to expose publicly. See [Hosted deployment model](/security/hosted-deployment) and the [threat model](/security/threat-model) for supported deployment shapes.
 
   **Customizable home directory.** `AUTHSOME_HOME` overrides the default `~/.authsome/` location. Useful for per-project credential isolation and CI.
 
