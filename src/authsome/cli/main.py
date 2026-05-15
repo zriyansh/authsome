@@ -721,8 +721,8 @@ async def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> No
 
             if definition.oauth and definition.oauth.token_url:
                 prompt_msg = f"Register '{definition.name}' with token endpoint {definition.oauth.token_url}? [y/N]"
-            elif definition.host_url:
-                prompt_msg = f"Register '{definition.name}' with host {definition.host_url}? [y/N]"
+            elif definition.api_url:
+                prompt_msg = f"Register '{definition.name}' with host {definition.api_url}? [y/N]"
             else:
                 prompt_msg = f"Register '{definition.name}' provider? [y/N]"
 
@@ -744,7 +744,7 @@ async def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> No
 
         warnings = []
         for name, val, is_host in endpoints_to_check:
-            if name not in ("host_url", "authorization_url"):
+            if name not in ("api_url", "authorization_url"):
                 continue
 
             target = val

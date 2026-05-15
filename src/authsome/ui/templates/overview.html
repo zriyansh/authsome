@@ -59,7 +59,7 @@
                 {% endif %}
             </div>
             <div class="provider-card-name">{{ p.display_name }}</div>
-            <div class="provider-card-desc">{{ p.description or p.host_url }}</div>
+            <div class="provider-card-desc">{{ p.description or p.api_url }}</div>
             <div class="provider-card-foot">
                 {% if p.status == 'reauth' %}
                 <button class="btn btn-warn-ghost" type="button">Fix</button>

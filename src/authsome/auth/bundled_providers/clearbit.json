@@ -4,14 +4,12 @@
   "display_name": "Clearbit",
   "auth_type": "api_key",
   "flow": "api_key",
-  "host_url": "api.clearbit.com",
+  "api_url": "api.clearbit.com",
   "api_key": {
     "header_name": "Authorization",
     "header_prefix": "Bearer"
   },
   "export": {
-    "env": {
-      "api_key": "CLEARBIT_API_KEY"
-    }
+    "CLEARBIT_API_KEY": "API_TOKEN"
   }
 }

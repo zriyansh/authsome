@@ -4,14 +4,12 @@
   "display_name": "Intercom",
   "auth_type": "api_key",
   "flow": "api_key",
-  "host_url": "api.intercom.io",
+  "api_url": "api.intercom.io",
   "api_key": {
     "header_name": "Authorization",
     "header_prefix": "Bearer"
   },
   "export": {
-    "env": {
-      "api_key": "INTERCOM_API_KEY"
-    }
+    "INTERCOM_API_KEY": "API_TOKEN"
   }
 }

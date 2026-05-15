@@ -4,14 +4,12 @@
   "display_name": "Dub.co",
   "auth_type": "api_key",
   "flow": "api_key",
-  "host_url": "api.dub.co",
+  "api_url": "api.dub.co",
   "api_key": {
     "header_name": "Authorization",
     "header_prefix": "Bearer"
   },
   "export": {
-    "env": {
-      "api_key": "DUB_API_KEY"
-    }
+    "DUB_API_KEY": "API_TOKEN"
   }
 }

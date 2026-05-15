@@ -39,7 +39,7 @@ Every provider definition declares:
 - An identity (`name`, `display_name`).
 - An auth type (`oauth2` or `api_key`) and a default flow (`pkce`, `device_code`, `dcr_pkce`, or `api_key`).
 - A flow-specific config block (`oauth` or `api_key`).
-- An optional `host_url` for proxy routing.
+- An optional `api_url` for proxy routing.
 - An optional `export.env` map describing which environment variables hold which credential fields.
 
 For full templates and the field-by-field schema, see [Provider schema](/reference/provider-schema). For a worked OAuth example using GitHub, see [GitHub integration](/integrations/oauth/github). For an API-key example using OpenAI, see [OpenAI integration](/integrations/api-key/openai).

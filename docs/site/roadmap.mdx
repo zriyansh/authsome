@@ -15,7 +15,7 @@ The canonical design document is [`authsome-design.md`](https://github.com/agent
 - **Vault** <Badge color="green">Shipped</Badge> Encrypted SQLite per profile with AES-256-GCM. Local file or OS keyring backend for the master key. See [Encryption at rest](/security/encryption).
 - **Auth** <Badge color="green">Shipped</Badge> OAuth2 PKCE, device code, and DCR + PKCE flows. API-key flow with a browser bridge and `getpass` fallback. Automatic refresh through the AuthLayer.
 - **Provider registry** <Badge color="green">Shipped</Badge> 14 OAuth + 31 API-key bundled providers. User overrides at `~/.authsome/providers/`. Custom provider registration via `authsome register`.
-- **Proxy** <Badge color="green">Shipped</Badge> mitmproxy-based local HTTP proxy. Host-matched routing via `host_url`. Per-provider header injection. Placeholder env vars in the child process.
+- **Proxy** <Badge color="green">Shipped</Badge> mitmproxy-based local HTTP proxy. Host-matched routing via `api_url`. Per-provider header injection. Placeholder env vars in the child process.
 - **Daemon** <Badge color="green">Shipped</Badge> FastAPI HTTP server on `127.0.0.1:7998`. Browser bridges, OAuth callbacks, dashboard UI. See [The local daemon](/concepts/the-daemon).
 - **Audit** <Badge color="green">Shipped</Badge> Append-only `audit.log` with structured JSON events for every significant CLI action. See [Audit log format](/reference/audit-log).
 - **CLI** <Badge color="green">Shipped</Badge> `whoami`, `doctor`, `list`, `inspect`, `login`, `get`, `export`, `run`, `logout`, `revoke`, `remove`, `register`, `log`. See [CLI reference](/reference/cli).

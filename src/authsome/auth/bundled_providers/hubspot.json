@@ -4,6 +4,7 @@
   "display_name": "HubSpot",
   "auth_type": "oauth2",
   "flow": "pkce",
+  "api_url": "api.hubapi.com",
   "oauth": {
     "authorization_url": "https://app.hubspot.com/oauth/authorize",
     "token_url": "https://api.hubapi.com/oauth/v1/token",
@@ -23,10 +24,6 @@
     "supports_dcr": false
   },
   "export": {
-    "env": {
-      "access_token": "HUBSPOT_ACCESS_TOKEN",
-      "refresh_token": "HUBSPOT_REFRESH_TOKEN"
-    }
-  },
-  "host_url": "api.hubapi.com"
+    "HUBSPOT_ACCESS_TOKEN": "ACCESS_TOKEN"
+  }
 }

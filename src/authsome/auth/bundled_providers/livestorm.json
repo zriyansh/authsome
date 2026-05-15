@@ -4,14 +4,12 @@
   "display_name": "Livestorm",
   "auth_type": "api_key",
   "flow": "api_key",
-  "host_url": "api.livestorm.co",
+  "api_url": "api.livestorm.co",
   "api_key": {
     "header_name": "Authorization",
     "header_prefix": "Bearer"
   },
   "export": {
-    "env": {
-      "api_key": "LIVESTORM_API_TOKEN"
-    }
+    "LIVESTORM_API_TOKEN": "API_TOKEN"
   }
 }
