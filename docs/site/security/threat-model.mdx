@@ -42,7 +42,7 @@ Authsome is a local-first credential broker. It assumes the local machine and us
 
 **Memory inspection.** Resolved credentials are held in the daemon's memory for the lifetime of `authsome run` and briefly in the proxy's request pipeline. A process with `ptrace` or kernel access can read them.
 
-**A malicious provider definition.** Custom providers in `~/.authsome/providers/` can declare any `host_url` and any `authorization_url`. Authsome validates schema, not intent. Register only definitions whose endpoints you have verified against the provider's official documentation. The custom-providers guide makes this point explicit; see [Custom providers](/guides/custom-providers).
+**A malicious provider definition.** Custom providers in `~/.authsome/providers/` can declare any `api_url` and any `authorization_url`. Authsome validates schema, not intent. Register only definitions whose endpoints you have verified against the provider's official documentation. The custom-providers guide makes this point explicit; see [Custom providers](/guides/custom-providers).
 
 **Network attackers on the wire.** Authsome relies on TLS to the provider. The mitmproxy CA it installs is intentionally limited to the local machine and used only for outbound interception from your own subprocesses. Authsome does not validate certificate transparency or pin provider certificates.
 

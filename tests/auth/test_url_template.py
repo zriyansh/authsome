@@ -16,7 +16,7 @@ def test_url_template_resolution():
             token_url="{base_url}/login/oauth/access_token",
             device_authorization_url="{base_url}/login/device/code",
         ),
-        host_url="{base_url}/api/v3",
+        api_url="{base_url}/api/v3",
     )
 
     # Resolve with custom base URL
@@ -24,12 +24,12 @@ def test_url_template_resolution():
 
     assert resolved.oauth.authorization_url == "https://github.acme.com/login/oauth/authorize"
     assert resolved.oauth.token_url == "https://github.acme.com/login/oauth/access_token"
-    assert resolved.host_url == "https://github.acme.com/api/v3"
+    assert resolved.api_url == "https://github.acme.com/api/v3"
 
     # Resolve with no base URL override (should use base_url from oauth)
     resolved_default = provider.resolve_urls(None)
     assert resolved_default.oauth.authorization_url == "https://github.com/login/oauth/authorize"
-    assert resolved_default.host_url == "https://github.com/api/v3"
+    assert resolved_default.api_url == "https://github.com/api/v3"
 
 
 def test_url_template_no_template():

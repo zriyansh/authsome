@@ -299,9 +299,9 @@ class TestProviderStateRecord:
 
 
 class TestHostUrl:
-    """ProviderDefinition host_url field tests."""
+    """ProviderDefinition api_url field tests."""
 
-    def test_provider_definition_parses_host_url(self) -> None:
+    def test_provider_definition_parses_api_url(self) -> None:
         provider = ProviderDefinition.model_validate(
             {
                 "schema_version": 1,
@@ -310,13 +310,13 @@ class TestHostUrl:
                 "auth_type": "api_key",
                 "flow": "api_key",
                 "api_key": {"header_name": "Authorization", "header_prefix": "Bearer"},
-                "host_url": "api.openai.com",
+                "api_url": "api.openai.com",
             }
         )
 
-        assert provider.host_url == "api.openai.com"
+        assert provider.api_url == "api.openai.com"
 
-    def test_provider_definition_defaults_host_url_to_none(self) -> None:
+    def test_provider_definition_defaults_api_url_to_none(self) -> None:
         provider = ProviderDefinition.model_validate(
             {
                 "schema_version": 1,
@@ -328,4 +328,4 @@ class TestHostUrl:
             }
         )
 
-        assert provider.host_url is None
+        assert provider.api_url is None

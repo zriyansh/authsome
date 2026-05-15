@@ -81,7 +81,7 @@ class TestRouting:
         assert match == RouteMatch(provider="openai", connection="default")
 
     @pytest.mark.asyncio
-    async def test_host_url_path_limits_routing(self) -> None:
+    async def test_api_url_path_limits_routing(self) -> None:
         auth = mock.AsyncMock()
         provider = mock.Mock()
         provider.oauth = None
@@ -91,7 +91,7 @@ class TestRouting:
             "display_name": name.title(),
             "auth_type": "api_key",
             "flow": "api_key",
-            "host_url": "api.example.com",
+            "api_url": "api.example.com",
         }
         auth.list_connections.return_value = {
             "connections": [
@@ -100,7 +100,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "https://api.example.com/v1",
+                            "api_url": "https://api.example.com/v1",
                             "base_url": None,
                         }
                     ],
@@ -117,7 +117,7 @@ class TestRouting:
         assert router.route("https", "api.example.com", 443, "/v2/resources") is None
 
     @pytest.mark.asyncio
-    async def test_more_specific_host_url_path_wins_over_host_only_route(self) -> None:
+    async def test_more_specific_api_url_path_wins_over_host_only_route(self) -> None:
         auth = mock.AsyncMock()
         provider = mock.Mock()
         provider.oauth = None
@@ -127,7 +127,7 @@ class TestRouting:
             "display_name": name.title(),
             "auth_type": "api_key",
             "flow": "api_key",
-            "host_url": "api.example.com",
+            "api_url": "api.example.com",
         }
         auth.list_connections.return_value = {
             "connections": [
@@ -136,7 +136,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "api.example.com",
+                            "api_url": "api.example.com",
                             "base_url": None,
                         }
                     ],
@@ -146,7 +146,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "https://api.example.com/v1",
+                            "api_url": "https://api.example.com/v1",
                             "base_url": None,
                         }
                     ],
@@ -166,7 +166,7 @@ class TestRouting:
         )
 
     @pytest.mark.asyncio
-    async def test_more_specific_nested_host_url_path_wins(self) -> None:
+    async def test_more_specific_nested_api_url_path_wins(self) -> None:
         auth = mock.AsyncMock()
         provider = mock.Mock()
         provider.oauth = None
@@ -176,7 +176,7 @@ class TestRouting:
             "display_name": name.title(),
             "auth_type": "api_key",
             "flow": "api_key",
-            "host_url": "api.example.com",
+            "api_url": "api.example.com",
         }
         auth.list_connections.return_value = {
             "connections": [
@@ -185,7 +185,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "https://api.example.com/v1",
+                            "api_url": "https://api.example.com/v1",
                             "base_url": None,
                         }
                     ],
@@ -195,7 +195,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "https://api.example.com/v1/beta",
+                            "api_url": "https://api.example.com/v1/beta",
                             "base_url": None,
                         }
                     ],
@@ -215,7 +215,7 @@ class TestRouting:
         )
 
     @pytest.mark.asyncio
-    async def test_equal_specificity_host_url_paths_remain_ambiguous(self) -> None:
+    async def test_equal_specificity_api_url_paths_remain_ambiguous(self) -> None:
         auth = mock.AsyncMock()
         provider = mock.Mock()
         provider.oauth = None
@@ -225,7 +225,7 @@ class TestRouting:
             "display_name": name.title(),
             "auth_type": "api_key",
             "flow": "api_key",
-            "host_url": "api.example.com",
+            "api_url": "api.example.com",
         }
         auth.list_connections.return_value = {
             "connections": [
@@ -234,7 +234,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "https://api.example.com/v1",
+                            "api_url": "https://api.example.com/v1",
                             "base_url": None,
                         }
                     ],
@@ -244,7 +244,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "https://api.example.com/v1",
+                            "api_url": "https://api.example.com/v1",
                             "base_url": None,
                         }
                     ],
@@ -259,7 +259,7 @@ class TestRouting:
         assert amb.match is None and amb.miss_reason == "ambiguous"
 
     @pytest.mark.asyncio
-    async def test_regex_host_url_matches_multiple_hosts(self) -> None:
+    async def test_regex_api_url_matches_multiple_hosts(self) -> None:
         auth = mock.AsyncMock()
         provider = mock.Mock()
         provider.oauth = None
@@ -269,7 +269,7 @@ class TestRouting:
             "display_name": name.title(),
             "auth_type": "api_key",
             "flow": "api_key",
-            "host_url": "api.example.com",
+            "api_url": "api.example.com",
         }
         auth.list_connections.return_value = {
             "connections": [
@@ -278,7 +278,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": r"regex:^api[0-9]+\.github\.com$",
+                            "api_url": r"regex:^api[0-9]+\.github\.com$",
                             "base_url": None,
                         }
                     ],
@@ -309,7 +309,7 @@ class TestRouting:
             "display_name": name.title(),
             "auth_type": "api_key",
             "flow": "api_key",
-            "host_url": "api.example.com",
+            "api_url": "api.example.com",
         }
         auth.list_connections.return_value = {
             "connections": [
@@ -318,7 +318,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": r"regex:^api[0-9]+\.github\.com$",
+                            "api_url": r"regex:^api[0-9]+\.github\.com$",
                             "base_url": None,
                         }
                     ],
@@ -328,7 +328,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "api1.github.com",
+                            "api_url": "api1.github.com",
                             "base_url": None,
                         }
                     ],
@@ -348,7 +348,7 @@ class TestRouting:
         )
 
     @pytest.mark.asyncio
-    async def test_plain_host_url_does_not_use_regex_matching(self) -> None:
+    async def test_plain_api_url_does_not_use_regex_matching(self) -> None:
         auth = mock.AsyncMock()
         provider = mock.Mock()
         provider.oauth = None
@@ -358,7 +358,7 @@ class TestRouting:
             "display_name": name.title(),
             "auth_type": "api_key",
             "flow": "api_key",
-            "host_url": "api.example.com",
+            "api_url": "api.example.com",
         }
         auth.list_connections.return_value = {
             "connections": [
@@ -367,7 +367,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "api.github.com",
+                            "api_url": "api.github.com",
                             "base_url": None,
                         }
                     ],
@@ -417,7 +417,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "api.example.com",
+                            "api_url": "api.example.com",
                             "base_url": None,
                         }
                     ],
@@ -670,19 +670,19 @@ class TestProxyServer:
 
 
 class TestProviderProxyMetadata:
-    """Bundled provider definitions include host_url for proxy routing."""
+    """Bundled provider definitions include api_url for proxy routing."""
 
     @pytest.mark.asyncio
-    async def test_openai_provider_has_host_url(self, tmp_path: Path) -> None:
+    async def test_openai_provider_has_api_url(self, tmp_path: Path) -> None:
         auth = await _make_auth(tmp_path)
         provider = await auth.get_provider("openai")
-        assert provider.host_url == "api.openai.com"
+        assert provider.api_url == "api.openai.com"
 
     @pytest.mark.asyncio
-    async def test_github_provider_has_host_url(self, tmp_path: Path) -> None:
+    async def test_github_provider_has_api_url(self, tmp_path: Path) -> None:
         auth = await _make_auth(tmp_path)
         provider = await auth.get_provider("github")
-        assert provider.host_url == "api.github.com"
+        assert provider.api_url == "api.github.com"
 
 
 # ── CLI tests ────────────────────────────────────────────────────────────

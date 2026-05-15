@@ -101,7 +101,7 @@ In sidecar mode, the proxy runner is the orchestrator.
 1. Starts the HTTP proxy on a random local port.
 2. Spawns the agent as a subprocess with `HTTP_PROXY` set to the local proxy address.
 3. Intercepts outbound HTTP requests from the agent.
-4. Looks up the matching provider by `host_url`, asks the AuthLayer for fresh credentials, and injects them into the `Authorization` header.
+4. Looks up the matching provider by `api_url`, asks the AuthLayer for fresh credentials, and injects them into the `Authorization` header.
 5. Writes refreshed credentials back to the vault.
 6. Tears down cleanly when the agent exits.
 

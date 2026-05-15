@@ -14,7 +14,7 @@ A provider definition is a JSON file that tells authsome how to authenticate aga
 | `display_name` | Yes | Human-readable name (e.g. `GitHub`, `Acme CRM`). |
 | `auth_type` | Yes | `"oauth2"` or `"api_key"`. |
 | `flow` | Yes | One of `pkce`, `device_code`, `dcr_pkce`, `api_key`. Must be valid for the auth type. |
-| `host_url` | No (recommended) | API host for proxy routing. Bare host, full URL, or `regex:<pattern>`. |
+| `api_url` | No (recommended) | API host for proxy routing. Bare host, full URL, or `regex:<pattern>`. |
 | `oauth` | If `auth_type` is `oauth2` | OAuth2 configuration block. |
 | `api_key` | If `auth_type` is `api_key` | API-key configuration block. |
 | `export` | No (recommended) | Mapping of internal credential fields to environment variable names. |
@@ -103,9 +103,9 @@ API-key example:
 
 Only `access_token` (OAuth2) and `api_key` (API-key) are valid keys in the `env` map. Refresh tokens are never exported.
 
-## `host_url` formats
+## `api_url` formats
 
-The `host_url` field controls proxy routing. See [Proxy injection](/concepts/proxy-injection) for matching rules.
+The `api_url` field controls proxy routing. See [Proxy injection](/concepts/proxy-injection) for matching rules.
 
 | Form | Example | Meaning |
 |------|---------|---------|
@@ -147,7 +147,7 @@ Use the regex form only when an API genuinely serves multiple hosts following a 
     "supports_device_code": true,
     "supports_dcr": false
   },
-  "host_url": "api.github.com",
+  "api_url": "api.github.com",
   "export": {
     "env": {
       "access_token": "GITHUB_ACCESS_TOKEN"
@@ -171,7 +171,7 @@ Use the regex form only when an API genuinely serves multiple hosts following a 
     "key_pattern": "^sk-[A-Za-z0-9_-]{20,}$",
     "key_pattern_hint": "OpenAI API keys start with 'sk-' followed by at least 20 letters, digits, '_' or '-'."
   },
-  "host_url": "api.openai.com",
+  "api_url": "api.openai.com",
   "export": {
     "env": {
       "api_key": "OPENAI_API_KEY"

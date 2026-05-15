@@ -264,7 +264,7 @@ EOF
 uv run authsome register /tmp/test-provider.json
 ```
 
-**Expected:** Confirmation prompt → provider registered. No `host_url` means no reachability check.
+**Expected:** Confirmation prompt → provider registered. No `api_url` means no reachability check.
 
 ```bash
 uv run authsome inspect test-custom

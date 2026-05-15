@@ -88,7 +88,7 @@ python my_agent.py   # script calls api.openai.com internally
 
 ### If `AUTHSOME_PROXY_MODE` is unset — use `authsome run`
 
-Wrap your command with `authsome run` to launch it behind the local auth proxy. The proxy matches outbound requests to known providers (e.g. `api.openai.com`) using the `host_url` in their definitions and injects auth headers at request time. Credentials are never placed in the child environment:
+Wrap your command with `authsome run` to launch it behind the local auth proxy. The proxy matches outbound requests to known providers (e.g. `api.openai.com`) using the `api_url` in their definitions and injects auth headers at request time. Credentials are never placed in the child environment:
 
 ```bash
 authsome run <your command>
