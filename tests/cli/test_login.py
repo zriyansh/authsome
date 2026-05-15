@@ -1,7 +1,7 @@
 """Tests for `authsome login`.
 
 Covers: session started path, session already completed, --force flag,
-JSON output shape, and that audit.log is called.
+JSON output shape.
 """
 
 import json

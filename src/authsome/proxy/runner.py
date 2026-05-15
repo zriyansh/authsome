@@ -10,6 +10,7 @@ from typing import Any, Protocol
 
 from loguru import logger
 
+from authsome.proxy.certs import ensure_local_proxy_ca
 from authsome.proxy.server import RunningProxy, start_proxy_server
 
 
@@ -30,8 +31,9 @@ class ProxyClient(Protocol):
 class ProxyRunner:
     """Launch a subprocess behind the Authsome local auth proxy."""
 
-    def __init__(self, client: ProxyClient) -> None:
+    def __init__(self, client: ProxyClient, home: Path | None = None) -> None:
         self._client = client
+        self._home = home or Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
 
     async def run(self, command: list[str]) -> subprocess.CompletedProcess[str]:
         """Run *command* behind the auth-injecting proxy."""
@@ -74,6 +76,7 @@ class ProxyRunner:
                     pass
 
     def _start_proxy(self) -> tuple[str, RunningProxy]:
+        ensure_local_proxy_ca(self._home)
         server = start_proxy_server(self._client)
         return server.url, server
 

@@ -15,7 +15,7 @@ from authsome.auth.sessions import AuthSession
 from authsome.errors import OperationNotAllowedError
 from authsome.identity.keys import create_identity
 from authsome.identity.registry import IdentityRegistry
-from authsome.server.dependencies import create_vault, get_server_home
+from authsome.server.dependencies import create_app_store, create_vault, get_identity_registry_path
 from authsome.utils import build_store_key
 
 
@@ -250,11 +250,12 @@ async def test_hosted_resume_login_flow_rejects_dcr_client_persistence() -> None
 async def test_revoke_local_deletes_shared_client_and_all_identity_connections(tmp_path) -> None:
     first_identity = create_identity(tmp_path, "steady-wisely-boldly-0042")
     second_identity = create_identity(tmp_path, "rapid-brightly-firmly-0007")
-    registry = IdentityRegistry(get_server_home(tmp_path))
-    registry.register(handle=first_identity.handle, did=first_identity.did)
-    registry.register(handle=second_identity.handle, did=second_identity.did)
+    store = await create_app_store(tmp_path)
+    registry = IdentityRegistry(get_identity_registry_path(tmp_path))
+    await registry.register(handle=first_identity.handle, did=first_identity.did)
+    await registry.register(handle=second_identity.handle, did=second_identity.did)
 
-    vault = await create_vault(tmp_path)
+    vault = await create_vault(store)
     try:
         service = AuthService(vault, identity="steady-wisely-boldly-0042", deployment_mode="local")
 
@@ -368,3 +369,4 @@ async def test_revoke_local_deletes_shared_client_and_all_identity_connections(t
         )
     finally:
         await vault.close()
+        await store.close()

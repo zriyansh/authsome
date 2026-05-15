@@ -17,7 +17,6 @@ from mitmproxy import http
 from mitmproxy.options import Options
 from mitmproxy.tools.dump import DumpMaster
 
-from authsome import audit
 from authsome.proxy.router import RouteMatch, RouteResolution
 from authsome.utils import utc_now
 
@@ -130,6 +129,8 @@ class ProxyRouter:
         if hasattr(client, "proxy_routes"):
             try:
                 route_data = await client.proxy_routes()
+                if not isinstance(route_data, dict):
+                    raise TypeError("proxy_routes() must return a dict payload")
                 for route in route_data.get("routes", []):
                     route_match = RouteMatch(provider=route["provider"], connection=route.get("connection"))
                     regex_pattern = _compile_host_regex(route["host_url"])
@@ -357,7 +358,13 @@ class AuthProxyAddon:
                 self._deny_request(flow, "no_match")
             elif resolution.miss_reason is not None:
                 normalized_host = _normalize_host(flow.request.host)
-                audit.log("proxy_miss", host=normalized_host, reason=resolution.miss_reason)
+                logger.info(
+                    "client_event event=proxy_miss host={} reason={} method={} path={}",
+                    normalized_host,
+                    resolution.miss_reason,
+                    flow.request.method,
+                    flow.request.path,
+                )
                 logger.debug(
                     "Proxy miss: host={} reason={} {} {}",
                     normalized_host,
@@ -392,13 +399,13 @@ class AuthProxyAddon:
         for key, value in headers.items():
             flow.request.headers[key] = value
 
-        audit.log(
-            "proxy_inject",
-            provider=match.provider,
-            connection=match.connection,
-            host=_normalize_host(flow.request.host),
-            method=flow.request.method,
-            path=flow.request.path,
+        logger.info(
+            "client_event event=proxy_inject provider={} connection={} host={} method={} path={}",
+            match.provider,
+            match.connection,
+            _normalize_host(flow.request.host),
+            flow.request.method,
+            flow.request.path,
         )
 
     def _deny_request(

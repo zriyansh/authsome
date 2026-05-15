@@ -1,4 +1,4 @@
-"""Global configuration models."""
+"""Authsome configuration models and helpers."""
 
 from __future__ import annotations
 
@@ -24,13 +24,7 @@ def current_spec_version() -> int:
 
 
 class EncryptionConfig(BaseModel):
-    """
-    Encryption configuration block.
-
-    Modes:
-    - "local_key": master key stored at ~/.authsome/server/master.key
-    - "keyring":   master key stored in the OS keyring
-    """
+    """Vault encryption backend settings for the daemon."""
 
     mode: str = "local_key"
 
@@ -45,14 +39,11 @@ class ProxyConfig(BaseModel):
         "configured_deny",
     ] = "connected_allow"
 
-
-class GlobalConfig(BaseModel):
-    """Daemon configuration for the local Authsome install."""
+class ServerConfig(BaseModel):
+    """Daemon-owned server configuration."""
 
     spec_version: int = Field(default_factory=current_spec_version)
-    encryption: EncryptionConfig | None = Field(default_factory=EncryptionConfig)
+    encryption: EncryptionConfig = Field(default_factory=EncryptionConfig)
     proxy: ProxyConfig | None = Field(default_factory=ProxyConfig)
-
-    extra_fields: dict[str, Any] = Field(default_factory=dict, exclude=True)
 
     model_config = {"extra": "allow"}

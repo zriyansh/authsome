@@ -97,14 +97,17 @@ def test_hosted_ui_auth_input_requires_matching_browser_session(monkeypatch, tmp
     app = create_app()
     with TestClient(app) as client:
         _register_identity(client, tmp_path, "steady-wisely-boldly-0042")
-        session = client.app.state.auth_sessions.create(
-            provider="github",
-            identity="steady-wisely-boldly-0042",
-            connection_name="default",
-            flow_type="pkce",
+        session = asyncio.run(
+            client.app.state.auth_sessions.create(
+                provider="github",
+                identity="steady-wisely-boldly-0042",
+                connection_name="default",
+                flow_type="pkce",
+            )
         )
         session.payload["ui_session_required"] = True
         session.payload["input_fields"] = [{"name": "client_id", "label": "Client ID", "secret": False}]
+        asyncio.run(client.app.state.auth_sessions.save(session))
 
         response = client.get(f"/auth/sessions/{session.session_id}/input")
 

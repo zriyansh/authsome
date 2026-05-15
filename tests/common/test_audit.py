@@ -1,61 +1,28 @@
-"""Tests for the AuditLogger."""
+"""Tests for daemon audit event models."""
 
-import json
-from pathlib import Path
-
-from authsome import audit
+from authsome.audit import AuditEvent
 
 
-def test_audit_logger_initialization(tmp_path: Path):
-    filepath = tmp_path / "audit.log"
-    audit.setup(filepath)
-    assert audit._logger_instance is not None
-    assert audit._logger_instance.filepath == filepath
+def test_audit_event_captures_known_fields() -> None:
+    event = AuditEvent(
+        event="login",
+        provider="github",
+        connection="default",
+        identity="steady-wisely-boldly-0042",
+        status="success",
+    )
+
+    assert event.event == "login"
+    assert event.provider == "github"
+    assert event.connection == "default"
+    assert event.identity == "steady-wisely-boldly-0042"
+    assert event.status == "success"
 
 
-def test_audit_logger_writes_json_line(tmp_path: Path):
-    filepath = tmp_path / "audit.log"
-    audit.setup(filepath)
-    audit.log("test_event", provider="test_provider", status="success")
+def test_audit_event_metadata_defaults_to_empty_mapping() -> None:
+    event = AuditEvent(event="proxy_miss")
 
-    assert filepath.exists()
-    lines = filepath.read_text(encoding="utf-8").strip().split("\n")
-    assert len(lines) == 1
-
-    event_data = json.loads(lines[0])
-    assert "timestamp" in event_data
-    assert event_data["event"] == "test_event"
-    assert event_data["provider"] == "test_provider"
-    assert event_data["status"] == "success"
-
-
-def test_audit_logger_filters_none_values(tmp_path: Path):
-    filepath = tmp_path / "audit.log"
-    audit.setup(filepath)
-    audit.log("test_event", provider="test_provider", missing=None)
-
-    lines = filepath.read_text(encoding="utf-8").strip().split("\n")
-    event_data = json.loads(lines[0])
-    assert "provider" in event_data
-    assert "missing" not in event_data
-
-
-def test_audit_logger_creates_parent_directory(tmp_path: Path):
-    filepath = tmp_path / "nested" / "dir" / "audit.log"
-    audit.setup(filepath)
-    audit.log("test_event")
-
-    assert filepath.exists()
-    assert filepath.parent.exists()
-
-
-def test_audit_logger_graceful_failure(tmp_path: Path, monkeypatch):
-    filepath = tmp_path / "audit.log"
-    audit.setup(filepath)
-
-    def mock_open(*args, **kwargs):
-        raise OSError("Permission denied")
-
-    monkeypatch.setattr("builtins.open", mock_open)
-    # This should not raise an exception
-    audit.log("test_event")
+    assert event.metadata == {}
+    payload = event.model_dump(mode="json")
+    assert payload["event"] == "proxy_miss"
+    assert "timestamp" in payload

@@ -9,7 +9,6 @@ import signal
 import subprocess
 import sys
 import time
-from pathlib import Path
 from typing import Any
 
 from authsome.cli.client import (
@@ -18,10 +17,11 @@ from authsome.cli.client import (
     is_managed_local_daemon_url,
     resolve_daemon_url,
 )
+from authsome.paths import get_authsome_home, get_server_home
 from authsome.server.daemon import DEFAULT_HOST, DEFAULT_PORT
 
-AUTHSOME_HOME = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
-DAEMON_DIR = AUTHSOME_HOME / "server" / "daemon"
+AUTHSOME_HOME = get_authsome_home()
+DAEMON_DIR = get_server_home(AUTHSOME_HOME) / "daemon"
 PID_FILE = DAEMON_DIR / "daemon.pid"
 LOG_FILE = DAEMON_DIR / "daemon.log"
 STATE_FILE = DAEMON_DIR / "daemon.json"
