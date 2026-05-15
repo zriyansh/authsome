@@ -23,7 +23,8 @@ class TestAuthServiceRefreshLogs:
     def audit_log(self, tmp_path: Path) -> Path:
         log_file = tmp_path / "audit.log"
         audit.setup(log_file)
-        return log_file
+        yield log_file
+        audit.clear()
 
     @pytest.fixture
     def service(self) -> AuthService:

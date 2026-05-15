@@ -18,7 +18,7 @@ class RegisterIdentityRequest(BaseModel):
 @router.post("/register")
 async def register_identity(body: RegisterIdentityRequest, request: Request) -> dict[str, str]:
     try:
-        registration = request.app.state.identity_registry.register(handle=body.handle, did=body.did)
+        registration = await request.app.state.identity_registry.register(handle=body.handle, did=body.did)
     except IdentityRegistrationError:
         raise
     except ValueError as exc:

@@ -387,7 +387,7 @@ async def connect_app(
 
     definition = await auth.get_provider(provider_name)
     flow = definition.flow
-    session = sessions.create(
+    session = await sessions.create(
         provider=provider_name,
         identity=auth.identity,
         connection_name=connection_name,
@@ -404,6 +404,7 @@ async def connect_app(
             existing = await auth.get_connection(provider_name, connection_name)
             if auth._connection_is_valid(existing):
                 session.status_message = "Already connected"
+                await sessions.save(session)
                 return _redirect(request, f"/ui/apps/{provider_name}")
         except Exception:
             pass
@@ -411,6 +412,7 @@ async def connect_app(
     fields = await auth.get_required_inputs(session)
     if fields:
         session.payload["input_fields"] = [field.model_dump(mode="json", exclude_none=True) for field in fields]
+        await sessions.save(session)
         return _redirect(request, build_auth_input_url(server_base_url, session.session_id))
 
     await auth.begin_login_flow(session=session, force=force)
@@ -418,12 +420,15 @@ async def connect_app(
         _update_device_code_expiry(sessions, session)
         background_tasks.add_task(auth.background_resume, session)
         if session.payload.get("user_code") and session.payload.get("verification_uri"):
+            await sessions.save(session)
             return _redirect(request, build_device_url(server_base_url, session.session_id))
 
-    sessions.index_oauth_state(session)
+    await sessions.index_oauth_state(session)
     auth_url = session.payload.get("auth_url")
     if auth_url:
+        await sessions.save(session)
         return _redirect(request, str(auth_url))
+    await sessions.save(session)
     return _redirect(request, f"/ui/apps/{provider_name}")
 
 

@@ -1,6 +1,6 @@
 """Tests for authsome data models."""
 
-from authsome.auth.models.config import GlobalConfig, current_spec_version
+from authsome.auth.models.config import current_spec_version
 from authsome.auth.models.connection import (
     ConnectionRecord,
     ProviderClientRecord,
@@ -35,25 +35,11 @@ class TestEnums:
         assert ExportFormat.JSON.value == "json"
 
 
-class TestGlobalConfig:
-    """Global config model tests."""
+class TestSpecVersion:
+    """Spec version helper tests."""
 
-    def test_defaults(self) -> None:
-        config = GlobalConfig()
-        assert config.spec_version == current_spec_version()
-        assert config.encryption is not None
-        assert config.encryption.mode == "local_key"
-
-    def test_json_roundtrip(self) -> None:
-        config = GlobalConfig(spec_version=1)
-        json_str = config.model_dump_json()
-        restored = GlobalConfig.model_validate_json(json_str)
-        assert restored.spec_version == 1
-
-    def test_extra_fields_preserved(self) -> None:
-        config = GlobalConfig.model_validate({"spec_version": 1, "custom": "val"})
-        dumped = config.model_dump()
-        assert dumped.get("custom") == "val"
+    def test_current_spec_version_is_int(self) -> None:
+        assert isinstance(current_spec_version(), int)
 
 
 class TestIdentityMetadata:

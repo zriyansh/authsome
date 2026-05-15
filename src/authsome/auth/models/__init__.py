@@ -1,6 +1,6 @@
 """auth.models — re-exports all model types used by the auth layer."""
 
-from authsome.auth.models.config import EncryptionConfig, GlobalConfig
+from authsome.auth.models.config import EncryptionConfig, ServerConfig
 from authsome.auth.models.connection import (
     AccountInfo,
     ConnectionRecord,
@@ -32,11 +32,11 @@ __all__ = [
     "ExportConfig",
     "ExportFormat",
     "FlowType",
-    "GlobalConfig",
     "OAuthConfig",
     "ProviderClientRecord",
     "ProviderDefinition",
     "ProviderMetadataRecord",
     "ProviderStateRecord",
+    "ServerConfig",
     "Sensitive",
 ]

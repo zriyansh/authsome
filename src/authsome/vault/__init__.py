@@ -1,12 +1,4 @@
-"""Vault — encrypted key-value layer over AppStore.
-
-The Vault wraps an AppStore's async KV backend and encrypts every value
-before writing and decrypts after reading.  It uses collections to
-logically separate different data types (profiles, providers, credentials).
-
-The Vault knows nothing about credential types, profiles, or providers.
-All key schema decisions belong to the caller (AuthService).
-"""
+"""Vault — encrypted key-value layer over AppStore."""
 
 from __future__ import annotations
 
@@ -18,7 +10,6 @@ from typing import TYPE_CHECKING
 from authsome.store.interfaces import AppStore
 
 if TYPE_CHECKING:
-    from authsome.auth.models.config import GlobalConfig
     from authsome.vault.crypto import VaultCrypto
 
 
@@ -27,8 +18,6 @@ class Vault:
 
     All values are encrypted at rest using AES-256-GCM.  The master key is
     managed by the configured VaultCrypto backend (local file or OS keyring).
-
-    Config is delegated unencrypted (needed before crypto is available).
     """
 
     def __init__(
@@ -55,14 +44,6 @@ class Vault:
     def home(self) -> Path:
         """Base directory for the storage system."""
         return self._app_store.home
-
-    # ── Config (delegated, unencrypted — bootstrap dependency) ────────────
-
-    async def get_config(self) -> GlobalConfig:
-        return await self._app_store.get_config()
-
-    async def save_config(self, config: GlobalConfig) -> None:
-        await self._app_store.save_config(config)
 
     # ── Index helpers ─────────────────────────────────────────────────────
 

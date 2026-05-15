@@ -1,57 +1,83 @@
-"""Audit logging for Authsome operations."""
+"""Structured server-side event logging helpers."""
+
+from __future__ import annotations
 
 import json
+import threading
+import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from loguru import logger
+from pydantic import BaseModel, Field
 
 from authsome.utils import utc_now
 
 
-class AuditLogger:
-    """Append-only structured audit logger."""
+class AuditEvent(BaseModel):
+    """Structured server-side event record."""
 
-    def __init__(self, filepath: Path) -> None:
-        self.filepath = filepath
-
-    def log(self, event_type: str, **kwargs: Any) -> None:
-        """Write an event to the audit log."""
-
-        # Ensure directory exists
-        if not self.filepath.parent.exists():
-            try:
-                self.filepath.parent.mkdir(parents=True, exist_ok=True)
-            except Exception as e:
-                logger.error("Failed to create audit log directory {}: {}", self.filepath.parent, e)
-                return
-
-        # Filter out None values to keep the log clean
-        filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None}
-
-        entry = {
-            "timestamp": utc_now().isoformat(),
-            "event": event_type,
-            **filtered_kwargs,
-        }
-
-        try:
-            with open(self.filepath, "a", encoding="utf-8") as f:
-                f.write(json.dumps(entry) + "\n")
-        except Exception as e:
-            logger.error("Failed to write to audit log at {}: {}", self.filepath, e)
+    event_id: str = Field(default_factory=lambda: f"audit_{uuid.uuid4().hex}")
+    timestamp: datetime = Field(default_factory=utc_now)
+    event: str
+    provider: str | None = None
+    connection: str | None = None
+    identity: str | None = None
+    status: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-_logger_instance: AuditLogger | None = None
+_log_path: Path | None = None
+_lock = threading.Lock()
 
 
-def setup(filepath: Path) -> None:
-    """Initialize the global audit logger singleton."""
-    global _logger_instance
-    _logger_instance = AuditLogger(filepath)
+def _build_event(event_type: str, **kwargs: Any) -> AuditEvent:
+    filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None}
+    return AuditEvent(
+        event=event_type,
+        provider=filtered_kwargs.pop("provider", None),
+        connection=filtered_kwargs.pop("connection", None),
+        identity=filtered_kwargs.pop("identity", None),
+        status=filtered_kwargs.pop("status", None),
+        metadata=filtered_kwargs,
+    )
+
+
+def setup(path: Path) -> None:
+    """Configure the server-side structured log path."""
+    global _log_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        path.touch()
+    _log_path = path
+
+
+def clear() -> None:
+    """Clear configured server-side log state."""
+    global _log_path
+    _log_path = None
+
+
+def _serialize_event(event: AuditEvent) -> str:
+    payload = event.model_dump(mode="json")
+    metadata = payload.pop("metadata", {})
+    if isinstance(metadata, dict):
+        payload.update(metadata)
+    return json.dumps(payload, separators=(",", ":"))
 
 
 def log(event_type: str, **kwargs: Any) -> None:
-    """Write an event to the global audit log."""
-    if _logger_instance is not None:
-        _logger_instance.log(event_type, **kwargs)
+    """Append a structured server event to the configured log file."""
+    if _log_path is None:
+        return
+    line = _serialize_event(_build_event(event_type, **kwargs))
+    with _lock:
+        _log_path.parent.mkdir(parents=True, exist_ok=True)
+        with _log_path.open("a", encoding="utf-8") as handle:
+            handle.write(line)
+            handle.write("\n")
+
+
+async def alog(event_type: str, **kwargs: Any) -> None:
+    """Async wrapper around structured server event logging."""
+    log(event_type, **kwargs)

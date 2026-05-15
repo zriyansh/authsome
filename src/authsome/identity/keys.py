@@ -13,6 +13,8 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from pydantic import BaseModel, Field
 
+from authsome.paths import get_client_home
+
 _ED25519_MULTICODEC_PREFIX = b"\xed\x01"
 _DID_KEY_PREFIX = "did:key:z"
 _HANDLE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*[a-z0-9]$")
@@ -60,7 +62,7 @@ class IdentityMetadata(BaseModel):
 
 
 def identities_dir(home: Path) -> Path:
-    return home / "identities"
+    return get_client_home(home) / "identities"
 
 
 def identity_metadata_path(home: Path, handle: str) -> Path:
@@ -145,7 +147,7 @@ def identity_exists(home: Path, handle: str) -> bool:
 
 def create_identity(home: Path, handle: str | None = None) -> IdentityMetadata:
     """Create a local identity and private key, returning existing metadata if present."""
-    from authsome.identity.client_config import load_client_config, save_client_config
+    from authsome.cli.client_config import load_client_config, save_client_config
 
     resolved_handle = validate_handle(handle or _unique_handle(home))
     if identity_exists(home, resolved_handle):
@@ -210,7 +212,7 @@ def ensure_local_identity(home: Path, active_handle: str | None = None) -> Ident
     re-creation, because the old profile's credentials would become inaccessible
     with no explanation.
     """
-    from authsome.identity.client_config import load_client_config
+    from authsome.cli.client_config import load_client_config
 
     remove_legacy_default_identity(home)
     if active_handle is None:

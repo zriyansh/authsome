@@ -1,4 +1,4 @@
-"""Client-side identity selection config."""
+"""Caller-local CLI config helpers."""
 
 from __future__ import annotations
 
@@ -6,16 +6,21 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from authsome import __version__
+from authsome.paths import get_client_home
+
 
 class ClientConfig(BaseModel):
     """Caller-local config that should not live in daemon-owned storage."""
 
+    version: str = __version__
     active_identity: str | None = None
+    proxy_ca_installed: bool = False
 
 
 def client_config_path(home: Path) -> Path:
     """Return the caller-local config file path."""
-    return home / "config.json"
+    return get_client_home(home) / "config.json"
 
 
 def load_client_config(home: Path) -> ClientConfig:
@@ -31,5 +36,6 @@ def load_client_config(home: Path) -> ClientConfig:
 
 def save_client_config(home: Path, config: ClientConfig) -> None:
     """Persist caller-local config."""
-    home.mkdir(parents=True, exist_ok=True)
-    client_config_path(home).write_text(config.model_dump_json(indent=2), encoding="utf-8")
+    path = client_config_path(home)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(config.model_dump_json(indent=2), encoding="utf-8")
