@@ -4,6 +4,7 @@
   "display_name": "Microsoft",
   "auth_type": "oauth2",
   "flow": "pkce",
+  "api_url": "graph.microsoft.com",
   "oauth": {
     "authorization_url": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
     "token_url": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
@@ -22,10 +23,6 @@
     "supports_dcr": false
   },
   "export": {
-    "env": {
-      "access_token": "MICROSOFT_ACCESS_TOKEN",
-      "refresh_token": "MICROSOFT_REFRESH_TOKEN"
-    }
-  },
-  "host_url": "graph.microsoft.com"
+    "MICROSOFT_ACCESS_TOKEN": "ACCESS_TOKEN"
+  }
 }

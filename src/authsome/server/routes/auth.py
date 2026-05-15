@@ -218,7 +218,7 @@ async def input_page(
         pages.input_page(
             session.session_id,
             definition.display_name,
-            definition.docs,
+            definition.docs_url,
             fields,
             callback_url=callback_url,
         )

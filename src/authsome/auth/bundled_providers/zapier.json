@@ -4,14 +4,12 @@
   "display_name": "Zapier",
   "auth_type": "api_key",
   "flow": "api_key",
-  "host_url": "api.zapier.com",
+  "api_url": "api.zapier.com",
   "api_key": {
     "header_name": "Authorization",
     "header_prefix": "Bearer"
   },
   "export": {
-    "env": {
-      "api_key": "ZAPIER_API_KEY"
-    }
+    "ZAPIER_API_KEY": "API_TOKEN"
   }
 }

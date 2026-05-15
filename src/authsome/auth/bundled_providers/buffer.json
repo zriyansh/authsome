@@ -4,14 +4,12 @@
   "display_name": "Buffer",
   "auth_type": "api_key",
   "flow": "api_key",
-  "host_url": "api.bufferapp.com",
+  "api_url": "api.bufferapp.com",
   "api_key": {
     "header_name": "Authorization",
     "header_prefix": "Bearer"
   },
   "export": {
-    "env": {
-      "api_key": "BUFFER_API_KEY"
-    }
+    "BUFFER_API_KEY": "API_TOKEN"
   }
 }

@@ -81,7 +81,7 @@ class CredentialResolutionResponse(BaseModel):
 class ProviderRoute(BaseModel):
     provider: str
     connection: str | None = None
-    host_url: str
+    api_url: str
     auth_endpoint_paths: list[str] = Field(default_factory=list)
 
 

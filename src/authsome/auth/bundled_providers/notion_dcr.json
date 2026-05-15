@@ -4,6 +4,7 @@
   "display_name": "Notion (DCR)",
   "auth_type": "oauth2",
   "flow": "dcr_pkce",
+  "api_url": "mcp.notion.com",
   "oauth": {
     "authorization_url": "https://mcp.notion.com/authorize",
     "token_url": "https://mcp.notion.com/token",
@@ -18,10 +19,6 @@
     "registration_endpoint": "https://mcp.notion.com/register"
   },
   "export": {
-    "env": {
-      "access_token": "NOTION_ACCESS_TOKEN",
-      "refresh_token": "NOTION_REFRESH_TOKEN"
-    }
-  },
-  "host_url": "mcp.notion.com"
+    "NOTION_ACCESS_TOKEN": "ACCESS_TOKEN"
+  }
 }
