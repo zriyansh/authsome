@@ -17,6 +17,7 @@ from mitmproxy import http
 from mitmproxy.options import Options
 from mitmproxy.tools.dump import DumpMaster
 
+from authsome import audit
 from authsome.proxy.router import RouteMatch, RouteResolution
 from authsome.utils import utc_now
 
@@ -379,11 +380,11 @@ class AuthProxyAddon:
             headers = await self._get_auth_headers(match)
         except Exception as exc:
             normalized_host = _normalize_host(flow.request.host)
-            logger.info(
-                "proxy_no_credentials host={} provider={} connection={}",
-                normalized_host,
-                match.provider,
-                match.connection,
+            audit.log(
+                "proxy_no_credentials",
+                host=normalized_host,
+                provider=match.provider,
+                connection=match.connection,
             )
             logger.warning(
                 "No credentials for provider={} connection={} host={}: {}",
@@ -416,7 +417,7 @@ class AuthProxyAddon:
         match: RouteMatch | None = None,
     ) -> None:
         host = _normalize_host(flow.request.host)
-        logger.info("proxy_deny host={} reason={}", host, reason)
+        audit.log("proxy_deny", host=host, reason=reason)
         logger.warning("Proxy deny: host={} reason={}", host, reason)
         if flow.request.method.upper() == "CONNECT":
             flow.kill()
