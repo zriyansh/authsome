@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 class HealthResponse(BaseModel):
     status: Literal["ok"]
     version: str
-    mode: Literal["local"] = "local"
+    mode: Literal["local", "hosted"] = "local"
 
 
 class ReadyResponse(BaseModel):
@@ -49,6 +49,10 @@ class AuthSessionResponse(BaseModel):
     next_action: NextAction = Field(default_factory=NoneAction)
 
 
+class UiBootstrapResponse(BaseModel):
+    url: str
+
+
 class StartAuthSessionRequest(BaseModel):
     provider: str
     connection: str = "default"
@@ -77,7 +81,7 @@ class CredentialResolutionResponse(BaseModel):
 class ProviderRoute(BaseModel):
     provider: str
     connection: str | None = None
-    host_url: str
+    api_url: str
     auth_endpoint_paths: list[str] = Field(default_factory=list)
 
 

@@ -57,8 +57,7 @@ def mock_client() -> AsyncMock:
 def _patch_runtime(mock_client: AsyncMock, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Replace resolve_runtime_client so CLI commands get the mock client.
 
-    Also patch audit.setup and audit.log to prevent real file writes,
-    and redirect AUTHSOME_HOME to a temporary directory.
+    Redirect AUTHSOME_HOME to a temporary directory.
     """
     monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
 
@@ -69,11 +68,8 @@ def _patch_runtime(mock_client: AsyncMock, monkeypatch: pytest.MonkeyPatch, tmp_
     monkeypatch.setattr(dc, "resolve_runtime_client", mock.AsyncMock(return_value=mock_client))
 
     import authsome.cli.context as context_mod
-    import authsome.cli.main as main_mod
 
     monkeypatch.setattr(context_mod, "resolve_runtime_client", mock.AsyncMock(return_value=mock_client))
-    monkeypatch.setattr(main_mod.audit, "setup", lambda *a, **kw: None)
-    monkeypatch.setattr(main_mod.audit, "log", lambda *a, **kw: None)
 
     import webbrowser
 

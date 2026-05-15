@@ -4,7 +4,7 @@
   "display_name": "Postiz",
   "auth_type": "oauth2",
   "flow": "device_code",
-  "host_url": "api.postiz.com",
+  "api_url": "api.postiz.com",
   "oauth": {
     "authorization_url": "https://platform.postiz.com/oauth/authorize",
     "token_url": "https://cli-auth.postiz.com/device/token",
@@ -17,9 +17,7 @@
     "supports_dcr": false
   },
   "export": {
-    "env": {
-      "access_token": "POSTIZ_ACCESS_TOKEN"
-    }
+    "POSTIZ_ACCESS_TOKEN": "ACCESS_TOKEN"
   },
-  "docs": "https://docs.postiz.com/public-api/oauth"
+  "docs_url": "https://docs.postiz.com/public-api/oauth"
 }

@@ -55,7 +55,7 @@ You should get a JSON response from OpenAI rather than an authentication error.
 
 ## How matching works
 
-Authsome routes requests to providers using each provider's `host_url` field.
+Authsome routes requests to providers using each provider's `api_url` field.
 
 | Request host | Matches | Header injected |
 |--------------|---------|-----------------|
@@ -63,9 +63,9 @@ Authsome routes requests to providers using each provider's `host_url` field.
 | `api.github.com` | `github` provider | `Authorization: Bearer ghu_...` |
 | `example.com` | nothing | request passes through unchanged |
 
-The first provider whose `host_url` matches the request host wins. Ambiguous matches (two providers claim the same host) are not injected, the request is forwarded unchanged.
+The first provider whose `api_url` matches the request host wins. Ambiguous matches (two providers claim the same host) are not injected, the request is forwarded unchanged.
 
-For the regex form (`"host_url": "regex:^api[0-9]+\\.github\\.com$"`), see [Provider registry](/concepts/provider-registry).
+For the regex form (`"api_url": "regex:^api[0-9]+\\.github\\.com$"`), see [Provider registry](/concepts/provider-registry).
 
 ## TLS certificate
 

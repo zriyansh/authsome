@@ -45,8 +45,6 @@ authsome login <provider>   # opens browser, captures credentials securely
 authsome list               # verify the provider shows as connected
 ```
 
-Use `--scopes repo,user` to request specific permissions. Use `--flow device_code` if the browser is unavailable.
-
 ---
 
 ## Troubleshooting & Help

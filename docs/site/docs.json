@@ -2,6 +2,11 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Authsome",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "favicon": "/favicon.svg",
   "description": "Local credential broker for AI agents. Log in once via OAuth2 or API key. Authsome keeps tokens fresh and injects them at runtime.",
   "colors": {
     "primary": "#83CA16",
@@ -25,7 +30,7 @@
   "seo": {
     "indexing": "all",
     "metatags": {
-      "canonical": "https://authsome.agentr.dev/docs",
+      "canonical": "https://authsome.ai/docs",
       "title-template": "%s · Authsome",
       "og:site_name": "Authsome Docs",
       "og:type": "website",
@@ -223,12 +228,20 @@
   "navbar": {
     "links": [
       {
-        "label": "PyPI",
-        "href": "https://pypi.org/project/authsome/"
+        "label": "Discord",
+        "href": "https://discord.gg/9YP2C9tvMp",
+        "icon": {
+          "name": "discord",
+          "style": "brands"
+        }
       },
       {
-        "label": "llms.txt",
-        "href": "/docs/llms.txt"
+        "label": "PyPI",
+        "href": "https://pypi.org/project/authsome/",
+        "icon": {
+          "name": "python",
+          "style": "brands"
+        }
       }
     ],
     "primary": {
@@ -251,13 +264,14 @@
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/agentrhq/authsome"
+      "github": "https://github.com/agentrhq/authsome",
+      "discord": "https://discord.gg/9YP2C9tvMp"
     },
     "links": [
       {
         "header": "Product",
         "items": [
-          { "label": "Home", "href": "https://authsome.agentr.dev" },
+          { "label": "Home", "href": "https://authsome.ai" },
           { "label": "GitHub", "href": "https://github.com/agentrhq/authsome" },
           { "label": "PyPI", "href": "https://pypi.org/project/authsome/" }
         ]

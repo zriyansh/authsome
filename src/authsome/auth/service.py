@@ -37,12 +37,14 @@ from authsome.errors import (
     CredentialMissingError,
     IdentityNotFoundError,
     InvalidProviderSchemaError,
+    OperationNotAllowedError,
     ProviderAlreadyRegisteredError,
     ProviderNotFoundError,
     RefreshFailedError,
     TokenExpiredError,
     UnsupportedFlowError,
 )
+from authsome.server.dependencies import list_registered_identity_handles
 from authsome.utils import build_store_key, format_duration, is_filesystem_safe, parse_store_key, utc_now
 from authsome.vault import Vault
 
@@ -73,17 +75,24 @@ class AuthService:
         self,
         vault: Vault,
         identity: str,
+        deployment_mode: str = "local",
     ) -> None:
         if not identity:
             raise ValueError("AuthService requires an explicit identity handle")
         self._vault = vault
         self._identity = identity
+        self._deployment_mode = "hosted" if deployment_mode == "hosted" else "local"
         self._bundled: dict[str, ProviderDefinition] = self._load_bundled_providers()
 
     @property
     def _coll(self) -> str:
         """Vault collection for the active identity's credentials."""
         return f"vault:{self._identity}"
+
+    @property
+    def _server_coll(self) -> str:
+        """Vault collection for server-scoped provider client records."""
+        return "server"
 
     @property
     def vault(self) -> Vault:
@@ -157,7 +166,7 @@ class AuthService:
                 definition = await self.get_provider(provider_name)
             except Exception:
                 continue
-            if not definition.host_url:
+            if not definition.api_url:
                 continue
 
             # Find the default connection
@@ -183,11 +192,11 @@ class AuthService:
                 {
                     "provider": provider_name,
                     "connection": default_conn.get("connection_name", "default"),
-                    "host_url": definition.host_url,
+                    "api_url": definition.api_url,
                     "auth_endpoint_paths": sorted(list(paths)),
                 }
             )
-        routes.sort(key=lambda r: (r["host_url"].startswith("regex:"), r["provider"]))
+        routes.sort(key=lambda r: (r["api_url"].startswith("regex:"), r["provider"]))
         return {"routes": routes}
 
     async def resolve_credentials(self, **kwargs: Any) -> dict[str, Any]:
@@ -205,6 +214,7 @@ class AuthService:
         }
 
     async def register_provider(self, definition: ProviderDefinition, *, force: bool = False) -> None:
+        self._ensure_local_provider_admin_operation_allowed("register", definition.name)
         self._validate_provider(definition)
         has_custom = (await self._vault.get(definition.name, collection="providers")) is not None
         if force or not has_custom:
@@ -220,6 +230,26 @@ class AuthService:
     async def remove_provider(self, name: str) -> bool:
         """Remove a custom provider. Returns True if removed."""
         return await self._vault.delete(name, collection="providers")
+
+    async def _iter_registered_identity_handles(self) -> list[str]:
+        handles = await list_registered_identity_handles(self._vault.home)
+        return handles or [self._identity]
+
+    def _ensure_local_provider_admin_operation_allowed(self, operation: str, provider: str) -> None:
+        if self._deployment_mode == "hosted":
+            raise OperationNotAllowedError(
+                operation,
+                f"{operation} is not allowed in hosted deployments",
+                provider=provider,
+            )
+
+    def _ensure_provider_client_mutation_allowed(self, provider: str) -> None:
+        if self._deployment_mode == "hosted":
+            raise OperationNotAllowedError(
+                "login",
+                "provider client configuration is not allowed in hosted deployments",
+                provider=provider,
+            )
 
     def _validate_provider(self, definition: ProviderDefinition) -> None:
         if not is_filesystem_safe(definition.name):
@@ -296,7 +326,7 @@ class AuthService:
                             "status": record.status.value,
                             "scopes": record.scopes,
                             "base_url": record.base_url,
-                            "host_url": record.host_url,
+                            "api_url": record.api_url,
                             "expires_at": record.expires_at.isoformat() if record.expires_at else None,
                         }
                     )
@@ -393,10 +423,10 @@ class AuthService:
             )
             fields.append(
                 InputField(
-                    name="host_url",
+                    name="api_url",
                     label="API Host URL",
                     secret=False,
-                    default=definition.host_url or "",
+                    default=definition.api_url or "",
                 )
             )
 
@@ -441,21 +471,30 @@ class AuthService:
         client_record = await self._get_provider_client_credentials(provider)
 
         if flow_type in (FlowType.PKCE, FlowType.DEVICE_CODE, FlowType.DCR_PKCE):
-            if client_record is None:
-                client_record = ProviderClientRecord(identity=self._identity, provider=provider)
-            if inputs.get("base_url"):
-                client_record.base_url = inputs["base_url"]
-                session.payload["base_url"] = inputs["base_url"]
-            if inputs.get("host_url"):
-                client_record.host_url = inputs["host_url"]
-            if inputs.get("client_id"):
-                client_record.client_id = inputs["client_id"]
-            if inputs.get("client_secret"):
-                client_record.client_secret = inputs["client_secret"]
-            if "scopes" in inputs:
-                scopes_input = inputs["scopes"].strip()
-                client_record.scopes = [s.strip() for s in scopes_input.split(",") if s.strip()] if scopes_input else []
-            await self._save_provider_client_credentials(client_record)
+            if inputs:
+                self._ensure_provider_client_mutation_allowed(provider)
+
+            if client_record is None and inputs:
+                client_record = ProviderClientRecord(provider=provider)
+
+            if client_record is not None:
+                if base_url := inputs.get("base_url"):
+                    client_record.base_url = base_url
+                    session.payload["base_url"] = base_url
+                if api_url := inputs.get("api_url"):
+                    client_record.api_url = api_url
+                if client_id := inputs.get("client_id"):
+                    client_record.client_id = client_id
+                if client_secret := inputs.get("client_secret"):
+                    client_record.client_secret = client_secret
+                if "scopes" in inputs:
+                    scopes_input = inputs["scopes"].strip()
+                    client_record.scopes = (
+                        [s.strip() for s in scopes_input.split(",") if s.strip()] if scopes_input else []
+                    )
+
+            if client_record is not None and inputs:
+                await self._save_provider_client_credentials(client_record)
         elif flow_type == FlowType.API_KEY:
             api_key = inputs.get("api_key")
             if api_key:
@@ -543,15 +582,16 @@ class AuthService:
             return None
 
         if result.client_record is not None:
+            self._ensure_provider_client_mutation_allowed(provider)
             if client_record is None:
-                client_record = ProviderClientRecord(identity=self._identity, provider=provider)
+                client_record = ProviderClientRecord(provider=provider)
             client_record.client_id = result.client_record.client_id
             client_record.client_secret = result.client_record.client_secret
             client_record.base_url = result.client_record.base_url or client_record.base_url
             await self._save_provider_client_credentials(client_record)
 
         result.connection.base_url = flow_base_url
-        result.connection.host_url = resolved_definition.host_url
+        result.connection.api_url = resolved_definition.api_url
 
         await self._save_connection(result.connection)
         await self._update_provider_metadata(provider, connection_name)
@@ -601,7 +641,7 @@ class AuthService:
     @staticmethod
     def _build_docs_hints(definition: ProviderDefinition, flow_type: FlowType) -> list[dict[str, Any]]:
         """Convert provider docs URL into a bridge instruction block."""
-        if not definition.docs:
+        if not definition.docs_url:
             return []
 
         if flow_type not in (FlowType.PKCE, FlowType.DEVICE_CODE, FlowType.DCR_PKCE, FlowType.API_KEY):
@@ -611,7 +651,7 @@ class AuthService:
             {
                 "type": "instructions",
                 "label": "Instructions",
-                "url": definition.docs,
+                "url": definition.docs_url,
             }
         ]
 
@@ -658,19 +698,31 @@ class AuthService:
         await self._remove_from_provider_metadata(provider, connection)
 
     async def revoke(self, provider: str) -> None:
+        self._ensure_local_provider_admin_operation_allowed("revoke", provider)
         await self.get_provider(provider)
-        meta_key = build_store_key(identity=self._identity, provider=provider, record_type="metadata")
-        existing_json = await self._vault.get(meta_key, collection=self._coll)
-        if existing_json:
+        for identity in await self._iter_registered_identity_handles():
+            identity_service = AuthService(
+                vault=self._vault,
+                identity=identity,
+                deployment_mode=self._deployment_mode,
+            )
+            meta_key = build_store_key(identity=identity, provider=provider, record_type="metadata")
+            existing_json = await self._vault.get(meta_key, collection=identity_service._coll)
+            if not existing_json:
+                continue
+
             metadata = ProviderMetadataRecord.model_validate_json(existing_json)
             for conn_name in list(metadata.connection_names):
-                await self.logout(provider, connection=conn_name)
-        await self._vault.delete(meta_key, collection=self._coll)
-        client_key = build_store_key(identity=self._identity, provider=provider, record_type="client")
-        await self._vault.delete(client_key, collection=self._coll)
+                await identity_service.logout(provider, connection=conn_name)
+
+            await self._vault.delete(meta_key, collection=identity_service._coll)
+
+        client_key = build_store_key(provider=provider, record_type="server")
+        await self._vault.delete(client_key, collection=self._server_coll)
 
     async def remove(self, provider: str) -> None:
         """Revoke all tokens and remove the provider definition if it is local."""
+        self._ensure_local_provider_admin_operation_allowed("remove", provider)
         await self.revoke(provider)
         if await self.is_local_provider(provider):
             await self._vault.delete(provider, collection="providers")
@@ -724,6 +776,19 @@ class AuthService:
             if record.api_key:
                 env_name = export_map.get("api_key", f"{export_name_part(provider)}_API_KEY")
                 values[env_name] = record.api_key
+
+        if definition.export and definition.export.model_extra:
+            token = record.access_token if record.auth_type == AuthType.OAUTH2 else record.api_key
+            available_values = {
+                "BASE_URL": record.base_url,
+                "API_URL": record.api_url or definition.api_url or record.base_url,
+                "ACCESS_TOKEN": token,
+                "API_TOKEN": token,
+            }
+
+            for target_env, source_field in definition.export.model_extra.items():
+                if isinstance(source_field, str) and (val := available_values.get(source_field.upper())):
+                    values[target_env] = val
 
         return values
 
@@ -786,15 +851,15 @@ class AuthService:
         await self._vault.put(key, record.model_dump_json(), collection=self._coll)
 
     async def _get_provider_client_credentials(self, provider: str) -> ProviderClientRecord | None:
-        key = build_store_key(identity=self._identity, provider=provider, record_type="client")
-        record_json = await self._vault.get(key, collection=self._coll)
+        key = build_store_key(provider=provider, record_type="server")
+        record_json = await self._vault.get(key, collection=self._server_coll)
         if record_json:
             return ProviderClientRecord.model_validate_json(record_json)
         return None
 
     async def _save_provider_client_credentials(self, record: ProviderClientRecord) -> None:
-        key = build_store_key(identity=self._identity, provider=record.provider, record_type="client")
-        await self._vault.put(key, record.model_dump_json(), collection=self._coll)
+        key = build_store_key(provider=record.provider, record_type="server")
+        await self._vault.put(key, record.model_dump_json(), collection=self._server_coll)
 
     async def _update_provider_metadata(self, provider: str, connection_name: str) -> None:
         meta_key = build_store_key(identity=self._identity, provider=provider, record_type="metadata")
@@ -842,7 +907,7 @@ class AuthService:
                     return refreshed.access_token
                 except RefreshFailedError as exc:
                     fallback_available = record.expires_at and now < record.expires_at
-                    audit.log(
+                    await audit.alog(
                         "refresh_failed",
                         provider=provider,
                         connection=connection,

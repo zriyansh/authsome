@@ -8,8 +8,8 @@ from unittest.mock import MagicMock
 
 from click.testing import CliRunner
 
+from authsome.cli.client_config import load_client_config
 from authsome.cli.main import cli
-from authsome.identity.client_config import load_client_config
 from authsome.identity.keys import load_identity
 
 

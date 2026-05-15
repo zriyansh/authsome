@@ -9,12 +9,22 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from authsome import audit
 from authsome.auth import AuthService
 from authsome.auth.sessions import AuthSessionStore
 from authsome.errors import AuthsomeError
 from authsome.identity.proof import ReplayCache
 from authsome.identity.registry import IdentityRegistrationError, IdentityRegistry
-from authsome.server.dependencies import create_vault, get_server_base_url, get_server_home
+from authsome.paths import get_server_log_path
+from authsome.server.dependencies import (
+    create_app_store,
+    create_vault,
+    get_deployment_mode,
+    get_identity_registry_path,
+    get_server_base_url,
+    load_server_config,
+    load_ui_session_signing_secret,
+)
 from authsome.server.routes.auth import router as auth_router
 from authsome.server.routes.connections import router as connections_router
 from authsome.server.routes.health import router as health_router
@@ -22,18 +32,29 @@ from authsome.server.routes.identities import router as identities_router
 from authsome.server.routes.providers import router as providers_router
 from authsome.server.routes.proxy import router as proxy_router
 from authsome.server.routes.ui import router as ui_router
+from authsome.server.ui_sessions import UiSessionStore
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage daemon lifecycle."""
-    app.state.vault = await create_vault()
-    app.state.auth_service = AuthService(vault=app.state.vault, identity="server")
+    app.state.store = await create_app_store()
+    app.state.server_config = load_server_config(app.state.store.home)
+    audit.setup(get_server_log_path(app.state.store.home))
+    app.state.vault = await create_vault(app.state.store)
+    app.state.auth_service = AuthService(
+        vault=app.state.vault,
+        identity="server",
+        deployment_mode=get_deployment_mode(),
+    )
     app.state.auth_sessions = AuthSessionStore()
+    app.state.ui_sessions = UiSessionStore(load_ui_session_signing_secret(app.state.vault.home))
     app.state.proof_replay_cache = ReplayCache()
-    app.state.identity_registry = IdentityRegistry(get_server_home(app.state.vault.home))
+    app.state.identity_registry = IdentityRegistry(get_identity_registry_path(app.state.store.home))
     app.state.server_base_url = get_server_base_url()
     yield
+    audit.clear()
+    await app.state.store.close()
 
 
 def create_app() -> FastAPI:

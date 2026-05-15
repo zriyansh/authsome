@@ -42,7 +42,7 @@ class ConnectionRecord(BaseModel):
     auth_type: AuthType
     status: ConnectionStatus
     base_url: str | None = None
-    host_url: str | None = None
+    api_url: str | None = None
 
     # OAuth2 fields
     scopes: list[str] | None = None
@@ -101,18 +101,17 @@ class ProviderStateRecord(BaseModel):
 
 class ProviderClientRecord(BaseModel):
     """
-    Client credentials configured for a provider within an identity.
+    Client credentials configured for a provider at server scope.
 
-    Stored at key: identity:<identity>:<provider>:client
+    Stored at key: server:provider:<provider>:client
     """
 
     schema_version: int = 2
-    identity: str
     provider: str
     client_id: str | None = None
     client_secret: Annotated[str | None, Sensitive()] = None
     base_url: str | None = None
-    host_url: str | None = None
+    api_url: str | None = None
     scopes: list[str] | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 

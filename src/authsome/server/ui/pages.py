@@ -39,7 +39,7 @@ def input_page(
     optional_rows = []
     for field in fields:
         row = _field_row(field)
-        if field.get("default") is None:
+        if field.get("default") is None or field.get("name") == "client_secret":
             required_rows.append(row)
         else:
             optional_rows.append(row)

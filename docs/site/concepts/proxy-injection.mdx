@@ -19,8 +19,8 @@ The child process never sees the raw secret.
   <Step title="Outbound requests are intercepted">
     When the child makes an HTTP(S) call, mitmproxy decrypts and inspects the request. It looks at the destination host.
   </Step>
-  <Step title="The proxy matches by host_url">
-    Authsome iterates the registered providers and matches the request host against each provider's `host_url` field. On a match, it asks the AuthLayer for fresh credentials (refreshing if necessary) and injects the right `Authorization` header.
+  <Step title="The proxy matches by api_url">
+    Authsome iterates the registered providers and matches the request host against each provider's `api_url` field. On a match, it asks the AuthLayer for fresh credentials (refreshing if necessary) and injects the right `Authorization` header.
   </Step>
   <Step title="The request is forwarded">
     The authenticated request goes to the external API. The response streams back through the proxy unchanged.
@@ -32,16 +32,16 @@ The child process never sees the raw secret.
 
 ## Routing contract
 
-Provider definitions declare a `host_url` to opt in to proxy injection.
+Provider definitions declare a `api_url` to opt in to proxy injection.
 
 ```json
 {
   "name": "github",
-  "host_url": "api.github.com"
+  "api_url": "api.github.com"
 }
 ```
 
-The `host_url` value can be one of:
+The `api_url` value can be one of:
 
 | Form | Example | Matches |
 |------|---------|---------|
@@ -53,7 +53,7 @@ Use the `regex:` prefix when an API serves multiple hosts that follow a pattern.
 
 ### Matching rules
 
-- **Exact host match** is preferred. The first provider whose `host_url` matches wins.
+- **Exact host match** is preferred. The first provider whose `api_url` matches wins.
 - **Ambiguous matches** (two providers claim the same host) are not injected. The request is forwarded unchanged. Authsome logs a warning.
 - **Unmatched traffic** is forwarded unchanged. The proxy is transparent for everything it does not recognize.
 - The **default connection** is used for injected credentials. Per-request connection selection is future work.

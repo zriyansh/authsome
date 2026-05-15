@@ -59,7 +59,7 @@ The alpha implementation intentionally covers the first useful slice:
 - Auth layer with provider registry, OAuth/API-key acquisition flows, token refresh, and provider metadata.
 - Vault layer with encrypted local storage.
 - CLI commands for login, list, get, export, register, revoke/remove, doctor, whoami, and proxy-backed `run`.
-- Host-based proxy injection using provider `host_url`.
+- Host-based proxy injection using provider `api_url`.
 
 Identity, Policy, and Audit are planned layers. They are part of the long-term architecture described in this document, but they are not required to understand the current alpha implementation.
 
@@ -81,7 +81,7 @@ Does not store credentials. Does not make access decisions. Does not know about 
 - Host-based routing is fragile if two providers share a base URL
 
 **v1 routing contract**:
-- Provider definitions may declare `host_url`.
+- Provider definitions may declare `api_url`.
 - The proxy matches outbound requests by exact host.
 - Ambiguous matches are not injected; the request is forwarded unchanged.
 - The default connection is used for injected credentials.

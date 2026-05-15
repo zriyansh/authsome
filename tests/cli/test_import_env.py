@@ -86,6 +86,7 @@ class TestScanCommand:
         }
         monkeypatch.setenv("OPENAI_API_KEY", "sk-test-value")
         monkeypatch.setattr("authsome.cli.main.click.confirm", lambda *args, **kwargs: False)
+        mock_client.get_connection.return_value = {}
         result = runner.invoke(cli, ["--log-file", "", "scan"])
 
         assert result.exit_code == 0, result.output

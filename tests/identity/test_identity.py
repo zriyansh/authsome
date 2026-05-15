@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from authsome.identity import current_from_home, load_client_config, save_client_config
-from authsome.identity.client_config import ClientConfig
+from authsome.cli.client_config import ClientConfig, load_client_config, save_client_config
+from authsome.identity import current_from_home
 from authsome.identity.keys import (
     create_identity,
     ensure_local_identity,

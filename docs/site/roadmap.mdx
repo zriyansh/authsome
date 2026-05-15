@@ -8,14 +8,12 @@ keywords: ["authsome roadmap", "authsome planned features", "identity policy aud
 
 Authsome's architecture is layered: identity, policy, vault, auth, audit. v1 ships Vault, Auth, and the proxy orchestrator. Identity, Policy, and Audit are documented in the design but not yet enforced. This page is the honest tracker for what's coming and what isn't.
 
-The canonical design document is [`authsome-design.md`](https://github.com/agentrhq/authsome/blob/main/docs/authsome-design.md) in the source tree.
-
 ## Landed in v1
 
 - **Vault** <Badge color="green">Shipped</Badge> Encrypted SQLite per profile with AES-256-GCM. Local file or OS keyring backend for the master key. See [Encryption at rest](/security/encryption).
 - **Auth** <Badge color="green">Shipped</Badge> OAuth2 PKCE, device code, and DCR + PKCE flows. API-key flow with a browser bridge and `getpass` fallback. Automatic refresh through the AuthLayer.
 - **Provider registry** <Badge color="green">Shipped</Badge> 14 OAuth + 31 API-key bundled providers. User overrides at `~/.authsome/providers/`. Custom provider registration via `authsome register`.
-- **Proxy** <Badge color="green">Shipped</Badge> mitmproxy-based local HTTP proxy. Host-matched routing via `host_url`. Per-provider header injection. Placeholder env vars in the child process.
+- **Proxy** <Badge color="green">Shipped</Badge> mitmproxy-based local HTTP proxy. Host-matched routing via `api_url`. Per-provider header injection. Placeholder env vars in the child process.
 - **Daemon** <Badge color="green">Shipped</Badge> FastAPI HTTP server on `127.0.0.1:7998`. Browser bridges, OAuth callbacks, dashboard UI. See [The local daemon](/concepts/the-daemon).
 - **Audit** <Badge color="green">Shipped</Badge> Append-only `audit.log` with structured JSON events for every significant CLI action. See [Audit log format](/reference/audit-log).
 - **CLI** <Badge color="green">Shipped</Badge> `whoami`, `doctor`, `list`, `inspect`, `login`, `get`, `export`, `run`, `logout`, `revoke`, `remove`, `register`, `log`. See [CLI reference](/reference/cli).
@@ -50,7 +48,7 @@ Re-encrypt every record under a new master key without losing state. The wire fo
 
 ## Recently open questions
 
-These are tracked in [`authsome-design.md`](https://github.com/agentrhq/authsome/blob/main/docs/authsome-design.md) under "Open Questions". They are unresolved enough to call out separately.
+The following are unresolved enough to call out separately from the planned work above.
 
 | Question | Status |
 |----------|--------|

@@ -79,8 +79,8 @@ def _validate_provider_endpoints(definition: Any, ctx_obj: ContextObj) -> list[t
             endpoints_to_check.append(("device_authorization_url", definition.oauth.device_authorization_url, False))
     if definition.registration and definition.registration.registration_endpoint:
         endpoints_to_check.append(("registration_endpoint", definition.registration.registration_endpoint, False))
-    if definition.host_url:
-        endpoints_to_check.append(("host_url", definition.host_url, True))
+    if definition.api_url:
+        endpoints_to_check.append(("api_url", definition.api_url, True))
 
     for name, val, is_host in endpoints_to_check:
         if "://" in val:

@@ -1,6 +1,6 @@
 """Tests for authsome data models."""
 
-from authsome.auth.models.config import GlobalConfig, current_spec_version
+from authsome.auth.models.config import current_spec_version
 from authsome.auth.models.connection import (
     ConnectionRecord,
     ProviderClientRecord,
@@ -10,6 +10,7 @@ from authsome.auth.models.connection import (
 )
 from authsome.auth.models.enums import AuthType, ConnectionStatus, ExportFormat, FlowType
 from authsome.auth.models.provider import ApiKeyConfig, OAuthConfig, ProviderDefinition
+from authsome.errors import OperationNotAllowedError
 from authsome.identity.keys import IdentityMetadata
 
 
@@ -34,25 +35,11 @@ class TestEnums:
         assert ExportFormat.JSON.value == "json"
 
 
-class TestGlobalConfig:
-    """Global config model tests."""
+class TestSpecVersion:
+    """Spec version helper tests."""
 
-    def test_defaults(self) -> None:
-        config = GlobalConfig()
-        assert config.spec_version == current_spec_version()
-        assert config.encryption is not None
-        assert config.encryption.mode == "local_key"
-
-    def test_json_roundtrip(self) -> None:
-        config = GlobalConfig(spec_version=1)
-        json_str = config.model_dump_json()
-        restored = GlobalConfig.model_validate_json(json_str)
-        assert restored.spec_version == 1
-
-    def test_extra_fields_preserved(self) -> None:
-        config = GlobalConfig.model_validate({"spec_version": 1, "custom": "val"})
-        dumped = config.model_dump()
-        assert dumped.get("custom") == "val"
+    def test_current_spec_version_is_int(self) -> None:
+        assert isinstance(current_spec_version(), int)
 
 
 class TestIdentityMetadata:
@@ -196,7 +183,6 @@ class TestSensitiveAnnotation:
         from authsome.utils import redact
 
         record = ProviderClientRecord(
-            identity="default",
             provider="github",
             client_id="public-cid",
             client_secret="secret-csec",
@@ -204,6 +190,31 @@ class TestSensitiveAnnotation:
         data = redact(record)
         assert data["client_secret"] == "***REDACTED***"
         assert data["client_id"] == "public-cid"
+
+    def test_provider_client_record_is_server_owned(self) -> None:
+        record = ProviderClientRecord(
+            provider="github",
+            client_id="public-cid",
+            client_secret="secret-csec",
+        )
+
+        data = record.model_dump(mode="json")
+
+        assert "identity" not in data
+        assert data["provider"] == "github"
+
+
+class TestErrors:
+    """Typed error model tests."""
+
+    def test_operation_not_allowed_error_includes_context(self) -> None:
+        error = OperationNotAllowedError(
+            "revoke",
+            "Hosted deployments cannot revoke providers.",
+            provider="github",
+        )
+
+        assert str(error) == ("OperationNotAllowedError: [github] (revoke) Hosted deployments cannot revoke providers.")
 
 
 class TestConnectionRecord:
@@ -288,9 +299,9 @@ class TestProviderStateRecord:
 
 
 class TestHostUrl:
-    """ProviderDefinition host_url field tests."""
+    """ProviderDefinition api_url field tests."""
 
-    def test_provider_definition_parses_host_url(self) -> None:
+    def test_provider_definition_parses_api_url(self) -> None:
         provider = ProviderDefinition.model_validate(
             {
                 "schema_version": 1,
@@ -299,13 +310,13 @@ class TestHostUrl:
                 "auth_type": "api_key",
                 "flow": "api_key",
                 "api_key": {"header_name": "Authorization", "header_prefix": "Bearer"},
-                "host_url": "api.openai.com",
+                "api_url": "api.openai.com",
             }
         )
 
-        assert provider.host_url == "api.openai.com"
+        assert provider.api_url == "api.openai.com"
 
-    def test_provider_definition_defaults_host_url_to_none(self) -> None:
+    def test_provider_definition_defaults_api_url_to_none(self) -> None:
         provider = ProviderDefinition.model_validate(
             {
                 "schema_version": 1,
@@ -317,4 +328,4 @@ class TestHostUrl:
             }
         )
 
-        assert provider.host_url is None
+        assert provider.api_url is None

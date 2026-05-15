@@ -1,0 +1,27 @@
+{
+  "name": "authsome",
+  "owner": {
+    "name": "Agentr",
+    "url": "https://agentr.dev"
+  },
+  "metadata": {
+    "description": "Local OAuth2 and API-key credential broker for AI agents.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "authsome",
+      "source": "./skills/authsome",
+      "description": "Login once, credentials live in an encrypted local vault, a local proxy injects them into outbound requests so the agent's env never holds raw keys. 44 providers preconfigured (13 OAuth2, 31 API key).",
+      "version": "1.0.0",
+      "author": {
+        "name": "Agentr",
+        "url": "https://github.com/agentrhq"
+      },
+      "homepage": "https://authsome.agentr.dev",
+      "license": "MIT",
+      "keywords": ["auth", "oauth2", "credentials", "agent-identity", "broker"],
+      "category": "auth"
+    }
+  ]
+}

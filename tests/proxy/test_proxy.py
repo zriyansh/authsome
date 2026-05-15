@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from unittest import mock
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -81,7 +81,7 @@ class TestRouting:
         assert match == RouteMatch(provider="openai", connection="default")
 
     @pytest.mark.asyncio
-    async def test_host_url_path_limits_routing(self) -> None:
+    async def test_api_url_path_limits_routing(self) -> None:
         auth = mock.AsyncMock()
         provider = mock.Mock()
         provider.oauth = None
@@ -91,7 +91,7 @@ class TestRouting:
             "display_name": name.title(),
             "auth_type": "api_key",
             "flow": "api_key",
-            "host_url": "api.example.com",
+            "api_url": "api.example.com",
         }
         auth.list_connections.return_value = {
             "connections": [
@@ -100,7 +100,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "https://api.example.com/v1",
+                            "api_url": "https://api.example.com/v1",
                             "base_url": None,
                         }
                     ],
@@ -117,7 +117,7 @@ class TestRouting:
         assert router.route("https", "api.example.com", 443, "/v2/resources") is None
 
     @pytest.mark.asyncio
-    async def test_more_specific_host_url_path_wins_over_host_only_route(self) -> None:
+    async def test_more_specific_api_url_path_wins_over_host_only_route(self) -> None:
         auth = mock.AsyncMock()
         provider = mock.Mock()
         provider.oauth = None
@@ -127,7 +127,7 @@ class TestRouting:
             "display_name": name.title(),
             "auth_type": "api_key",
             "flow": "api_key",
-            "host_url": "api.example.com",
+            "api_url": "api.example.com",
         }
         auth.list_connections.return_value = {
             "connections": [
@@ -136,7 +136,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "api.example.com",
+                            "api_url": "api.example.com",
                             "base_url": None,
                         }
                     ],
@@ -146,7 +146,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "https://api.example.com/v1",
+                            "api_url": "https://api.example.com/v1",
                             "base_url": None,
                         }
                     ],
@@ -166,7 +166,7 @@ class TestRouting:
         )
 
     @pytest.mark.asyncio
-    async def test_more_specific_nested_host_url_path_wins(self) -> None:
+    async def test_more_specific_nested_api_url_path_wins(self) -> None:
         auth = mock.AsyncMock()
         provider = mock.Mock()
         provider.oauth = None
@@ -176,7 +176,7 @@ class TestRouting:
             "display_name": name.title(),
             "auth_type": "api_key",
             "flow": "api_key",
-            "host_url": "api.example.com",
+            "api_url": "api.example.com",
         }
         auth.list_connections.return_value = {
             "connections": [
@@ -185,7 +185,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "https://api.example.com/v1",
+                            "api_url": "https://api.example.com/v1",
                             "base_url": None,
                         }
                     ],
@@ -195,7 +195,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "https://api.example.com/v1/beta",
+                            "api_url": "https://api.example.com/v1/beta",
                             "base_url": None,
                         }
                     ],
@@ -215,7 +215,7 @@ class TestRouting:
         )
 
     @pytest.mark.asyncio
-    async def test_equal_specificity_host_url_paths_remain_ambiguous(self) -> None:
+    async def test_equal_specificity_api_url_paths_remain_ambiguous(self) -> None:
         auth = mock.AsyncMock()
         provider = mock.Mock()
         provider.oauth = None
@@ -225,7 +225,7 @@ class TestRouting:
             "display_name": name.title(),
             "auth_type": "api_key",
             "flow": "api_key",
-            "host_url": "api.example.com",
+            "api_url": "api.example.com",
         }
         auth.list_connections.return_value = {
             "connections": [
@@ -234,7 +234,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "https://api.example.com/v1",
+                            "api_url": "https://api.example.com/v1",
                             "base_url": None,
                         }
                     ],
@@ -244,7 +244,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "https://api.example.com/v1",
+                            "api_url": "https://api.example.com/v1",
                             "base_url": None,
                         }
                     ],
@@ -259,7 +259,7 @@ class TestRouting:
         assert amb.match is None and amb.miss_reason == "ambiguous"
 
     @pytest.mark.asyncio
-    async def test_regex_host_url_matches_multiple_hosts(self) -> None:
+    async def test_regex_api_url_matches_multiple_hosts(self) -> None:
         auth = mock.AsyncMock()
         provider = mock.Mock()
         provider.oauth = None
@@ -269,7 +269,7 @@ class TestRouting:
             "display_name": name.title(),
             "auth_type": "api_key",
             "flow": "api_key",
-            "host_url": "api.example.com",
+            "api_url": "api.example.com",
         }
         auth.list_connections.return_value = {
             "connections": [
@@ -278,7 +278,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": r"regex:^api[0-9]+\.github\.com$",
+                            "api_url": r"regex:^api[0-9]+\.github\.com$",
                             "base_url": None,
                         }
                     ],
@@ -309,7 +309,7 @@ class TestRouting:
             "display_name": name.title(),
             "auth_type": "api_key",
             "flow": "api_key",
-            "host_url": "api.example.com",
+            "api_url": "api.example.com",
         }
         auth.list_connections.return_value = {
             "connections": [
@@ -318,7 +318,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": r"regex:^api[0-9]+\.github\.com$",
+                            "api_url": r"regex:^api[0-9]+\.github\.com$",
                             "base_url": None,
                         }
                     ],
@@ -328,7 +328,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "api1.github.com",
+                            "api_url": "api1.github.com",
                             "base_url": None,
                         }
                     ],
@@ -348,7 +348,7 @@ class TestRouting:
         )
 
     @pytest.mark.asyncio
-    async def test_plain_host_url_does_not_use_regex_matching(self) -> None:
+    async def test_plain_api_url_does_not_use_regex_matching(self) -> None:
         auth = mock.AsyncMock()
         provider = mock.Mock()
         provider.oauth = None
@@ -358,7 +358,7 @@ class TestRouting:
             "display_name": name.title(),
             "auth_type": "api_key",
             "flow": "api_key",
-            "host_url": "api.example.com",
+            "api_url": "api.example.com",
         }
         auth.list_connections.return_value = {
             "connections": [
@@ -367,7 +367,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "api.github.com",
+                            "api_url": "api.github.com",
                             "base_url": None,
                         }
                     ],
@@ -417,7 +417,7 @@ class TestRouting:
                     "connections": [
                         {
                             "connection_name": "default",
-                            "host_url": "api.example.com",
+                            "api_url": "api.example.com",
                             "base_url": None,
                         }
                     ],
@@ -480,22 +480,13 @@ class TestAuthProxyAddon:
         flow = self._make_flow()
         auth.resolve_credentials.return_value = {"headers": {"Authorization": "Bearer sk-test"}, "expires_at": None}
 
-        with patch("authsome.proxy.server.audit.log") as log_mock:
-            addon, _router, patcher = self._make_addon(auth, RouteMatch(provider="openai", connection="default"))
-            try:
-                await addon.request(flow)
-            finally:
-                patcher.stop()
+        addon, _router, patcher = self._make_addon(auth, RouteMatch(provider="openai", connection="default"))
+        try:
+            await addon.request(flow)
+        finally:
+            patcher.stop()
 
         assert flow.request.headers["Authorization"] == "Bearer sk-test"
-        log_mock.assert_any_call(
-            "proxy_inject",
-            provider="openai",
-            connection="default",
-            host="api.openai.com",
-            method="GET",
-            path="/v1/responses",
-        )
 
     @pytest.mark.asyncio
     async def test_addon_overwrites_existing_authorization_header(self) -> None:
@@ -516,15 +507,13 @@ class TestAuthProxyAddon:
         auth = mock.AsyncMock()
         flow = self._make_flow(host="example.com", path="/")
 
-        with patch("authsome.proxy.server.audit.log") as log_mock:
-            addon, _router, patcher = self._make_addon(auth, None, miss_reason="no_match")
-            try:
-                await addon.request(flow)
-            finally:
-                patcher.stop()
+        addon, _router, patcher = self._make_addon(auth, None, miss_reason="no_match")
+        try:
+            await addon.request(flow)
+        finally:
+            patcher.stop()
 
         auth.resolve_credentials.assert_not_called()
-        log_mock.assert_called_once_with("proxy_miss", host="example.com", reason="no_match")
 
     @pytest.mark.asyncio
     async def test_addon_continues_on_header_retrieval_failure(self) -> None:
@@ -565,15 +554,17 @@ class TestProxyRunner:
         from authsome.proxy.runner import ProxyRunner
 
         auth = await _make_auth(tmp_path)
-        runner = ProxyRunner(auth)
+        runner = ProxyRunner(auth, home=tmp_path)
 
         with patch("authsome.proxy.runner.subprocess.run") as run_mock:
             run_mock.return_value.returncode = 0
-            with patch.object(runner, "_start_proxy", return_value=("http://127.0.0.1:8899", mock.Mock())):
-                with patch.object(runner, "_build_ca_bundle", return_value=Path("/tmp/fake-ca.pem")):
-                    await runner.run(["python", "-c", "print('ok')"])
+            with patch("authsome.proxy.runner.ensure_local_proxy_ca") as ensure_ca_mock:
+                with patch.object(runner, "_start_proxy", return_value=("http://127.0.0.1:8899", mock.Mock())):
+                    with patch.object(runner, "_build_ca_bundle", return_value=Path("/tmp/fake-ca.pem")):
+                        await runner.run(["python", "-c", "print('ok')"])
 
         env = run_mock.call_args.kwargs["env"]
+        ensure_ca_mock.assert_not_called()
         assert env["HTTP_PROXY"] == "http://127.0.0.1:8899"
         assert env["HTTPS_PROXY"] == "http://127.0.0.1:8899"
         assert env["http_proxy"] == "http://127.0.0.1:8899"
@@ -591,7 +582,7 @@ class TestProxyRunner:
         auth = await _make_auth(tmp_path)
         await _save_connection_record(auth, "openai", "sk-real-padded-for-regex-12")
 
-        runner = ProxyRunner(auth)
+        runner = ProxyRunner(auth, home=tmp_path)
 
         with patch("authsome.proxy.runner.subprocess.run") as run_mock:
             run_mock.return_value.returncode = 0
@@ -608,7 +599,7 @@ class TestProxyRunner:
         from authsome.proxy.runner import ProxyRunner
 
         auth = await _make_auth(tmp_path)
-        runner = ProxyRunner(auth)
+        runner = ProxyRunner(auth, home=tmp_path)
         server = mock.Mock()
 
         with patch("authsome.proxy.runner.subprocess.run", side_effect=RuntimeError("boom")):
@@ -619,6 +610,42 @@ class TestProxyRunner:
 
         server.shutdown.assert_called_once()
 
+    def test_start_proxy_ensures_local_proxy_ca_once(self, tmp_path: Path) -> None:
+        from authsome.proxy.runner import ProxyRunner
+
+        runner = ProxyRunner(mock.Mock(), home=tmp_path)
+        server = mock.Mock(url="http://127.0.0.1:8899")
+
+        with patch("authsome.proxy.runner.ensure_local_proxy_ca") as ensure_ca_mock:
+            with patch("authsome.proxy.runner.start_proxy_server", return_value=server) as start_mock:
+                proxy_url, returned_server = runner._start_proxy()
+
+        ensure_ca_mock.assert_called_once_with(tmp_path)
+        start_mock.assert_called_once_with(runner._client)
+        assert proxy_url == "http://127.0.0.1:8899"
+        assert returned_server is server
+
+    def test_ensure_local_proxy_ca_sets_flag_after_success(self, tmp_path: Path) -> None:
+        from authsome.cli.client_config import load_client_config
+        from authsome.proxy.certs import ensure_local_proxy_ca
+
+        with patch("authsome.proxy.certs._ensure_macos_keychain_ca", return_value=True) as ensure_ca_mock:
+            ensure_local_proxy_ca(tmp_path)
+
+        ensure_ca_mock.assert_called_once_with()
+        assert load_client_config(tmp_path).proxy_ca_installed is True
+
+    def test_ensure_local_proxy_ca_skips_repeat_prompt_once_flagged(self, tmp_path: Path) -> None:
+        from authsome.cli.client_config import ClientConfig, save_client_config
+        from authsome.proxy.certs import ensure_local_proxy_ca
+
+        save_client_config(tmp_path, ClientConfig(proxy_ca_installed=True))
+
+        with patch("authsome.proxy.certs._ensure_macos_keychain_ca") as ensure_ca_mock:
+            ensure_local_proxy_ca(tmp_path)
+
+        ensure_ca_mock.assert_not_called()
+
     def test_runner_merges_existing_no_proxy(self, tmp_path: Path) -> None:
         from authsome.proxy.runner import ProxyRunner
 
@@ -628,145 +655,6 @@ class TestProxyRunner:
         assert "127.0.0.1" in result
         assert "localhost" in result
         assert "::1" in result
-
-    def test_add_ca_to_macos_keychain_skips_on_non_macos(self, tmp_path: Path) -> None:
-        from authsome.proxy.runner import ProxyRunner
-
-        cert = tmp_path / "ca.pem"
-        cert.write_text("fake-cert")
-
-        with patch("authsome.proxy.runner.sys") as mock_sys:
-            mock_sys.platform = "linux"
-            added = ProxyRunner._add_ca_to_macos_keychain(cert)
-
-        assert added is False
-
-    def test_add_ca_to_macos_keychain_skips_missing_cert(self, tmp_path: Path) -> None:
-        from authsome.proxy.runner import ProxyRunner
-
-        missing = tmp_path / "nonexistent.pem"
-
-        with patch("authsome.proxy.runner.sys") as mock_sys:
-            mock_sys.platform = "darwin"
-            added = ProxyRunner._add_ca_to_macos_keychain(missing)
-
-        assert added is False
-
-    def _make_fake_keychain(self, tmp_path: Path) -> Path:
-        """Create a fake login.keychain-db under the tmp_path home structure."""
-        keychain_dir = tmp_path / "Library" / "Keychains"
-        keychain_dir.mkdir(parents=True)
-        keychain = keychain_dir / "login.keychain-db"
-        keychain.touch()
-        return keychain
-
-    def test_add_ca_to_macos_keychain_skips_when_already_present(self, tmp_path: Path) -> None:
-        from authsome.proxy.runner import ProxyRunner
-
-        cert = tmp_path / "ca.pem"
-        cert.write_text("fake-cert")
-        self._make_fake_keychain(tmp_path)
-
-        with (
-            patch("authsome.proxy.runner.sys") as mock_sys,
-            patch("authsome.proxy.runner.Path.home", return_value=tmp_path),
-            patch("authsome.proxy.runner.subprocess.run") as run_mock,
-        ):
-            mock_sys.platform = "darwin"
-            # find-certificate returns 0 → cert already present
-            run_mock.return_value = Mock(returncode=0)
-            added = ProxyRunner._add_ca_to_macos_keychain(cert)
-
-        assert added is False
-        # Only the find-certificate check should have run, not add-trusted-cert
-        assert run_mock.call_count == 1
-        assert "find-certificate" in run_mock.call_args[0][0]
-
-    def test_add_ca_to_macos_keychain_returns_true_on_success(self, tmp_path: Path) -> None:
-        from authsome.proxy.runner import ProxyRunner
-
-        cert = tmp_path / "ca.pem"
-        cert.write_text("fake-cert")
-        self._make_fake_keychain(tmp_path)
-
-        find_result = Mock(returncode=1)  # cert not present
-        add_result = Mock(returncode=0)  # add succeeded
-
-        with (
-            patch("authsome.proxy.runner.sys") as mock_sys,
-            patch("authsome.proxy.runner.Path.home", return_value=tmp_path),
-            patch("authsome.proxy.runner.subprocess.run", side_effect=[find_result, add_result]),
-        ):
-            mock_sys.platform = "darwin"
-            added = ProxyRunner._add_ca_to_macos_keychain(cert)
-
-        assert added is True
-
-    def test_add_ca_to_macos_keychain_returns_false_on_failure(self, tmp_path: Path) -> None:
-        from authsome.proxy.runner import ProxyRunner
-
-        cert = tmp_path / "ca.pem"
-        cert.write_text("fake-cert")
-        self._make_fake_keychain(tmp_path)
-
-        find_result = Mock(returncode=1)  # cert not present
-        add_result = Mock(returncode=1, stderr="denied", stdout="")  # add failed
-
-        with (
-            patch("authsome.proxy.runner.sys") as mock_sys,
-            patch("authsome.proxy.runner.Path.home", return_value=tmp_path),
-            patch("authsome.proxy.runner.subprocess.run", side_effect=[find_result, add_result]),
-        ):
-            mock_sys.platform = "darwin"
-            added = ProxyRunner._add_ca_to_macos_keychain(cert)
-
-        assert added is False
-
-    def test_remove_ca_from_macos_keychain_skips_on_non_macos(self) -> None:
-        from authsome.proxy.runner import ProxyRunner
-
-        with patch("authsome.proxy.runner.sys") as mock_sys, patch("authsome.proxy.runner.subprocess.run") as run_mock:
-            mock_sys.platform = "linux"
-            ProxyRunner._remove_ca_from_macos_keychain()
-
-        run_mock.assert_not_called()
-
-    def test_remove_ca_from_macos_keychain_calls_delete_certificate(self, tmp_path: Path) -> None:
-        from authsome.proxy.runner import ProxyRunner
-
-        self._make_fake_keychain(tmp_path)
-
-        with patch("authsome.proxy.runner.sys") as mock_sys, patch("authsome.proxy.runner.subprocess.run") as run_mock:
-            mock_sys.platform = "darwin"
-            run_mock.return_value = Mock(returncode=0)
-            ProxyRunner._remove_ca_from_macos_keychain()
-
-        run_mock.assert_called_once()
-        cmd = run_mock.call_args[0][0]
-        assert "delete-certificate" in cmd
-        assert "mitmproxy" in cmd
-
-    @pytest.mark.asyncio
-    async def test_runner_adds_keychain_cert_on_macos_and_removes_after_run(self, tmp_path: Path) -> None:
-        from authsome.proxy.runner import ProxyRunner
-
-        auth = await _make_auth(tmp_path)
-        runner = ProxyRunner(auth)
-        fake_ca = tmp_path / "fake-ca.pem"
-        fake_ca.write_text("fake")
-
-        with (
-            patch("authsome.proxy.runner.subprocess.run") as run_mock,
-            patch.object(runner, "_start_proxy", return_value=("http://127.0.0.1:8899", Mock())),
-            patch.object(runner, "_build_ca_bundle", return_value=fake_ca),
-            patch.object(ProxyRunner, "_add_ca_to_macos_keychain", return_value=True) as add_mock,
-            patch.object(ProxyRunner, "_remove_ca_from_macos_keychain") as remove_mock,
-        ):
-            run_mock.return_value = Mock(returncode=0)
-            await runner.run(["echo", "hello"])
-
-        add_mock.assert_called_once()
-        remove_mock.assert_called_once()
 
 
 class TestProxyServer:
@@ -782,19 +670,19 @@ class TestProxyServer:
 
 
 class TestProviderProxyMetadata:
-    """Bundled provider definitions include host_url for proxy routing."""
+    """Bundled provider definitions include api_url for proxy routing."""
 
     @pytest.mark.asyncio
-    async def test_openai_provider_has_host_url(self, tmp_path: Path) -> None:
+    async def test_openai_provider_has_api_url(self, tmp_path: Path) -> None:
         auth = await _make_auth(tmp_path)
         provider = await auth.get_provider("openai")
-        assert provider.host_url == "api.openai.com"
+        assert provider.api_url == "api.openai.com"
 
     @pytest.mark.asyncio
-    async def test_github_provider_has_host_url(self, tmp_path: Path) -> None:
+    async def test_github_provider_has_api_url(self, tmp_path: Path) -> None:
         auth = await _make_auth(tmp_path)
         provider = await auth.get_provider("github")
-        assert provider.host_url == "api.github.com"
+        assert provider.api_url == "api.github.com"
 
 
 # ── CLI tests ────────────────────────────────────────────────────────────

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from typing import Literal, cast
+
 from fastapi import APIRouter, Depends, Request
 
 from authsome import __version__
 from authsome.auth import AuthService
 from authsome.auth.models.config import current_spec_version
+from authsome.server.dependencies import get_deployment_mode
 from authsome.server.routes._deps import get_auth_service, get_protected_auth_service, get_server_base_url
 from authsome.server.schemas import HealthResponse, ReadyResponse
 
@@ -15,7 +18,9 @@ router = APIRouter()
 
 @router.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    return HealthResponse(status="ok", version=__version__)
+    mode = get_deployment_mode()
+    response_mode = cast(Literal["local", "hosted"], mode if mode == "hosted" else "local")
+    return HealthResponse(status="ok", version=__version__, mode=response_mode)
 
 
 @router.get("/ready", response_model=ReadyResponse)
@@ -24,25 +29,9 @@ async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
     issues: list[str] = []
     warnings: list[str] = []
 
-    # 1. Config & Schema Version Check
-    try:
-        config = await auth.vault.get_config()
-        checks["config"] = "ok"
+    checks["spec_version"] = str(current_spec_version())
 
-        expected_spec_version = current_spec_version()
-        if getattr(config, "spec_version", None) != expected_spec_version:
-            issues.append(
-                f"config: spec_version mismatch (got {config.spec_version}, expected {expected_spec_version})"
-            )
-            checks["version_compatibility"] = "failed"
-        else:
-            checks["version_compatibility"] = "ok"
-    except Exception as exc:
-        checks["config"] = "failed"
-        checks["version_compatibility"] = "failed"
-        issues.append(f"config: {exc}")
-
-    # 2. Active Identity Check
+    # 1. Active Identity Check
     try:
         await auth.get_identity(auth.identity)
         checks["identity"] = "ok"
@@ -50,7 +39,7 @@ async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
         checks["identity"] = "failed"
         issues.append(f"identity: {exc}")
 
-    # 3. Providers List Check
+    # 2. Providers List Check
     try:
         await auth.list_providers()
         checks["providers"] = "ok"
@@ -58,7 +47,7 @@ async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
         checks["providers"] = "failed"
         issues.append(f"providers: {exc}")
 
-    # 4. Connected Providers Check
+    # 3. Connected Providers Check
     try:
         conn_list = await auth.list_connections()
         checks["connections"] = "ok"
@@ -69,7 +58,7 @@ async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
         checks["connections"] = "failed"
         issues.append(f"connections: {exc}")
 
-    # 5. Vault Roundtrip & Store Integrity Check
+    # 4. Vault Roundtrip & Store Integrity Check
     try:
         await auth.vault.put("__ready_test__", "ok", collection=f"vault:{auth.identity}")
         value = await auth.vault.get("__ready_test__", collection=f"vault:{auth.identity}")
@@ -104,8 +93,7 @@ async def whoami(
     auth: AuthService = Depends(get_protected_auth_service),
     server_base_url: str = Depends(get_server_base_url),
 ) -> dict[str, str]:
-    config = await auth.vault.get_config()
-    enc_mode = config.encryption.mode if config.encryption else "local_key"
+    enc_mode = request.app.state.server_config.encryption.mode
     if enc_mode == "local_key":
         enc_desc = f"Local Key ({auth.vault.home / 'server' / 'master.key'})"
     elif enc_mode == "keyring":

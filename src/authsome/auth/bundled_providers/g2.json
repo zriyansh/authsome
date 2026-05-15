@@ -4,14 +4,12 @@
   "display_name": "G2",
   "auth_type": "api_key",
   "flow": "api_key",
-  "host_url": "api.g2.com",
+  "api_url": "api.g2.com",
   "api_key": {
     "header_name": "Authorization",
     "header_prefix": "Token"
   },
   "export": {
-    "env": {
-      "api_key": "G2_API_TOKEN"
-    }
+    "G2_API_TOKEN": "API_TOKEN"
   }
 }

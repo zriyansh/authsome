@@ -81,6 +81,7 @@ def build_store_key(
 
     Spec §10.1 key namespace:
       provider:<provider_name>:definition
+      server:provider:<provider_name>:client
       identity:<identity_name>:<provider_name>:metadata
       identity:<identity_name>:<provider_name>:state
       identity:<identity_name>:<provider_name>:connection:<connection_name>
@@ -88,6 +89,8 @@ def build_store_key(
     """
     if record_type == "definition" and provider:
         return f"provider:{provider}:definition"
+    if record_type == "server" and provider:
+        return f"server:provider:{provider}:client"
 
     if identity and provider:
         if record_type == "metadata":
@@ -114,6 +117,10 @@ def parse_store_key(key: str) -> StoreKeyParts:
     if key.startswith("provider:") and key.endswith(":definition"):
         provider = key[len("provider:") : -len(":definition")]
         return StoreKeyParts(provider=provider, record_type="definition")
+
+    if key.startswith("server:provider:") and key.endswith(":client"):
+        provider = key[len("server:provider:") : -len(":client")]
+        return StoreKeyParts(provider=provider, record_type="server")
 
     if key.startswith("identity:"):
         # Format: identity:<identity_name>:<remainder>
@@ -287,7 +294,7 @@ def format_error_code(exc: Exception) -> int:
         return 2
     if exc_name == "ConnectionNotFoundError":
         return 3
-    if exc_name == "ProviderNotFoundError":
+    if exc_name in ("ProviderNotFoundError", "OperationNotAllowedError"):
         return 4
     if exc_name in ("CredentialMissingError", "TokenExpiredError", "RefreshFailedError"):
         return 5

@@ -4,14 +4,12 @@
   "display_name": "SavvyCal",
   "auth_type": "api_key",
   "flow": "api_key",
-  "host_url": "api.savvycal.com",
+  "api_url": "api.savvycal.com",
   "api_key": {
     "header_name": "Authorization",
     "header_prefix": "Bearer"
   },
   "export": {
-    "env": {
-      "api_key": "SAVVYCAL_API_KEY"
-    }
+    "SAVVYCAL_API_KEY": "API_TOKEN"
   }
 }
