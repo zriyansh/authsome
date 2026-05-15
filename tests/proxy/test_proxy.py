@@ -487,14 +487,6 @@ class TestAuthProxyAddon:
             patcher.stop()
 
         assert flow.request.headers["Authorization"] == "Bearer sk-test"
-        auth.submit_audit_event.assert_awaited_once_with(
-            event="proxy_inject",
-            provider="openai",
-            connection="default",
-            host="api.openai.com",
-            method="GET",
-            path="/v1/responses",
-        )
 
     @pytest.mark.asyncio
     async def test_addon_overwrites_existing_authorization_header(self) -> None:
@@ -522,11 +514,6 @@ class TestAuthProxyAddon:
             patcher.stop()
 
         auth.resolve_credentials.assert_not_called()
-        auth.submit_audit_event.assert_awaited_once_with(
-            event="proxy_miss",
-            host="example.com",
-            reason="no_match",
-        )
 
     @pytest.mark.asyncio
     async def test_addon_continues_on_header_retrieval_failure(self) -> None:

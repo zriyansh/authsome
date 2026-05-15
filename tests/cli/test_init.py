@@ -21,7 +21,7 @@ def test_init_removes_legacy_default_state_and_registers_identity(
     mock_client: MagicMock,
     tmp_path: Path,
 ) -> None:
-    identities = tmp_path / "identities"
+    identities = tmp_path / "client" / "identities"
     identities.mkdir(parents=True)
     (identities / "default.json").write_text("{}", encoding="utf-8")
     (identities / "default.key").write_text("legacy\n", encoding="utf-8")

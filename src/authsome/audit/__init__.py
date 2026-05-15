@@ -1,21 +1,21 @@
-"""Audit models and transitional logging helpers for Authsome operations."""
+"""Structured server-side event logging helpers."""
 
 from __future__ import annotations
 
+import json
+import threading
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from authsome.utils import utc_now
 
-if TYPE_CHECKING:
-    from authsome.store.interfaces import AppStore
-
 
 class AuditEvent(BaseModel):
-    """Structured audit event stored by the daemon."""
+    """Structured server-side event record."""
 
     event_id: str = Field(default_factory=lambda: f"audit_{uuid.uuid4().hex}")
     timestamp: datetime = Field(default_factory=utc_now)
@@ -27,7 +27,8 @@ class AuditEvent(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-_store_instance: AppStore | None = None
+_log_path: Path | None = None
+_lock = threading.Lock()
 
 
 def _build_event(event_type: str, **kwargs: Any) -> AuditEvent:
@@ -42,8 +43,41 @@ def _build_event(event_type: str, **kwargs: Any) -> AuditEvent:
     )
 
 
-async def alog(event_type: str, **kwargs: Any) -> None:
-    """Write an event using the configured async sink when available."""
-    if _store_instance is not None:
-        await _store_instance.append_audit_event(_build_event(event_type, **kwargs))
+def setup(path: Path) -> None:
+    """Configure the server-side structured log path."""
+    global _log_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        path.touch()
+    _log_path = path
+
+
+def clear() -> None:
+    """Clear configured server-side log state."""
+    global _log_path
+    _log_path = None
+
+
+def _serialize_event(event: AuditEvent) -> str:
+    payload = event.model_dump(mode="json")
+    metadata = payload.pop("metadata", {})
+    if isinstance(metadata, dict):
+        payload.update(metadata)
+    return json.dumps(payload, separators=(",", ":"))
+
+
+def log(event_type: str, **kwargs: Any) -> None:
+    """Append a structured server event to the configured log file."""
+    if _log_path is None:
         return
+    line = _serialize_event(_build_event(event_type, **kwargs))
+    with _lock:
+        _log_path.parent.mkdir(parents=True, exist_ok=True)
+        with _log_path.open("a", encoding="utf-8") as handle:
+            handle.write(line)
+            handle.write("\n")
+
+
+async def alog(event_type: str, **kwargs: Any) -> None:
+    """Async wrapper around structured server event logging."""
+    log(event_type, **kwargs)

@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Request
 from authsome import __version__
 from authsome.auth import AuthService
 from authsome.auth.models.config import current_spec_version
-from authsome.server.dependencies import get_deployment_mode, get_encryption_mode
+from authsome.server.dependencies import get_deployment_mode
 from authsome.server.routes._deps import get_auth_service, get_protected_auth_service, get_server_base_url
 from authsome.server.schemas import HealthResponse, ReadyResponse
 
@@ -93,7 +93,7 @@ async def whoami(
     auth: AuthService = Depends(get_protected_auth_service),
     server_base_url: str = Depends(get_server_base_url),
 ) -> dict[str, str]:
-    enc_mode = get_encryption_mode()
+    enc_mode = request.app.state.server_config.encryption.mode
     if enc_mode == "local_key":
         enc_desc = f"Local Key ({auth.vault.home / 'server' / 'master.key'})"
     elif enc_mode == "keyring":

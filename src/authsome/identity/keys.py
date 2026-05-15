@@ -13,6 +13,8 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from pydantic import BaseModel, Field
 
+from authsome.paths import get_client_home
+
 _ED25519_MULTICODEC_PREFIX = b"\xed\x01"
 _DID_KEY_PREFIX = "did:key:z"
 _HANDLE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*[a-z0-9]$")
@@ -60,7 +62,7 @@ class IdentityMetadata(BaseModel):
 
 
 def identities_dir(home: Path) -> Path:
-    return home / "identities"
+    return get_client_home(home) / "identities"
 
 
 def identity_metadata_path(home: Path, handle: str) -> Path:

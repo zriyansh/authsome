@@ -8,7 +8,7 @@ import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Protocol, cast
+from typing import Any, Protocol
 from urllib.parse import urlparse
 
 from loguru import logger
@@ -348,10 +348,12 @@ class AuthProxyAddon:
         if resolution.match is None:
             if resolution.miss_reason is not None:
                 normalized_host = _normalize_host(flow.request.host)
-                await self._submit_audit_event(
-                    event="proxy_miss",
-                    host=normalized_host,
-                    reason=resolution.miss_reason,
+                logger.info(
+                    "client_event event=proxy_miss host={} reason={} method={} path={}",
+                    normalized_host,
+                    resolution.miss_reason,
+                    flow.request.method,
+                    flow.request.path,
                 )
                 logger.error(
                     "Proxy miss: host={} reason={} {} {}",
@@ -376,23 +378,14 @@ class AuthProxyAddon:
         for key, value in headers.items():
             flow.request.headers[key] = value
 
-        await self._submit_audit_event(
-            event="proxy_inject",
-            provider=match.provider,
-            connection=match.connection,
-            host=_normalize_host(flow.request.host),
-            method=flow.request.method,
-            path=flow.request.path,
+        logger.info(
+            "client_event event=proxy_inject provider={} connection={} host={} method={} path={}",
+            match.provider,
+            match.connection,
+            _normalize_host(flow.request.host),
+            flow.request.method,
+            flow.request.path,
         )
-
-    async def _submit_audit_event(self, *, event: str, **kwargs: Any) -> None:
-        submit_audit_event = cast(Any, getattr(self._client, "submit_audit_event", None))
-        if submit_audit_event is None:
-            return
-        try:
-            await submit_audit_event(event=event, **kwargs)
-        except Exception:
-            logger.debug("Audit submission failed for proxy event {}", event)
 
     async def _get_auth_headers(self, match: RouteMatch) -> dict[str, str]:
         cache_key = (match.provider, match.connection or "")

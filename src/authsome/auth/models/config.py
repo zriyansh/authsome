@@ -1,8 +1,10 @@
-"""Authsome configuration helpers."""
+"""Authsome configuration models and helpers."""
 
 from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
+
+from pydantic import BaseModel, Field
 
 
 def current_spec_version() -> int:
@@ -18,3 +20,18 @@ def current_spec_version() -> int:
         return int(parts[1])
     except ValueError:
         return 0
+
+
+class EncryptionConfig(BaseModel):
+    """Vault encryption backend settings for the daemon."""
+
+    mode: str = "local_key"
+
+
+class ServerConfig(BaseModel):
+    """Daemon-owned server configuration."""
+
+    spec_version: int = Field(default_factory=current_spec_version)
+    encryption: EncryptionConfig = Field(default_factory=EncryptionConfig)
+
+    model_config = {"extra": "allow"}

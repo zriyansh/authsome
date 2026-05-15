@@ -44,6 +44,14 @@ async def _ensure_browser_session_identity(request: Request, session: AuthSessio
     return identity == session.identity
 
 
+async def _load_session_or_404(sessions: AuthSessionStore, session_id: str) -> AuthSession:
+    """Return an auth session or raise the route-level not-found response."""
+    try:
+        return await sessions.get(session_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Authentication session not found") from exc
+
+
 @router.post("/sessions", response_model=AuthSessionResponse)
 async def start_session(
     body: StartAuthSessionRequest,
@@ -109,7 +117,7 @@ async def get_session(
     sessions: AuthSessionStore = Depends(get_auth_sessions),
     server_base_url: str = Depends(get_server_base_url),
 ) -> AuthSessionResponse:
-    session = await sessions.get(session_id)
+    session = await _load_session_or_404(sessions, session_id)
     if session.identity != auth.identity:
         raise HTTPException(status_code=404, detail="Authentication session not found")
     return _session_response(session, server_base_url)
@@ -123,7 +131,7 @@ async def resume_session(
     sessions: AuthSessionStore = Depends(get_auth_sessions),
     server_base_url: str = Depends(get_server_base_url),
 ) -> AuthSessionResponse:
-    session = await sessions.get(session_id)
+    session = await _load_session_or_404(sessions, session_id)
     if session.identity != auth.identity:
         raise HTTPException(status_code=404, detail="Authentication session not found")
     try:
@@ -257,7 +265,13 @@ async def submit_input(
     sessions: AuthSessionStore = Depends(get_auth_sessions),
     server_base_url: str = Depends(get_server_base_url),
 ):
-    session = await sessions.get(session_id)
+    try:
+        session = await sessions.get(session_id)
+    except KeyError:
+        return HTMLResponse(
+            pages.message_page("Authentication session expired", "Please run authsome login again."),
+            status_code=404,
+        )
     if not await _ensure_browser_session_identity(request, session):
         return HTMLResponse(
             pages.message_page("Dashboard session expired", "Run 'authsome ui' to reopen the hosted dashboard."),

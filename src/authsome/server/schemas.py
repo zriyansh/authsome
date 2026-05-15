@@ -11,8 +11,6 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
-from authsome.audit import AuditEvent
-
 
 class HealthResponse(BaseModel):
     status: Literal["ok"]
@@ -89,16 +87,3 @@ class ProviderRoute(BaseModel):
 
 class ProxyRoutesResponse(BaseModel):
     routes: list[ProviderRoute]
-
-
-class AuditEventRequest(BaseModel):
-    event: str
-    provider: str | None = None
-    connection: str | None = None
-    identity: str | None = None
-    status: str | None = None
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class AuditEventsResponse(BaseModel):
-    events: list[AuditEvent] = Field(default_factory=list)

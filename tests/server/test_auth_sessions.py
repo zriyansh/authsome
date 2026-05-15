@@ -107,7 +107,7 @@ def test_resume_session_rejects_other_identity(monkeypatch, tmp_path: Path) -> N
     assert response.json()["detail"] == "Proof JWT body hash does not match request"
 
 
-def test_sessions_survive_app_recreation(monkeypatch, tmp_path: Path) -> None:
+def test_sessions_do_not_survive_app_recreation(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
     owner = create_identity(tmp_path, "steady-wisely-boldly-0042")
     session_id = ""
@@ -131,5 +131,5 @@ def test_sessions_survive_app_recreation(monkeypatch, tmp_path: Path) -> None:
             headers=_auth_header(tmp_path, "GET", f"/auth/sessions/{session_id}", handle=owner.handle),
         )
 
-    assert response.status_code == 200
-    assert response.json()["id"] == session_id
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Authentication session not found"

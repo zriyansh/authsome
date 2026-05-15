@@ -15,7 +15,7 @@ from authsome.auth.sessions import AuthSession
 from authsome.errors import OperationNotAllowedError
 from authsome.identity.keys import create_identity
 from authsome.identity.registry import IdentityRegistry
-from authsome.server.dependencies import create_app_store, create_vault
+from authsome.server.dependencies import create_app_store, create_vault, get_identity_registry_path
 from authsome.utils import build_store_key
 
 
@@ -251,7 +251,7 @@ async def test_revoke_local_deletes_shared_client_and_all_identity_connections(t
     first_identity = create_identity(tmp_path, "steady-wisely-boldly-0042")
     second_identity = create_identity(tmp_path, "rapid-brightly-firmly-0007")
     store = await create_app_store(tmp_path)
-    registry = IdentityRegistry(store)
+    registry = IdentityRegistry(get_identity_registry_path(tmp_path))
     await registry.register(handle=first_identity.handle, did=first_identity.did)
     await registry.register(handle=second_identity.handle, did=second_identity.did)
 

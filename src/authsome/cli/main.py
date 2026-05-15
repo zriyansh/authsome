@@ -9,6 +9,7 @@ from typing import Any
 
 import click
 import requests
+from loguru import logger
 
 from authsome import AuthenticationFailedError, FlowType, __version__
 from authsome.auth.models.enums import AuthType, ExportFormat
@@ -27,6 +28,7 @@ from authsome.cli.helpers import (
     auth_command,
     setup_logging,
 )
+from authsome.paths import get_client_log_path
 from authsome.utils import connection_is_active, format_error_code, format_expires_at, redact
 
 
@@ -36,7 +38,7 @@ from authsome.utils import connection_is_active, format_error_code, format_expir
 @click.option(
     "--log-file",
     "log_file",
-    default=str(Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome"))) / "logs" / "authsome.log"),
+    default=str(get_client_log_path(Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome"))))),
     show_default=True,
     metavar="PATH",
     help="Path for the rotating log file. Pass empty string to disable.",
@@ -215,25 +217,29 @@ async def list_cmd(ctx_obj: ContextObj) -> None:
 @click.option("-n", "--lines", default=50, metavar="COUNT", help="Number of lines to show.")
 @auth_command
 async def log_cmd(ctx_obj: ContextObj, lines: int) -> None:
-    """View the authsome audit log."""
-    actx = await ctx_obj.initialize()
+    """View the local authsome client log."""
+    home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
+    log_path = get_client_log_path(home)
     try:
-        payload = await actx.runtime_client.list_audit_events(limit=lines)
-        events = payload.get("events", [])
-
+        entries = log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-lines:]
         if ctx_obj.json_output:
-            ctx_obj.print_json({"events": events})
+            ctx_obj.print_json({"log_file": str(log_path), "entries": entries})
         else:
-            if not events:
-                ctx_obj.echo("No audit events found.", err=True, color="yellow")
+            if not entries:
+                ctx_obj.echo("No log entries found.", err=True, color="yellow")
                 sys.exit(0)
-            for event in events:
-                ctx_obj.echo(json_lib.dumps(event))
+            for entry in entries:
+                ctx_obj.echo(entry)
+    except FileNotFoundError:
+        if ctx_obj.json_output:
+            ctx_obj.print_json({"log_file": str(log_path), "entries": []})
+        else:
+            ctx_obj.echo("No log entries found.", err=True, color="yellow")
     except Exception as e:
         if ctx_obj.json_output:
             ctx_obj.print_json({"error": str(e)})
         else:
-            ctx_obj.echo(f"Error reading audit log: {e}", err=True, color="red")
+            ctx_obj.echo(f"Error reading log file: {e}", err=True, color="red")
         sys.exit(1)
 
 
@@ -307,20 +313,15 @@ async def login(
                 )
                 ctx_obj.echo(f"Session ID: {session_id}")
 
-        await actx.runtime_client.submit_audit_event(
-            event="login",
-            provider=provider,
-            connection=connection,
-            flow=flow or "unknown",
-            status=login_result["status"],
+        logger.info(
+            "client_event event=login provider={} connection={} flow={} status={}",
+            provider,
+            connection,
+            flow or "unknown",
+            login_result["status"],
         )
     except Exception:
-        await actx.runtime_client.submit_audit_event(
-            event="login",
-            provider=provider,
-            connection=connection,
-            status="failure",
-        )
+        logger.warning("client_event event=login provider={} connection={} status=failure", provider, connection)
         raise
 
     if ctx_obj.json_output:
@@ -458,13 +459,12 @@ async def scan(ctx_obj: ContextObj, connection: str, auto_import: bool) -> None:
 
             imported += 1
             results.append({"provider": provider_name, "status": "imported", "env_var": item["env_var"]})
-            await actx.runtime_client.submit_audit_event(
-                event="scan",
-                provider=provider_name,
-                connection=connection,
-                source=item["source"],
-                source_env=item["env_var"],
-                status="success",
+            logger.info(
+                "client_event event=scan provider={} connection={} source={} source_env={} status=success",
+                provider_name,
+                connection,
+                item["source"],
+                item["env_var"],
             )
 
     if ctx_obj.json_output:
@@ -498,11 +498,7 @@ async def logout(ctx_obj: ContextObj, provider: str, connection: str) -> None:
     """Log out of the specified PROVIDER connection."""
     actx = await ctx_obj.initialize()
     await actx.runtime_client.logout(provider, connection)
-    await actx.runtime_client.submit_audit_event(
-        event="logout",
-        provider=provider,
-        connection=connection,
-    )
+    logger.info("client_event event=logout provider={} connection={}", provider, connection)
 
     if ctx_obj.json_output:
         ctx_obj.print_json({"status": "logged_out", "provider": provider, "connection": connection})
@@ -531,11 +527,7 @@ async def revoke(ctx_obj: ContextObj, provider: str) -> None:
     """Reset and delete all stored connections and secrets for PROVIDER."""
     actx = await ctx_obj.initialize()
     await actx.runtime_client.revoke(provider)
-    await actx.runtime_client.submit_audit_event(
-        event="revoke",
-        provider=provider,
-        connection="all",
-    )
+    logger.info("client_event event=revoke provider={} connection=all", provider)
 
     if ctx_obj.json_output:
         ctx_obj.print_json({"status": "revoked", "provider": provider})
@@ -550,11 +542,7 @@ async def remove(ctx_obj: ContextObj, provider: str) -> None:
     """Permanently uninstall the specified custom PROVIDER definition."""
     actx = await ctx_obj.initialize()
     await actx.runtime_client.remove(provider)
-    await actx.runtime_client.submit_audit_event(
-        event="remove",
-        provider=provider,
-        connection="all",
-    )
+    logger.info("client_event event=remove provider={} connection=all", provider)
 
     if ctx_obj.json_output:
         ctx_obj.print_json({"status": "removed", "provider": provider})
@@ -583,11 +571,11 @@ async def get(ctx_obj: ContextObj, provider: str, connection: str, field: str | 
 
         if not require_os_auth("reveal secrets"):
             raise AuthenticationFailedError("Authentication failed or cancelled.")
-        await actx.runtime_client.submit_audit_event(
-            event="get",
-            provider=provider,
-            connection=connection,
-            field=field or "all",
+        logger.info(
+            "client_event event=get provider={} connection={} field={}",
+            provider,
+            connection,
+            field or "all",
         )
 
     data = redact(record) if not show_secret else record.model_dump(mode="json")
@@ -666,11 +654,11 @@ async def export(ctx_obj: ContextObj, provider: str | None, connection: str, exp
     actx = await ctx_obj.initialize()
     fmt = ExportFormat(export_format)
     output = await actx.runtime_client.export(provider, connection, format=fmt.value)
-    await actx.runtime_client.submit_audit_event(
-        event="export",
-        provider=provider,
-        connection=connection,
-        format=fmt.value,
+    logger.info(
+        "client_event event=export provider={} connection={} format={}",
+        provider,
+        connection,
+        fmt.value,
     )
     if ctx_obj.json_output:
         # Call with format=json and parse the result to properly wrap with version info
@@ -745,11 +733,7 @@ async def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> No
         await actx.runtime_client.register_provider(definition.model_dump(mode="json"), force=force)
 
         endpoints = [ep for _, ep, _ in endpoints_to_check]
-        await actx.runtime_client.submit_audit_event(
-            event="register",
-            provider=definition.name,
-            endpoints=endpoints,
-        )
+        logger.info("client_event event=register provider={} endpoints={}", definition.name, endpoints)
 
         if ctx_obj.json_output:
             ctx_obj.print_json({"status": "registered", "provider": definition.name})
