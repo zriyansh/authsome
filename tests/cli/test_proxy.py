@@ -9,6 +9,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from authsome.cli.main import cli
+from authsome.server.dependencies import load_server_config
 from authsome.store.local import LocalAppStore
 
 
@@ -37,7 +38,7 @@ def test_proxy_mode_sets_and_persists_value(
     assert set_data["status"] == "updated"
     assert set_data["mode"] == "configured_deny"
 
-    persisted = asyncio.run(LocalAppStore(tmp_path).get_config())
+    persisted = load_server_config(tmp_path)
     assert persisted.proxy is not None
     assert persisted.proxy.mode == "configured_deny"
 

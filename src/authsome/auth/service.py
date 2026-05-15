@@ -44,7 +44,7 @@ from authsome.errors import (
     TokenExpiredError,
     UnsupportedFlowError,
 )
-from authsome.server.dependencies import list_registered_identity_handles
+from authsome.server.dependencies import list_registered_identity_handles, load_server_config
 from authsome.utils import build_store_key, format_duration, is_filesystem_safe, parse_store_key, utc_now
 from authsome.vault import Vault
 
@@ -155,7 +155,7 @@ class AuthService:
 
     async def proxy_mode(self) -> str:
         """Return the configured proxy mode (e.g. "connected_allow")."""
-        config = await self.vault.get_config()
+        config = load_server_config(self._vault.home)
         if config.proxy is not None:
             return config.proxy.mode
         return "connected_allow"

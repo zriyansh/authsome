@@ -982,18 +982,16 @@ async def proxy_mode(ctx_obj: ContextObj, value: str | None) -> None:
     """Show or set the persisted proxy mode.
 
     Without arguments, prints the current mode. With VALUE, updates the
-    persisted GlobalConfig.proxy.mode. Changes take effect on the next
+    persisted ServerConfig.proxy.mode. Changes take effect on the next
     `authsome run` invocation (the proxy reads the mode at startup).
     """
     from authsome.auth.models.config import ProxyConfig
-    from authsome.store.local import LocalAppStore
+    from authsome.server.dependencies import load_server_config, save_server_config
 
     home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
-    store = LocalAppStore(home)
-    await store.ensure_initialized()
 
     if value is None:
-        cfg = await store.get_config()
+        cfg = load_server_config(home)
         current = cfg.proxy.mode if cfg.proxy is not None else "connected_allow"
         if ctx_obj.json_output:
             ctx_obj.print_json({"mode": current})
@@ -1005,12 +1003,12 @@ async def proxy_mode(ctx_obj: ContextObj, value: str | None) -> None:
         Literal["connected_allow", "connected_deny", "configured_allow", "configured_deny"],
         value,
     )
-    cfg = await store.get_config()
+    cfg = load_server_config(home)
     if cfg.proxy is None:
         cfg.proxy = ProxyConfig(mode=mode_value)
     else:
         cfg.proxy.mode = mode_value
-    await store.save_config(cfg)
+    save_server_config(cfg, home)
     logger.info("proxy_mode_set mode={}", mode_value)
 
     if ctx_obj.json_output:
