@@ -35,9 +35,7 @@ class ProxyClient(Protocol):
 
     async def resolve_credentials(self, **kwargs: Any) -> Any: ...
 
-    async def proxy_routes(self) -> Any: ...
-
-    async def proxy_mode(self) -> str: ...
+    async def proxy_routes(self, scope: str = "connected") -> Any: ...
 
 
 @dataclass(frozen=True)
@@ -72,9 +70,9 @@ class ProxyRouter:
         self._regex_routes = regex_routes
 
     @classmethod
-    async def create(cls, client: ProxyClient) -> ProxyRouter:
+    async def create(cls, client: ProxyClient, scope: str = "connected") -> ProxyRouter:
         """Async factory for ProxyRouter."""
-        routes_by_host, regex_routes = await cls._build_routes(client)
+        routes_by_host, regex_routes = await cls._build_routes(client, scope)
         return cls(routes_by_host, regex_routes)
 
     def resolve(self, scheme: str, host: str, port: int, path: str) -> RouteResolution:
@@ -122,6 +120,7 @@ class ProxyRouter:
     @staticmethod
     async def _build_routes(
         client: ProxyClient,
+        scope: str = "connected",
     ) -> tuple[dict[str, tuple[_RouteTarget, ...]], tuple[_RegexRouteTarget, ...]]:
         routes_by_host: dict[str, list[_RouteTarget]] = {}
         regex_routes: list[_RegexRouteTarget] = []
@@ -129,7 +128,7 @@ class ProxyRouter:
 
         if hasattr(client, "proxy_routes"):
             try:
-                route_data = await client.proxy_routes()
+                route_data = await client.proxy_routes(scope=scope)
                 if not isinstance(route_data, dict):
                     raise TypeError("proxy_routes() must return a dict payload")
                 for route in route_data.get("routes", []):
@@ -331,27 +330,28 @@ def _auth_endpoint_paths_for_regex(provider, host_pattern: re.Pattern[str]) -> f
 class AuthProxyAddon:
     """Mitmproxy addon that injects auth headers for matched requests.
 
-    Credential resolution goes through the runtime client.
+    The proxy mode is caller-local config (`ClientConfig.proxy_mode`),
+    read once by the runner and injected here at construction time —
+    the daemon never sees or persists a proxy mode of its own.
     """
 
-    def __init__(self, client: ProxyClient) -> None:
+    def __init__(self, client: ProxyClient, mode: str = "connected_allow") -> None:
         self._client = client
+        self._mode = mode
+        self._scope, self._policy = mode.split("_", 1)
         self._router: ProxyRouter | None = None
-        self._mode: str | None = None
         self._header_cache: dict[tuple[str, str], _HeaderCacheEntry] = {}
         self._header_locks: dict[tuple[str, str], asyncio.Lock] = {}
 
-    async def _ensure_initialized(self) -> tuple[ProxyRouter, str]:
-        """Build the router and read the proxy mode once at router-build time."""
+    async def _ensure_initialized(self) -> ProxyRouter:
+        """Build the router once on the first request."""
         if self._router is None:
-            self._router = await ProxyRouter.create(self._client)
-        if self._mode is None:
-            self._mode = await self._client.proxy_mode()
-        return self._router, self._mode
+            self._router = await ProxyRouter.create(self._client, scope=self._scope)
+        return self._router
 
     async def request(self, flow: http.HTTPFlow) -> None:
-        router, mode = await self._ensure_initialized()
-        policy = mode.split("_", 1)[1]
+        router = await self._ensure_initialized()
+        policy = self._policy
 
         resolution = router.resolve(flow.request.scheme, flow.request.host, flow.request.port, flow.request.path)
         if resolution.match is None:
@@ -551,11 +551,13 @@ def start_proxy_server(
     client: ProxyClient,
     host: str = "127.0.0.1",
     port: int = 0,
+    *,
+    mode: str = "connected_allow",
 ) -> RunningProxy:
     """Start a mitmproxy DumpMaster in a background thread."""
 
     confdir = Path.home() / ".mitmproxy"
-    auth_addon = AuthProxyAddon(client=client)
+    auth_addon = AuthProxyAddon(client=client, mode=mode)
 
     ready = threading.Event()
     state: dict = {}

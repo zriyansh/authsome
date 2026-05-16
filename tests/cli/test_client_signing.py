@@ -83,7 +83,8 @@ async def test_proxy_routes_request_is_signed(monkeypatch, tmp_path: Path) -> No
     await AuthsomeApiClient("http://127.0.0.1:7998").proxy_routes()
 
     assert captured["method"] == "GET"
-    assert captured["url"].endswith("/proxy/routes")
+    assert "/proxy/routes" in captured["url"]
+    assert captured["url"].endswith("scope=connected")
     assert captured["headers"]["Authorization"].startswith("PoP ")
 
 

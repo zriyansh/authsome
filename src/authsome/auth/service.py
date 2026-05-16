@@ -44,7 +44,7 @@ from authsome.errors import (
     TokenExpiredError,
     UnsupportedFlowError,
 )
-from authsome.server.dependencies import list_registered_identity_handles, load_server_config
+from authsome.server.dependencies import list_registered_identity_handles
 from authsome.utils import build_store_key, format_duration, is_filesystem_safe, parse_store_key, utc_now
 from authsome.vault import Vault
 
@@ -153,17 +153,15 @@ class AuthService:
         val = await self._vault.get(provider, collection="providers")
         return val is not None
 
-    async def proxy_mode(self) -> str:
-        """Return the configured proxy mode (e.g. "connected_allow")."""
-        config = load_server_config(self._vault.home)
-        if config.proxy is not None:
-            return config.proxy.mode
-        return "connected_allow"
+    async def proxy_routes(self, scope: str = "connected") -> dict[str, Any]:
+        """Build the list of routes for proxy routing.
 
-    async def proxy_routes(self) -> dict[str, Any]:
-        """Build the list of routes for proxy routing."""
-        mode = await self.proxy_mode()
-        scope = mode.split("_", 1)[0]
+        The *scope* argument is supplied by the caller-local proxy addon
+        (which owns the configured `ClientConfig.proxy_mode`). The daemon
+        does not persist any proxy mode of its own.
+        """
+        if scope not in {"connected", "configured"}:
+            scope = "connected"
 
         routes = []
         if scope == "connected":

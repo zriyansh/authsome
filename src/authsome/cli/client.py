@@ -198,14 +198,14 @@ class AuthsomeApiClient:
         )
         return result["output"]
 
-    async def proxy_routes(self) -> dict[str, Any]:
-        """Return proxy routes from a PoP-protected daemon endpoint."""
-        return await self._get("/proxy/routes")
+    async def proxy_routes(self, scope: str = "connected") -> dict[str, Any]:
+        """Return proxy routes from a PoP-protected daemon endpoint.
 
-    async def proxy_mode(self) -> str:
-        """Return the configured proxy mode from the daemon."""
-        data = await self._get("/proxy/mode")
-        return data["mode"]
+        The scope is owned by the caller (read from `ClientConfig.proxy_mode`);
+        the daemon merely projects its connections/providers into the
+        requested view.
+        """
+        return await self._get(f"/proxy/routes?scope={scope}")
 
     async def resolve_credentials(self, **kwargs: Any) -> dict[str, Any]:
         """Resolve proxy credentials from a PoP-protected daemon endpoint."""

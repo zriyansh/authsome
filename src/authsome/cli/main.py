@@ -5,7 +5,7 @@ import os
 import pathlib
 import sys
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any
 
 import click
 import requests
@@ -960,61 +960,6 @@ async def ui(ctx_obj: ContextObj, no_browser: bool) -> None:
 
     ctx_obj.echo(f"Opening Authsome UI at {url}")
     webbrowser.open(url)
-
-
-PROXY_MODE_CHOICES = (
-    "connected_allow",
-    "connected_deny",
-    "configured_allow",
-    "configured_deny",
-)
-
-
-@cli.group(name="proxy")
-def proxy() -> None:
-    """Manage proxy behavior settings."""
-
-
-@proxy.command(name="mode")
-@click.argument("value", required=False, type=click.Choice(PROXY_MODE_CHOICES))
-@auth_command
-async def proxy_mode(ctx_obj: ContextObj, value: str | None) -> None:
-    """Show or set the persisted proxy mode.
-
-    Without arguments, prints the current mode. With VALUE, updates the
-    persisted ServerConfig.proxy.mode. Changes take effect on the next
-    `authsome run` invocation (the proxy reads the mode at startup).
-    """
-    from authsome.auth.models.config import ProxyConfig
-    from authsome.server.dependencies import load_server_config, save_server_config
-
-    home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
-
-    if value is None:
-        cfg = load_server_config(home)
-        current = cfg.proxy.mode if cfg.proxy is not None else "connected_allow"
-        if ctx_obj.json_output:
-            ctx_obj.print_json({"mode": current})
-        else:
-            ctx_obj.echo(current)
-        return
-
-    mode_value = cast(
-        Literal["connected_allow", "connected_deny", "configured_allow", "configured_deny"],
-        value,
-    )
-    cfg = load_server_config(home)
-    if cfg.proxy is None:
-        cfg.proxy = ProxyConfig(mode=mode_value)
-    else:
-        cfg.proxy.mode = mode_value
-    save_server_config(cfg, home)
-    logger.info("proxy_mode_set mode={}", mode_value)
-
-    if ctx_obj.json_output:
-        ctx_obj.print_json({"status": "updated", "mode": value})
-    else:
-        ctx_obj.echo(f"proxy.mode = {value}", color="green")
 
 
 @cli.group()

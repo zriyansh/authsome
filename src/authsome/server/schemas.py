@@ -87,12 +87,3 @@ class ProviderRoute(BaseModel):
 
 class ProxyRoutesResponse(BaseModel):
     routes: list[ProviderRoute]
-
-
-class ProxyModeResponse(BaseModel):
-    mode: Literal[
-        "connected_allow",
-        "connected_deny",
-        "configured_allow",
-        "configured_deny",
-    ]

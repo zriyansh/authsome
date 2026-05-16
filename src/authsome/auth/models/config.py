@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
-from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -29,22 +28,10 @@ class EncryptionConfig(BaseModel):
     mode: str = "local_key"
 
 
-class ProxyConfig(BaseModel):
-    """Proxy configuration block."""
-
-    mode: Literal[
-        "connected_allow",
-        "connected_deny",
-        "configured_allow",
-        "configured_deny",
-    ] = "connected_allow"
-
-
 class ServerConfig(BaseModel):
     """Daemon-owned server configuration."""
 
     spec_version: int = Field(default_factory=current_spec_version)
     encryption: EncryptionConfig = Field(default_factory=EncryptionConfig)
-    proxy: ProxyConfig | None = Field(default_factory=ProxyConfig)
 
     model_config = {"extra": "allow"}

@@ -465,14 +465,12 @@ class TestAuthProxyAddon:
         router = mock.Mock()
         router.resolve.return_value = RouteResolution(match=match, miss_reason=miss_reason)
 
-        # Mock the async factory method
         mock_create = mock.AsyncMock(return_value=router)
 
         patcher = patch("authsome.proxy.server.ProxyRouter.create", mock_create)
         patcher.start()
 
-        auth.proxy_mode.return_value = mode
-        addon = AuthProxyAddon(client=auth)
+        addon = AuthProxyAddon(client=auth, mode=mode)
         return addon, router, patcher
 
     @pytest.mark.asyncio
@@ -683,9 +681,23 @@ class TestProxyRunner:
                 proxy_url, returned_server = runner._start_proxy()
 
         ensure_ca_mock.assert_called_once_with(tmp_path)
-        start_mock.assert_called_once_with(runner._client)
+        start_mock.assert_called_once_with(runner._client, mode="connected_allow")
         assert proxy_url == "http://127.0.0.1:8899"
         assert returned_server is server
+
+    def test_start_proxy_passes_client_config_mode(self, tmp_path: Path) -> None:
+        from authsome.cli.client_config import ClientConfig, save_client_config
+        from authsome.proxy.runner import ProxyRunner
+
+        save_client_config(tmp_path, ClientConfig(proxy_mode="configured_deny"))
+        runner = ProxyRunner(mock.Mock(), home=tmp_path)
+        server = mock.Mock(url="http://127.0.0.1:8899")
+
+        with patch("authsome.proxy.runner.ensure_local_proxy_ca"):
+            with patch("authsome.proxy.runner.start_proxy_server", return_value=server) as start_mock:
+                runner._start_proxy()
+
+        start_mock.assert_called_once_with(runner._client, mode="configured_deny")
 
     def test_ensure_local_proxy_ca_sets_flag_after_success(self, tmp_path: Path) -> None:
         from authsome.cli.client_config import load_client_config
