@@ -60,14 +60,8 @@ profile may be active — check with `cat ~/.authsome/client/config.json`.
 Read `skills/authsome/evals/evals.json`. Show the user a table of which
 evals will run (id, name, agent, requires_human, optional).
 
-### 2. Create a fresh eval profile
-
-```bash
-uv run authsome profile create --json
-```
-
-Save `profile` as `EVAL_HANDLE`. Read `~/.authsome/client/config.json`
-and save `active_identity` as `PREV_HANDLE`.
+Read `~/.authsome/client/config.json` and save `active_identity` as
+`EVAL_HANDLE` — this is the fresh profile created during pre-session setup.
 
 Create the run directory and save as `RUN_DIR`:
 
@@ -75,7 +69,7 @@ Create the run directory and save as `RUN_DIR`:
 mkdir -p "evals/results/$(date +%Y%m%d_%H%M%S)"
 ```
 
-### 3. Per-eval loop
+### 2. Per-eval loop
 
 For each eval to run, **in order**:
 
@@ -113,15 +107,22 @@ show the outcome and trajectory icons to the user as a brief verdict.
 After showing the verdict, ask if the user is ready to continue to the
 next eval (or stop here).
 
-### 4. Teardown
+### 3. Teardown
+
+Delete the eval profile's key files:
 
 ```bash
-uv run authsome profile use PREV_HANDLE
 rm ~/.authsome/client/identities/EVAL_HANDLE.json
 rm ~/.authsome/client/identities/EVAL_HANDLE.key
 ```
 
-### 5. Generate report
+Then switch back to the user's original profile:
+
+```bash
+uv run authsome profile use <original-handle>
+```
+
+### 4. Generate report
 
 ```bash
 uv run python evals/generate_report.py RUN_DIR/grading.json
