@@ -56,6 +56,12 @@ class ContextObj:
             color = None
         click.secho(message, err=err, fg=color, nl=nl)
 
+    def emit(self, message: str, color: str | None = None, nl: bool = True) -> None:
+        """Print primary data output. Never suppressed by --quiet; respects --no-color."""
+        if self.no_color:
+            color = None
+        click.secho(message, fg=color, nl=nl)
+
 
 pass_ctx = click.make_pass_decorator(ContextObj)
 
