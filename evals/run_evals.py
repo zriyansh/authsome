@@ -124,10 +124,12 @@ def run_agent(cmd: list[str]) -> tuple[str, bool]:
 
 
 def grade(eval_: dict, transcript: str) -> dict:
-    """Call Claude as LLM judge via `claude -p` and return grading result dict."""
+    """Call hermes as LLM judge and return grading result dict."""
     has_trajectory = "trajectory_efficiency" in eval_
 
-    user_content = f"""Environment: {eval_["environment"]}
+    user_content = f"""{JUDGE_SYSTEM_PROMPT}
+
+Environment: {eval_["environment"]}
 
 Outcome criterion: {eval_["outcome"]}
 
@@ -141,16 +143,18 @@ Transcript (last 4000 chars):
 Return ONLY valid JSON, no markdown fences."""
 
     result = subprocess.run(
-        ["claude", "--system-prompt", JUDGE_SYSTEM_PROMPT, "-p", user_content],
+        ["hermes", "chat", "-Q", "-q", user_content, "-t", ""],
         capture_output=True,
         text=True,
         timeout=120,
     )
 
     if result.returncode != 0:
-        raise RuntimeError(f"claude -p judge failed (exit {result.returncode}): {result.stderr[:300]}")
+        raise RuntimeError(f"hermes judge failed (exit {result.returncode}): {result.stderr[:300]}")
 
-    raw = result.stdout.strip()
+    # hermes -Q prepends "session_id: <id>\n" — drop that line
+    lines = result.stdout.strip().splitlines()
+    raw = "\n".join(l for l in lines if not l.startswith("session_id:")).strip()
     # Strip markdown fences if present
     if "```" in raw:
         for part in raw.split("```"):
@@ -201,11 +205,27 @@ def print_env_banner(eval_: dict) -> None:
     print("=" * 60)
 
 
+def preflight_check() -> None:
+    """Verify hermes is available and can reach the LLM."""
+    if not shutil.which("hermes"):
+        print("[ERROR] hermes not found in PATH. Install it first.", file=sys.stderr)
+        sys.exit(1)
+    result = subprocess.run(
+        ["hermes", "chat", "-Q", "-q", "reply with the single word OK", "-t", ""],
+        capture_output=True, text=True, timeout=30,
+    )
+    if result.returncode != 0 or "OK" not in result.stdout.upper():
+        print(f"[ERROR] hermes smoke test failed. Check your hermes config.\nstdout: {result.stdout[:200]}\nstderr: {result.stderr[:200]}", file=sys.stderr)
+        sys.exit(1)
+    print("[preflight] hermes OK")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run authsome agentic evals")
     parser.add_argument("--id", type=int, default=None, help="Run only eval with this id")
     args = parser.parse_args()
 
+    preflight_check()
     evals = load_evals(args.id)
 
     # Install skill once per unique agent type
