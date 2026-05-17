@@ -99,11 +99,16 @@ class ProxyRunner:
                 provider = ProviderDefinition.model_validate(provider_dict)
                 if provider.name not in connected_names:
                     continue
-                if not provider.export or not provider.export.env:
+                if not provider.export:
                     continue
-                for env_var in provider.export.env.values():
-                    env[env_var] = "authsome-proxy-managed"
-                    logger.debug("Set dummy env var {} for provider {}", env_var, provider.name)
+                if provider.export.env:
+                    for env_var in provider.export.env.values():
+                        env[env_var] = "authsome-proxy-managed"
+                        logger.debug("Set dummy env var {} for provider {}", env_var, provider.name)
+                if provider.export.model_extra:
+                    for env_var in provider.export.model_extra.keys():
+                        env[env_var] = "authsome-proxy-managed"
+                        logger.debug("Set dummy env var {} for provider {}", env_var, provider.name)
 
     @staticmethod
     def _build_ca_bundle(server: RunningProxy) -> Path | None:

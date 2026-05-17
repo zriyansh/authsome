@@ -28,7 +28,7 @@ def _make_connection_record() -> dict:
         "scopes": [],
         "token_type": None,
         "base_url": None,
-        "host_url": None,
+        "api_url": None,
     }
 
 

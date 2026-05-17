@@ -4,6 +4,7 @@
   "display_name": "Slack",
   "auth_type": "oauth2",
   "flow": "pkce",
+  "api_url": "slack.com",
   "oauth": {
     "authorization_url": "https://slack.com/oauth/v2/authorize",
     "token_url": "https://slack.com/api/oauth.v2.access",
@@ -18,10 +19,6 @@
     "supports_dcr": false
   },
   "export": {
-    "env": {
-      "access_token": "SLACK_ACCESS_TOKEN",
-      "refresh_token": "SLACK_REFRESH_TOKEN"
-    }
-  },
-  "host_url": "slack.com"
+    "SLACK_ACCESS_TOKEN": "ACCESS_TOKEN"
+  }
 }

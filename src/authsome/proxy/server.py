@@ -133,7 +133,7 @@ class ProxyRouter:
                     raise TypeError("proxy_routes() must return a dict payload")
                 for route in route_data.get("routes", []):
                     route_match = RouteMatch(provider=route["provider"], connection=route.get("connection"))
-                    regex_pattern = _compile_host_regex(route["host_url"])
+                    regex_pattern = _compile_host_regex(route["api_url"])
                     auth_paths = frozenset(route.get("auth_endpoint_paths", []))
                     if regex_pattern is not None:
                         regex_routes.append(
@@ -148,7 +148,7 @@ class ProxyRouter:
                             )
                         )
                         continue
-                    host, path_prefix = _parse_host_url(route["host_url"])
+                    host, path_prefix = _parse_api_url(route["api_url"])
                     if not host or host in _LOOPBACK_HOSTS:
                         continue
                     routes_by_host.setdefault(host, []).append(
@@ -183,13 +183,13 @@ class ProxyRouter:
             for conn in selected_connections:
                 if conn.get("is_default") is False:
                     continue
-                target_host_url = conn.get("host_url") or getattr(definition, "host_url", None)
-                if not target_host_url:
+                target_api_url = conn.get("api_url") or getattr(definition, "api_url", None)
+                if not target_api_url:
                     continue
 
                 resolved = definition.resolve_urls(conn.get("base_url"))
                 route_match = RouteMatch(provider=provider_name, connection=conn.get("connection_name"))
-                regex_pattern = _compile_host_regex(target_host_url)
+                regex_pattern = _compile_host_regex(target_api_url)
                 if regex_pattern is not None:
                     regex_routes.append(
                         _RegexRouteTarget(
@@ -204,7 +204,7 @@ class ProxyRouter:
                     )
                     continue
 
-                host, path_prefix = _parse_host_url(target_host_url)
+                host, path_prefix = _parse_api_url(target_api_url)
                 if not host or host in _LOOPBACK_HOSTS:
                     continue
 
@@ -234,30 +234,30 @@ def _is_auth_endpoint(provider, host: str, path: str) -> bool:
     return _request_path(path) in _auth_endpoint_paths(provider, _normalize_host(host))
 
 
-def _extract_host(host_url: str) -> str:
-    return _parse_host_url(host_url)[0]
+def _extract_host(api_url: str) -> str:
+    return _parse_api_url(api_url)[0]
 
 
-def _parse_host_url(host_url: str) -> tuple[str, str | None]:
-    raw = host_url.strip()
+def _parse_api_url(api_url: str) -> tuple[str, str | None]:
+    raw = api_url.strip()
     parsed = urlparse(raw if "://" in raw else f"//{raw}")
     host = _normalize_host(parsed.hostname or raw)
     return host, _normalize_path_prefix(parsed.path)
 
 
-def _compile_host_regex(host_url: str) -> re.Pattern[str] | None:
-    raw = host_url.strip()
+def _compile_host_regex(api_url: str) -> re.Pattern[str] | None:
+    raw = api_url.strip()
     if not raw.lower().startswith(_REGEX_HOST_PREFIX):
         return None
 
     pattern = raw[len(_REGEX_HOST_PREFIX) :].strip()
     if not pattern:
-        logger.warning("Skipping empty regex host_url")
+        logger.warning("Skipping empty regex api_url")
         return None
     try:
         return re.compile(pattern, re.IGNORECASE)
     except re.error as exc:
-        logger.warning("Skipping invalid regex host_url {}: {}", pattern, exc)
+        logger.warning("Skipping invalid regex api_url {}: {}", pattern, exc)
         return None
 
 

@@ -4,14 +4,12 @@
   "display_name": "Typeform",
   "auth_type": "api_key",
   "flow": "api_key",
-  "host_url": "api.typeform.com",
+  "api_url": "api.typeform.com",
   "api_key": {
     "header_name": "Authorization",
     "header_prefix": "Bearer"
   },
   "export": {
-    "env": {
-      "api_key": "TYPEFORM_API_KEY"
-    }
+    "TYPEFORM_API_KEY": "API_TOKEN"
   }
 }

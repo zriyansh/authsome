@@ -9,22 +9,23 @@ All commands support `--json` for machine-readable output, `--quiet` to suppress
 
 | Command | Description |
 |---------|-------------|
-| `whoami` | Show home directory and encryption mode. |
-| `doctor` | Run health checks on directory layout and encryption. |
+| `whoami` | Show local identity context and encryption mode. |
+| `doctor` | Run health checks on identity, providers, vault, and store integrity. |
 | `list` | List all providers (bundled and custom) and their connection states. |
 | `inspect <provider>` | Show the full provider definition and any connections. |
 | `login <provider>` | Authenticate with a provider using its configured flow. |
 | `get <provider>` | Get connection metadata (secrets redacted by default). |
-| `export <provider>` | Export credentials in `env` or `json` format. |
+| `export <provider>` | Export credentials in `env`, `shell`, or `json` format. |
 | `run -- <cmd>` | Run a subprocess behind the local auth proxy. |
 | `scan` | Discover provider API keys in env files and the current environment. |
 | `logout <provider>` | Log out of a connection and remove local state. |
 | `revoke <provider>` | Reset all connections and client secrets for the provider. |
 | `remove <provider>` | Uninstall a custom provider or reset a bundled one. |
 | `register <path>` | Register a custom provider from a JSON file. |
-| `connection set-default <provider> <connection>` | Set the default connection for a provider. |
+| `set-default <provider> <connection>` | Set the default connection for a provider. |
+| `profile` | Manage local profiles backed by identity keys. |
 | `ui` | Open the dashboard in the browser. |
-| `log` | View the audit log. |
+| `log` | View structured audit entries. |
 | `daemon <subcommand>` | Manage the local daemon: `serve`, `start`, `stop`, `restart`, `status`, `logs`. |
 
 ## Global flags
@@ -32,32 +33,42 @@ All commands support `--json` for machine-readable output, `--quiet` to suppress
 | Flag | Description |
 |------|-------------|
 | `--json` | Output in machine-readable JSON. |
-| `--quiet` | Suppress non-essential output. |
+| `--quiet` | Suppress non-essential output (banners, status messages). Primary data rows always print. |
 | `--no-color` | Disable ANSI colors. |
 | `-v`, `--version` | Print the authsome version. |
 | `--verbose` | Enable DEBUG logging to stderr. |
-| `--log-file <path>` | Path for the rotating log file. Pass `""` to disable. Default: `~/.authsome/logs/authsome.log`. |
+| `--log-file <path>` | Path for the rotating client debug log file. Pass `""` to disable. Default: `~/.authsome/client/logs/authsome.log`. |
 
 ## Command details
 
 ### `whoami` / `doctor`
 
 ```bash
-uvx authsome whoami           # show home directory and encryption mode
+uvx authsome whoami           # show identity context and encryption mode
 uvx authsome doctor           # run health checks
+uvx authsome doctor --json    # structured output for monitoring
 ```
 
-`doctor` exits with `0` if all checks pass and a non-zero code otherwise. Use `--json` for structured output suitable for monitoring.
+`doctor` runs six checks and exits `0` when all pass:
+
+| Check | What it verifies |
+|-------|-----------------|
+| `spec_version` | Server spec version is compatible |
+| `identity` | Active identity key is present and readable |
+| `providers` | Provider registry loads without error |
+| `connections` | Connection store is accessible |
+| `vault` | Vault roundtrip (put / get / delete) succeeds |
+| `integrity` | Store integrity check passes |
 
 ### `list` / `inspect`
 
 ```bash
 uvx authsome list                      # all providers + connection states
-uvx authsome inspect github            # full provider definition
-uvx authsome inspect github --json     # same, as JSON
+uvx authsome list --json               # machine-readable, bundled + custom arrays
+uvx authsome inspect github            # full provider definition + connections as JSON
 ```
 
-`list` shows three states per provider. `available`, `configured`, `connected`. See [Credential storage](/concepts/credential-storage#the-three-states) for the state model.
+`--quiet` suppresses the summary header (`Providers: N total, N connected`) but always prints the table.
 
 ### `login`
 
@@ -71,7 +82,7 @@ uvx authsome login <provider> [OPTIONS]
 | `--connection <name>` | Connection name. Default: `default`. |
 | `--scopes <s1,s2>` | Comma-separated scopes to request. |
 | `--base-url <url>` | Override the base URL for multi-tenant providers. |
-| `--force` | Overwrite an existing connection. |
+| `--force` | Overwrite an existing connection without prompting. |
 
 Examples:
 
@@ -84,7 +95,7 @@ uvx authsome login github --base-url https://github.acme.com   # GitHub Enterpri
 ```
 
 <Warning>
-  Sensitive values. `client_secret`, API keys, are never accepted as command-line arguments. Authsome collects them through the secure browser bridge or, on headless machines, through masked terminal input.
+  Sensitive values — `client_secret`, API keys — are never accepted as command-line arguments. Authsome collects them through the secure browser bridge or, on headless machines, through masked terminal input.
 </Warning>
 
 ### `get`
@@ -96,7 +107,7 @@ uvx authsome get <provider> [OPTIONS]
 | Option | Description |
 |--------|-------------|
 | `--connection <name>` | Connection name. Default: `default`. |
-| `--field <field>` | Return only a specific field. |
+| `--field <field>` | Return only the value of a specific field. |
 | `--show-secret` | Reveal encrypted secret values in output. |
 
 ```bash
@@ -114,14 +125,15 @@ uvx authsome export <provider> [OPTIONS]
 | Option | Description |
 |--------|-------------|
 | `--connection <name>` | Connection name. Default: `default`. |
-| `--format <fmt>` | Output format: `env` (default) or `json`. |
+| `--format <fmt>` | Output format: `env` (default), `shell`, or `json`. |
 
 ```bash
-uvx authsome export github --format env       # KEY=value lines
-uvx authsome export openai --format json      # JSON object
+uvx authsome export github --format env      # KEY=value lines
+uvx authsome export github --format shell    # export KEY=value (sourceable)
+uvx authsome export openai --format json     # JSON object
 ```
 
-Only the `access_token` (OAuth2) or `api_key` (API-key) is exported. Refresh tokens are never exposed, authsome handles refresh transparently.
+Only the `access_token` (OAuth2) or `api_key` (API-key) is exported. Refresh tokens are never exposed — authsome handles refresh transparently.
 
 ### `run`
 
@@ -170,17 +182,26 @@ uvx authsome scan --import --connection ci  # import into a named connection
 
 `scan` does not support `--quiet`. Use `--json` for headless contexts.
 
-### `connection set-default`
+### `set-default`
 
 ```bash
-uvx authsome connection set-default <provider> <connection>
+uvx authsome set-default <provider> <connection>
 ```
 
 Sets the default connection for a provider. The proxy and library calls use the default unless an explicit `--connection` flag is passed.
 
 ```bash
-uvx authsome connection set-default github work
+uvx authsome set-default github work
 ```
+
+### `profile`
+
+```bash
+uvx authsome profile create   # create a new local profile keypair
+uvx authsome profile use      # switch the active local profile
+```
+
+Profiles are backed by Ed25519 identity keys at `~/.authsome/identities/`. Each profile has its own credential namespace in the vault. See [Profiles vs Connections](/concepts/profiles-vs-connections) for the distinction.
 
 ### `ui`
 
@@ -205,7 +226,7 @@ uvx authsome daemon logs [-n 100]
 
 - `serve` runs the daemon in the foreground (blocks the terminal).
 - `start` / `stop` / `restart` manage a background daemon.
-- `status` prints PID, base URL, and uptime.
+- `status` prints health, PID file path, and log file path as JSON.
 - `logs` tails the daemon log file.
 
 ### `logout` / `revoke` / `remove`
@@ -214,7 +235,7 @@ uvx authsome daemon logs [-n 100]
 |---------|-------------|-----------------|
 | `logout` | Removes the connection record | Not contacted |
 | `revoke` | Removes all connections + client credentials | Calls revocation endpoint where supported |
-| `remove` | Removes the provider entirely (custom) or resets to bundled (bundled) | Not contacted |
+| `remove` | Removes the provider entirely (custom) or resets to bundled default (bundled) | Not contacted |
 
 ```bash
 uvx authsome logout github --connection work
@@ -225,35 +246,53 @@ uvx authsome remove acmecrm
 ### `register`
 
 ```bash
-uvx authsome register <path/to/provider.json> [--yes] [--force]
+uvx authsome register <path/to/provider.json> [OPTIONS]
 ```
 
-Validates the JSON, copies it into `~/.authsome/providers/`, and confirms the new provider appears in `authsome list`. Use `--yes` to skip the confirmation prompt in scripts, and `--force` to overwrite an existing provider with the same name.
+| Option | Description |
+|--------|-------------|
+| `--force` | Overwrite an existing provider with the same name without prompting. |
+| `--yes` | Skip the confirmation prompt (without forcing an overwrite). |
+
+Validates the JSON, copies it into `~/.authsome/providers/`, and confirms the new provider appears in `authsome list`.
+
+```bash
+uvx authsome register ./acme.json             # prompt before registering
+uvx authsome register ./acme.json --force     # overwrite existing, no prompt
+uvx authsome register ./acme.json --yes       # skip prompt, fail if already exists
+```
 
 See [Custom providers](/guides/custom-providers) for full templates.
 
 ### `log`
 
 ```bash
-uvx authsome log              # last 50 audit entries
-uvx authsome log -n 200       # last 200
-uvx authsome log --json       # one JSON object per line, parsed
+uvx authsome log              # last 50 structured audit entries
+uvx authsome log -n 200       # last 200 entries
+uvx authsome log --json       # entries as a parsed JSON array
+uvx authsome log --raw        # raw client debug log (loguru format)
+uvx authsome log --raw -n 20  # last 20 lines of the client debug log
 ```
 
-Reads from `~/.authsome/audit.log`. Each entry records actions like `login`, `logout`, `revoke`, `export`, and `get --show-secret`.
+Reads from `~/.authsome/server/logs/authsome.log` (the server-side structured audit log). Each entry records actions like `login`, `logout`, `revoke`, `export`, and `get --show-secret`, with fields: `timestamp`, `event`, `provider`, `connection`, `identity`, `status`.
+
+The `--raw` flag switches to the client-side debug log at `~/.authsome/client/logs/authsome.log` (loguru format, DEBUG level).
 
 ## Exit codes
 
-| Code | Meaning |
-|------|---------|
-| `0` | Success |
-| `1` | Generic failure |
-| `2` | Invalid usage |
-| `3` | Provider not found |
-| `4` | Authentication failed |
-| `5` | Credential missing |
-| `6` | Refresh failed |
-| `7` | Store unavailable |
-| `8` | User cancelled credential entry |
+| Code | Meaning | Error class |
+|------|---------|-------------|
+| `0` | Success | — |
+| `1` | Unexpected failure | Unclassified exceptions |
+| `2` | Authentication failed or input cancelled | `AuthenticationFailedError`, `InputCancelledError` |
+| `3` | Connection not found | `ConnectionNotFoundError` |
+| `4` | Provider not found or operation not allowed | `ProviderNotFoundError`, `OperationNotAllowedError` |
+| `5` | Credential missing or token expired | `CredentialMissingError`, `TokenExpiredError`, `RefreshFailedError` |
+| `6` | Connection already exists | `ConnectionAlreadyExistsError` |
+| `7` | Provider already registered | `ProviderAlreadyRegisteredError` |
+| `8` | Endpoint unreachable | `EndpointUnreachableError` |
+| `9` | Daemon unavailable | `DaemonUnavailableError` |
 
-When `--json` is passed and a command fails, the structured output includes an `error` and `message` key on stderr-friendly format.
+Note: Click argument validation errors (missing required argument, unknown option) also produce exit code `2` via Click's own mechanism.
+
+When `--json` is passed and a command fails, the structured output includes `"error"` and `"message"` keys.

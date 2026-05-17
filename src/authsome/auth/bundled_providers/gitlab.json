@@ -4,6 +4,7 @@
   "display_name": "GitLab",
   "auth_type": "oauth2",
   "flow": "pkce",
+  "api_url": "gitlab.com",
   "oauth": {
     "authorization_url": "https://gitlab.com/oauth/authorize",
     "token_url": "https://gitlab.com/oauth/token",
@@ -22,10 +23,6 @@
     "supports_dcr": false
   },
   "export": {
-    "env": {
-      "access_token": "GITLAB_ACCESS_TOKEN",
-      "refresh_token": "GITLAB_REFRESH_TOKEN"
-    }
-  },
-  "host_url": "gitlab.com"
+    "GITLAB_ACCESS_TOKEN": "ACCESS_TOKEN"
+  }
 }

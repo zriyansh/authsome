@@ -4,14 +4,12 @@
   "display_name": "SEMrush",
   "auth_type": "api_key",
   "flow": "api_key",
-  "host_url": "api.semrush.com",
+  "api_url": "api.semrush.com",
   "api_key": {
     "header_name": "Authorization",
     "header_prefix": "Bearer"
   },
   "export": {
-    "env": {
-      "api_key": "SEMRUSH_API_KEY"
-    }
+    "SEMRUSH_API_KEY": "API_TOKEN"
   }
 }

@@ -18,7 +18,7 @@ Authsome is a local-first credential broker. It assumes the local machine and us
 | OAuth `client_secret` | Vault | AES-256-GCM |
 | OAuth `client_id` | Vault | Plaintext (not sensitive) |
 | Provider definitions | Filesystem (`bundled_providers/`, `~/.authsome/providers/`) | None (not sensitive) |
-| Master key | `~/.authsome/master.key` (mode 0600) **or** OS keyring | Filesystem permissions or keyring backend |
+| Master key | `~/.authsome/server/master.key` (mode 0600) **or** OS keyring | Filesystem permissions or keyring backend |
 | Audit log | `~/.authsome/audit.log` | None (intentionally readable) |
 | In-flight auth sessions | Daemon memory | Process boundary |
 
@@ -30,7 +30,7 @@ Authsome is a local-first credential broker. It assumes the local machine and us
 
 **Secrets in shell history.** `client_secret`, access tokens, refresh tokens, and API keys are never accepted as command-line arguments. They are collected through a local browser bridge or, on headless machines, through masked terminal input via `getpass`.
 
-**Offline disk access.** AES-256-GCM at rest protects against a stolen disk image or another user reading your home directory. An attacker with raw access to `store.db` cannot decrypt records without the master key, which lives separately under `master.key` (mode 0600) or in the OS keyring.
+**Offline disk access.** AES-256-GCM at rest protects against a stolen disk image or another user reading your home directory. An attacker with raw access to the encrypted store cannot decrypt records without the master key, which lives separately under `~/.authsome/server/master.key` (mode 0600) or in the OS keyring.
 
 **Stale tokens.** OAuth refresh is automatic. Agents call authsome at runtime, get a fresh token, and never need to handle expiry. There is no long-lived embedded token sitting in a script or CI variable to leak.
 
@@ -42,7 +42,7 @@ Authsome is a local-first credential broker. It assumes the local machine and us
 
 **Memory inspection.** Resolved credentials are held in the daemon's memory for the lifetime of `authsome run` and briefly in the proxy's request pipeline. A process with `ptrace` or kernel access can read them.
 
-**A malicious provider definition.** Custom providers in `~/.authsome/providers/` can declare any `host_url` and any `authorization_url`. Authsome validates schema, not intent. Register only definitions whose endpoints you have verified against the provider's official documentation. The custom-providers guide makes this point explicit; see [Custom providers](/guides/custom-providers).
+**A malicious provider definition.** Custom providers in `~/.authsome/providers/` can declare any `api_url` and any `authorization_url`. Authsome validates schema, not intent. Register only definitions whose endpoints you have verified against the provider's official documentation. The custom-providers guide makes this point explicit; see [Custom providers](/guides/custom-providers).
 
 **Network attackers on the wire.** Authsome relies on TLS to the provider. The mitmproxy CA it installs is intentionally limited to the local machine and used only for outbound interception from your own subprocesses. Authsome does not validate certificate transparency or pin provider certificates.
 

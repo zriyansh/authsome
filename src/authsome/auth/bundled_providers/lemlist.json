@@ -4,14 +4,12 @@
   "display_name": "Lemlist",
   "auth_type": "api_key",
   "flow": "api_key",
-  "host_url": "api.lemlist.com",
+  "api_url": "api.lemlist.com",
   "api_key": {
     "header_name": "Authorization",
     "header_prefix": "Bearer"
   },
   "export": {
-    "env": {
-      "api_key": "LEMLIST_API_KEY"
-    }
+    "LEMLIST_API_KEY": "API_TOKEN"
   }
 }

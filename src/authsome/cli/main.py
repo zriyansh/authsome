@@ -28,7 +28,7 @@ from authsome.cli.helpers import (
     auth_command,
     setup_logging,
 )
-from authsome.paths import get_client_log_path
+from authsome.paths import get_client_log_path, get_server_log_path
 from authsome.utils import connection_is_active, format_error_code, format_expires_at, redact
 
 
@@ -140,6 +140,7 @@ async def list_cmd(ctx_obj: ContextObj) -> None:
     connected_provider_ids = {row["provider_id"] for row in rows if connection_is_active(row)}
     connected_count = len(connected_provider_ids)
     ctx_obj.echo(f"Providers: {len(bundled_out) + len(custom_out)} total, {connected_count} connected")
+    ctx_obj.echo("")
 
     headers = {
         "provider": "Provider",
@@ -202,45 +203,108 @@ async def list_cmd(ctx_obj: ContextObj) -> None:
 
         return f"{provider_str}  {source_str}  {auth_str}  {connection_str}  {status_str}  {expires_str}".rstrip()
 
-    ctx_obj.echo(render_row(headers, is_header=True))
-    ctx_obj.echo(
+    ctx_obj.emit(render_row(headers, is_header=True))
+    ctx_obj.emit(
         render_row(
             {key: "-" * widths[key] for key in ("provider", "source", "auth", "connection", "status", "expires")},
             is_divider=True,
         )
     )
     for row in rows:
-        ctx_obj.echo(render_row(row))
+        ctx_obj.emit(render_row(row))
 
 
 @cli.command(name="log")
-@click.option("-n", "--lines", default=50, metavar="COUNT", help="Number of lines to show.")
+@click.option("-n", "--lines", default=50, metavar="COUNT", help="Number of entries to show.")
+@click.option("--raw", is_flag=True, help="Show raw client debug log instead of structured audit entries.")
 @auth_command
-async def log_cmd(ctx_obj: ContextObj, lines: int) -> None:
-    """View the local authsome client log."""
+async def log_cmd(ctx_obj: ContextObj, lines: int, raw: bool) -> None:
+    """View structured audit entries or the raw client debug log."""
     home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
-    log_path = get_client_log_path(home)
-    try:
-        entries = log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-lines:]
-        if ctx_obj.json_output:
-            ctx_obj.print_json({"log_file": str(log_path), "entries": entries})
-        else:
-            if not entries:
+
+    if raw:
+        log_path = get_client_log_path(home)
+        try:
+            raw_lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-lines:]
+            if ctx_obj.json_output:
+                ctx_obj.print_json({"log_file": str(log_path), "entries": raw_lines})
+            elif not raw_lines:
                 ctx_obj.echo("No log entries found.", err=True, color="yellow")
-                sys.exit(0)
-            for entry in entries:
-                ctx_obj.echo(entry)
+            else:
+                for entry in raw_lines:
+                    ctx_obj.emit(entry)
+        except FileNotFoundError:
+            if ctx_obj.json_output:
+                ctx_obj.print_json({"log_file": str(log_path), "entries": []})
+            else:
+                ctx_obj.echo("No log entries found.", err=True, color="yellow")
+        return
+
+    audit_path = get_server_log_path(home)
+    try:
+        raw_lines = audit_path.read_text(encoding="utf-8", errors="replace").splitlines()[-lines:]
     except FileNotFoundError:
-        if ctx_obj.json_output:
-            ctx_obj.print_json({"log_file": str(log_path), "entries": []})
+        raw_lines = []
+
+    parsed: list[dict] = []
+    for line in raw_lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            parsed.append(json_lib.loads(line))
+        except Exception:
+            parsed.append({"raw": line})
+
+    if ctx_obj.json_output:
+        ctx_obj.print_json({"log_file": str(audit_path), "entries": parsed})
+        return
+
+    if not parsed:
+        ctx_obj.echo("No audit entries found.", err=True, color="yellow")
+        return
+
+    col_widths = {
+        "timestamp": max(19, *(len((e.get("timestamp") or "")[:19]) for e in parsed)),
+        "event": max(5, *(len(e.get("event") or "-") for e in parsed)),
+        "provider": max(8, *(len(e.get("provider") or "-") for e in parsed)),
+        "status": max(6, *(len(e.get("status") or "-") for e in parsed)),
+    }
+
+    def _row(ts: str, ev: str, prov: str, stat: str, header: bool = False) -> str:
+        return (
+            f"{ts:<{col_widths['timestamp']}}  "
+            f"{ev:<{col_widths['event']}}  "
+            f"{prov:<{col_widths['provider']}}  "
+            f"{stat:<{col_widths['status']}}"
+        ).rstrip()
+
+    ctx_obj.emit(_row("Timestamp", "Event", "Provider", "Status", header=True))
+    ctx_obj.emit(
+        _row(
+            "-" * col_widths["timestamp"],
+            "-" * col_widths["event"],
+            "-" * col_widths["provider"],
+            "-" * col_widths["status"],
+        )
+    )
+
+    for entry in parsed:
+        ts = (entry.get("timestamp") or "")[:19].replace("T", " ")
+        ev = entry.get("event") or entry.get("raw") or "-"
+        prov = entry.get("provider") or "-"
+        stat = entry.get("status") or "-"
+        status_color = None
+        if not ctx_obj.no_color:
+            if stat in ("success", "ok", "completed"):
+                status_color = "green"
+            elif stat in ("failure", "failed", "error"):
+                status_color = "red"
+        if status_color:
+            stat_str = click.style(stat, fg=status_color)
+            ctx_obj.emit(_row(ts, ev, prov, "") + stat_str)
         else:
-            ctx_obj.echo("No log entries found.", err=True, color="yellow")
-    except Exception as e:
-        if ctx_obj.json_output:
-            ctx_obj.print_json({"error": str(e)})
-        else:
-            ctx_obj.echo(f"Error reading log file: {e}", err=True, color="red")
-        sys.exit(1)
+            ctx_obj.emit(_row(ts, ev, prov, stat))
 
 
 @cli.command()
@@ -713,16 +777,16 @@ async def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> No
         # 1. Extract and validate endpoints
         endpoints_to_check = _validate_provider_endpoints(definition, ctx_obj)
 
-        # 3. Confirmation prompt
-        if not ctx_obj.json_output and not ctx_obj.quiet and not yes:
+        # 3. Confirmation prompt — --force implies --yes (skip prompt, override existing)
+        if not ctx_obj.json_output and not ctx_obj.quiet and not yes and not force:
             ctx_obj.echo(f"Registering '{definition.name}' provider:")
             for name, val, _ in endpoints_to_check:
                 ctx_obj.echo(f"  - {name}: {val}")
 
             if definition.oauth and definition.oauth.token_url:
                 prompt_msg = f"Register '{definition.name}' with token endpoint {definition.oauth.token_url}? [y/N]"
-            elif definition.host_url:
-                prompt_msg = f"Register '{definition.name}' with host {definition.host_url}? [y/N]"
+            elif definition.api_url:
+                prompt_msg = f"Register '{definition.name}' with host {definition.api_url}? [y/N]"
             else:
                 prompt_msg = f"Register '{definition.name}' provider? [y/N]"
 
@@ -744,7 +808,7 @@ async def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> No
 
         warnings = []
         for name, val, is_host in endpoints_to_check:
-            if name not in ("host_url", "authorization_url"):
+            if name not in ("api_url", "authorization_url"):
                 continue
 
             target = val
@@ -926,8 +990,8 @@ async def doctor(ctx_obj: ContextObj) -> None:
         all_ok = results.get("status") == "ready"
         for key, val in results.get("checks", {}).items():
             ok = val == "ok"
-            ctx_obj.echo(f"{key}: ", nl=False)
-            ctx_obj.echo("OK" if ok else "FAIL", color="green" if ok else "red")
+            ctx_obj.emit(f"{key}: ", nl=False)
+            ctx_obj.emit("OK" if ok else "FAIL", color="green" if ok else "red")
         issues = results.get("issues", [])
         if issues:
             ctx_obj.echo("\nIssues found:", color="red")

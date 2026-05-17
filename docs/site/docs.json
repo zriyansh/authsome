@@ -30,7 +30,7 @@
   "seo": {
     "indexing": "all",
     "metatags": {
-      "canonical": "https://authsome.agentr.dev/docs",
+      "canonical": "https://authsome.ai/docs",
       "title-template": "%s · Authsome",
       "og:site_name": "Authsome Docs",
       "og:type": "website",
@@ -271,7 +271,7 @@
       {
         "header": "Product",
         "items": [
-          { "label": "Home", "href": "https://authsome.agentr.dev" },
+          { "label": "Home", "href": "https://authsome.ai" },
           { "label": "GitHub", "href": "https://github.com/agentrhq/authsome" },
           { "label": "PyPI", "href": "https://pypi.org/project/authsome/" }
         ]

@@ -4,14 +4,12 @@
   "display_name": "Ashby",
   "auth_type": "api_key",
   "flow": "api_key",
-  "host_url": "api.ashbyhq.com",
+  "api_url": "api.ashbyhq.com",
   "api_key": {
     "header_name": "Authorization",
     "header_prefix": "Basic"
   },
   "export": {
-    "env": {
-      "api_key": "ASHBY_API_KEY"
-    }
+    "ASHBY_API_KEY": "API_TOKEN"
   }
 }

@@ -123,19 +123,19 @@ https_proxy=http://127.0.0.1:<port>
 
 If they are missing, the proxy didn't start. Check `uvx authsome --verbose run -- ...` for startup errors.
 
-### The host doesn't match any provider's `host_url`
+### The host doesn't match any provider's `api_url`
 
-The proxy only injects auth for requests whose host matches a provider's `host_url`. Confirm the destination host:
+The proxy only injects auth for requests whose host matches a provider's `api_url`. Confirm the destination host:
 
 ```bash
-uvx authsome inspect <provider> | grep host_url
+uvx authsome inspect <provider> | grep api_url
 ```
 
-If the API uses a different host than the provider declares, override the bundled provider with a custom JSON that has the correct `host_url`.
+If the API uses a different host than the provider declares, override the bundled provider with a custom JSON that has the correct `api_url`.
 
 ### Two providers claim the same host
 
-When two providers' `host_url` patterns match the same request, authsome refuses to inject and forwards unchanged. This shows up in the proxy logs as `ambiguous host match`. Resolve by removing or renaming one of the providers, or by tightening one `host_url` to a more specific regex.
+When two providers' `api_url` patterns match the same request, authsome refuses to inject and forwards unchanged. This shows up in the proxy logs as `ambiguous host match`. Resolve by removing or renaming one of the providers, or by tightening one `api_url` to a more specific regex.
 
 ## Corporate / upstream proxy
 

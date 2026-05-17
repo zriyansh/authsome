@@ -32,13 +32,13 @@ uv run authsome whoami --json
 uv run authsome doctor
 ```
 
-**Expected:** Exit code `0`; `OK` printed for `config`, `providers`, `vault`.
+**Expected:** Exit code `0`; `OK` printed for `spec_version`, `identity`, `providers`, `connections`, `vault`, `integrity`.
 
 ```bash
 uv run authsome doctor --json
 ```
 
-**Expected:** `{"status": "ready", "checks": {"config": "ok", ...}}`.
+**Expected:** `{"status": "ready", "checks": {"spec_version": "ok", "identity": "ok", "providers": "ok", "connections": "ok", "vault": "ok", "integrity": "ok"}}`.
 
 ---
 
@@ -220,26 +220,32 @@ uv run authsome run --quiet curl -s https://api.resend.com/domains
 uv run authsome log
 ```
 
-**Expected:** Recent audit entries as newline-delimited JSON objects with `timestamp`, `event`, `provider`, `status`.
+**Expected:** Human-readable table of recent audit entries with columns `Timestamp`, `Event`, `Provider`, `Status`. Shows "No audit entries found." if empty.
 
 ```bash
 uv run authsome log -n 5
 ```
 
-**Expected:** Last 5 entries only.
+**Expected:** Last 5 entries only (same table format).
 
 ```bash
 uv run authsome log -n 5 --json
 ```
 
-**Expected:** Same entries as a JSON array.
+**Expected:** JSON object with `log_file` path and `entries` array of parsed audit event objects, each with `timestamp`, `event`, `provider`, `status`.
+
+```bash
+uv run authsome log --raw -n 10
+```
+
+**Expected:** Last 10 lines of the raw client debug log (loguru format).
 
 ---
 
 ## 11. Connection Management
 
 ```bash
-uv run authsome connection set-default github default
+uv run authsome set-default github default
 ```
 
 **Expected:** Confirmation that `default` is now the default connection for `github`.
@@ -264,7 +270,7 @@ EOF
 uv run authsome register /tmp/test-provider.json
 ```
 
-**Expected:** Confirmation prompt → provider registered. No `host_url` means no reachability check.
+**Expected:** Confirmation prompt → provider registered. No `api_url` means no reachability check.
 
 ```bash
 uv run authsome inspect test-custom
@@ -279,11 +285,11 @@ uv run authsome list | grep test-custom
 **Expected:** Listed under `custom` source, `not_connected`.
 
 ```bash
-# Register again to test --force
+# Register again to test --force (overwrites without prompting)
 uv run authsome register /tmp/test-provider.json --force
 ```
 
-**Expected:** Overwrites existing without prompting for overwrite confirmation.
+**Expected:** Registers immediately, no confirmation prompt, no error.
 
 ```bash
 uv run authsome remove test-custom
@@ -372,19 +378,19 @@ uv run authsome --verbose get github
 uv run authsome login doesnotexist 2>&1; echo "exit: $?"
 ```
 
-**Expected:** `ProviderNotFoundError`, exit code `3`.
+**Expected:** `ProviderNotFoundError`, exit code `4`.
 
 ```bash
 uv run authsome inspect doesnotexist 2>&1; echo "exit: $?"
 ```
 
-**Expected:** `ProviderNotFoundError`, exit code `3`.
+**Expected:** `ProviderNotFoundError`, exit code `4`.
 
 ```bash
 uv run authsome logout doesnotexist 2>&1; echo "exit: $?"
 ```
 
-**Expected:** `ProviderNotFoundError`, exit code `3`.
+**Expected:** `ProviderNotFoundError`, exit code `4`.
 
 ```bash
 # Missing required argument
@@ -399,7 +405,7 @@ uv run authsome logout resend
 uv run authsome get resend 2>&1; echo "exit: $?"
 ```
 
-**Expected:** Non-zero exit; message indicates no connection found.
+**Expected:** `ConnectionNotFoundError`, exit code `3`.
 
 ---
 

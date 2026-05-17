@@ -174,7 +174,7 @@ def _build_provider_view(
         "display_name": provider.display_name,
         "auth_type": provider.auth_type.value,
         "auth_type_label": "OAuth 2.0" if provider.auth_type == AuthType.OAUTH2 else "API Key",
-        "host_url": provider.host_url or (provider.oauth.base_url if provider.oauth else None) or provider.name,
+        "api_url": provider.api_url or (provider.oauth.base_url if provider.oauth else None) or provider.name,
         "description": (provider.metadata or {}).get("description", ""),
         "source": source,
         "logo_initial": _logo_initial(provider.display_name or provider.name),
@@ -283,7 +283,7 @@ async def app_detail(
 
     client_record = await auth.get_provider_client(provider_name)
     redirect_uri = build_callback_url(server_base_url)
-    host_url = provider.host_url or (provider.oauth.base_url if provider.oauth else None) or provider.name
+    api_url = provider.api_url or (provider.oauth.base_url if provider.oauth else None) or provider.name
     policy = _ui_policy()
 
     if connection_record is None:
@@ -296,7 +296,7 @@ async def app_detail(
                 provider=provider,
                 connection=None,
                 logo_initial=_logo_initial(provider.display_name or provider.name),
-                host_url=host_url,
+                api_url=api_url,
                 obtained_label=None,
                 auth_type_label="OAuth 2.0" if provider.auth_type == AuthType.OAUTH2 else "API Key",
                 client_id=client_record.client_id if client_record and policy["show_provider_client_details"] else None,
@@ -306,7 +306,7 @@ async def app_detail(
                 redirect_uri=redirect_uri,
                 auth_url=provider.oauth.authorization_url if provider.oauth else None,
                 token_url=provider.oauth.token_url if provider.oauth else None,
-                base_url=(provider.oauth.base_url if provider.oauth else None) or provider.host_url,
+                base_url=(provider.oauth.base_url if provider.oauth else None) or provider.api_url,
             ),
         )
 
@@ -316,7 +316,7 @@ async def app_detail(
         provider=provider,
         connection=connection_record,
         logo_initial=_logo_initial(provider.display_name or provider.name),
-        host_url=host_url,
+        api_url=api_url,
         expires_label=_format_relative(connection_record.expires_at),
         obtained_label=_format_relative(connection_record.obtained_at),
         scopes=connection_record.scopes or [],
@@ -350,7 +350,7 @@ async def app_detail(
             "api_key": connection_record.api_key,
             "base_url": connection_record.base_url
             or (provider.oauth.base_url if provider.oauth else None)
-            or provider.host_url,
+            or provider.api_url,
         },
     )
 

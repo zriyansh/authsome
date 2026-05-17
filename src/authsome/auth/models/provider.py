@@ -73,8 +73,8 @@ class ProviderDefinition(BaseModel):
     registration: ClientRegistrationConfig | None = None
     api_key: ApiKeyConfig | None = None
     export: ExportConfig | None = None
-    docs: str | None = None
-    host_url: str | None = None
+    docs_url: str | None = None
+    api_url: str | None = None
 
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -108,7 +108,7 @@ class ProviderDefinition(BaseModel):
         if resolved.registration and resolved.registration.registration_endpoint:
             resolved.registration.registration_endpoint = resolve(resolved.registration.registration_endpoint)
 
-        # Resolve host_url if it contains the template
-        resolved.host_url = resolve(resolved.host_url) or resolved.host_url
+        # Resolve api_url if it contains the template
+        resolved.api_url = resolve(resolved.api_url) or resolved.api_url
 
         return resolved

@@ -173,8 +173,7 @@ class AuthService:
                     definition = await self.get_provider(provider_name)
                 except Exception:
                     continue
-
-                if not definition.host_url:
+                if not definition.api_url:
                     continue
 
                 # Find the default connection
@@ -185,11 +184,11 @@ class AuthService:
                 routes.append(self._build_route_entry(definition, default_conn.get("connection_name", "default")))
         else:  # configured
             for definition in await self.list_providers():
-                if not definition.host_url:
+                if not definition.api_url:
                     continue
                 routes.append(self._build_route_entry(definition, "default"))
 
-        routes.sort(key=lambda r: (r["host_url"].startswith("regex:"), r["provider"]))
+        routes.sort(key=lambda r: (r["api_url"].startswith("regex:"), r["provider"]))
         return {"routes": routes}
 
     def _build_route_entry(self, definition: ProviderDefinition, connection_name: str) -> dict[str, Any]:
@@ -209,7 +208,7 @@ class AuthService:
         return {
             "provider": definition.name,
             "connection": connection_name,
-            "host_url": definition.host_url,
+            "api_url": definition.api_url,
             "auth_endpoint_paths": sorted(list(paths)),
         }
 
@@ -340,7 +339,7 @@ class AuthService:
                             "status": record.status.value,
                             "scopes": record.scopes,
                             "base_url": record.base_url,
-                            "host_url": record.host_url,
+                            "api_url": record.api_url,
                             "expires_at": record.expires_at.isoformat() if record.expires_at else None,
                         }
                     )
@@ -437,10 +436,10 @@ class AuthService:
             )
             fields.append(
                 InputField(
-                    name="host_url",
+                    name="api_url",
                     label="API Host URL",
                     secret=False,
-                    default=definition.host_url or "",
+                    default=definition.api_url or "",
                 )
             )
 
@@ -495,8 +494,8 @@ class AuthService:
                 if base_url := inputs.get("base_url"):
                     client_record.base_url = base_url
                     session.payload["base_url"] = base_url
-                if host_url := inputs.get("host_url"):
-                    client_record.host_url = host_url
+                if api_url := inputs.get("api_url"):
+                    client_record.api_url = api_url
                 if client_id := inputs.get("client_id"):
                     client_record.client_id = client_id
                 if client_secret := inputs.get("client_secret"):
@@ -605,7 +604,7 @@ class AuthService:
             await self._save_provider_client_credentials(client_record)
 
         result.connection.base_url = flow_base_url
-        result.connection.host_url = resolved_definition.host_url
+        result.connection.api_url = resolved_definition.api_url
 
         await self._save_connection(result.connection)
         await self._update_provider_metadata(provider, connection_name)
@@ -655,7 +654,7 @@ class AuthService:
     @staticmethod
     def _build_docs_hints(definition: ProviderDefinition, flow_type: FlowType) -> list[dict[str, Any]]:
         """Convert provider docs URL into a bridge instruction block."""
-        if not definition.docs:
+        if not definition.docs_url:
             return []
 
         if flow_type not in (FlowType.PKCE, FlowType.DEVICE_CODE, FlowType.DCR_PKCE, FlowType.API_KEY):
@@ -665,7 +664,7 @@ class AuthService:
             {
                 "type": "instructions",
                 "label": "Instructions",
-                "url": definition.docs,
+                "url": definition.docs_url,
             }
         ]
 
@@ -790,6 +789,19 @@ class AuthService:
             if record.api_key:
                 env_name = export_map.get("api_key", f"{export_name_part(provider)}_API_KEY")
                 values[env_name] = record.api_key
+
+        if definition.export and definition.export.model_extra:
+            token = record.access_token if record.auth_type == AuthType.OAUTH2 else record.api_key
+            available_values = {
+                "BASE_URL": record.base_url,
+                "API_URL": record.api_url or definition.api_url or record.base_url,
+                "ACCESS_TOKEN": token,
+                "API_TOKEN": token,
+            }
+
+            for target_env, source_field in definition.export.model_extra.items():
+                if isinstance(source_field, str) and (val := available_values.get(source_field.upper())):
+                    values[target_env] = val
 
         return values
 

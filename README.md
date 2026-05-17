@@ -21,8 +21,8 @@
 </p>
 
 <p align="center">
-  <a href="https://authsome.agentr.dev/docs">Docs</a> ·
-  <a href="https://authsome.agentr.dev">Website</a> ·
+  <a href="https://authsome.ai/docs">Docs</a> ·
+  <a href="https://authsome.ai">Website</a> ·
   <a href="https://discord.gg/9YP2C9tvMp">Discord</a> ·
   <a href="https://github.com/agentrhq/authsome/issues">Issues</a>
 </p>
@@ -31,7 +31,7 @@
 
 An open-source credential broker that sits between your agents and the services they call. Instead of sharing credentials with every agent, log in once via OAuth2 or API keys. Authsome stores credentials securely and injects them via an HTTP proxy. You get one place to manage access, rotate keys, and see what every agent is doing.
 
-**44 bundled providers** out of the box: 13 OAuth2 and 31 API key. [See the full list](https://authsome.agentr.dev/docs/reference/bundled-providers).
+**45 bundled providers** out of the box: 14 OAuth2 and 31 API key. [See the full list](https://authsome.ai/docs/reference/bundled-providers).
 
 ---
 
@@ -80,10 +80,10 @@ uvx authsome get github --field access_token --show-secret
 export $(uvx authsome export github)
 # → sets GITHUB_ACCESS_TOKEN in current shell
 
-uvx authsome run python my_agent.py
+uvx authsome run -- python my_agent.py
 # runs behind a local auth proxy that injects headers at request time
 # without exposing secrets in the child process environment.
-# matched automatically via provider host_url (e.g. api.openai.com)
+# matched automatically via provider api_url (e.g. api.openai.com)
 ```
 
 Credentials are stored locally, encrypted at rest, and refreshed before expiry. No server. No account. No cloud.
@@ -132,26 +132,26 @@ uvx authsome list                             # all connections + token status
 
 Authsome ships with adapters for the most common agent frameworks and CLIs:
 
-- [Claude Code](https://authsome.agentr.dev/docs/integrations/agents/claude-code)
-- [Codex](https://authsome.agentr.dev/docs/integrations/agents/codex)
-- [Cursor](https://authsome.agentr.dev/docs/integrations/agents/cursor)
-- [OpenCode](https://authsome.agentr.dev/docs/integrations/agents/opencode)
-- [LangChain](https://authsome.agentr.dev/docs/integrations/agents/langchain)
-- [LlamaIndex](https://authsome.agentr.dev/docs/integrations/agents/llamaindex)
-- [OpenAI Agents SDK](https://authsome.agentr.dev/docs/integrations/agents/openai-agents-sdk)
-- [Anthropic SDK](https://authsome.agentr.dev/docs/integrations/agents/anthropic-sdk)
+- [Claude Code](https://authsome.ai/docs/integrations/agents/claude-code)
+- [Codex](https://authsome.ai/docs/integrations/agents/codex)
+- [Cursor](https://authsome.ai/docs/integrations/agents/cursor)
+- [OpenCode](https://authsome.ai/docs/integrations/agents/opencode)
+- [LangChain](https://authsome.ai/docs/integrations/agents/langchain)
+- [LlamaIndex](https://authsome.ai/docs/integrations/agents/llamaindex)
+- [OpenAI Agents SDK](https://authsome.ai/docs/integrations/agents/openai-agents-sdk)
+- [Anthropic SDK](https://authsome.ai/docs/integrations/agents/anthropic-sdk)
 
-Full list at [authsome.agentr.dev/docs/integrations](https://authsome.agentr.dev/docs/integrations/agents/index).
+Full list at [authsome.ai/docs/integrations](https://authsome.ai/docs/integrations/agents/index).
 
 ## Docs
 
-Full documentation lives at **[authsome.agentr.dev/docs](https://authsome.agentr.dev/docs)**.
+Full documentation lives at **[authsome.ai/docs](https://authsome.ai/docs)**.
 
-- [Quickstart](https://authsome.agentr.dev/docs/quickstart)
-- [CLI reference](https://authsome.agentr.dev/docs/reference/cli)
-- [Architecture](https://authsome.agentr.dev/docs/concepts/architecture)
-- [Custom providers](https://authsome.agentr.dev/docs/guides/custom-providers)
-- [Troubleshooting](https://authsome.agentr.dev/docs/troubleshooting/doctor)
+- [Quickstart](https://authsome.ai/docs/quickstart)
+- [CLI reference](https://authsome.ai/docs/reference/cli)
+- [Architecture](https://authsome.ai/docs/concepts/architecture)
+- [Custom providers](https://authsome.ai/docs/guides/custom-providers)
+- [Troubleshooting](https://authsome.ai/docs/troubleshooting/doctor)
 
 To preview the docs site locally:
 
@@ -170,7 +170,7 @@ mint dev
 
 Authsome is a credential tool. If you find a vulnerability, please do **not** open a public GitHub issue.
 
-See the [responsible disclosure policy](https://authsome.agentr.dev/docs/security/disclosure) for how to report it privately.
+See the [responsible disclosure policy](https://authsome.ai/docs/security/disclosure) for how to report it privately.
 
 ## Contributing
 
