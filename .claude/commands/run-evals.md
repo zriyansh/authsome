@@ -4,6 +4,49 @@ Interactive eval runner for the authsome skill. You orchestrate the
 state-check conversation; the Python script handles agent execution and
 grading.
 
+## Pre-session setup
+
+Run this once before starting an eval session.
+
+**1. Install the latest authsome CLI:**
+
+```bash
+uv sync
+```
+
+Verify:
+
+```bash
+uv run authsome --version
+```
+
+**2. Create a fresh identity and verify the existing one still works:**
+
+```bash
+# Check the current identity is healthy
+uv run authsome doctor
+
+# Create a new identity for the eval session
+uv run authsome profile create --json
+```
+
+Save the new `profile` handle. Then switch to it:
+
+```bash
+uv run authsome profile use <new-handle>
+```
+
+**3. Confirm the new identity starts clean:**
+
+```bash
+uv run authsome list
+```
+
+Expected: no providers connected. If any show `connected`, the wrong
+profile may be active — check with `cat ~/.authsome/client/config.json`.
+
+---
+
 ## Arguments
 
 - No args — run all non-optional evals (ids 1–6)
