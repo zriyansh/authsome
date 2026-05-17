@@ -81,6 +81,4 @@ ignore = []
 max-complexity = 20
 
 [dependency-groups]
-dev = [
-    "anthropic>=0.102.0",
-]
+dev = []

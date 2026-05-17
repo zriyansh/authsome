@@ -19,8 +19,6 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
-import anthropic
-
 REPO_ROOT = Path(__file__).parent.parent
 EVALS_JSON = REPO_ROOT / "skills" / "authsome" / "evals" / "evals.json"
 SKILL_MD = REPO_ROOT / "skills" / "authsome" / "SKILL.md"
@@ -126,8 +124,7 @@ def run_agent(cmd: list[str]) -> tuple[str, bool]:
 
 
 def grade(eval_: dict, transcript: str) -> dict:
-    """Call Claude as LLM judge and return grading result dict."""
-    client = anthropic.Anthropic()
+    """Call Claude as LLM judge via `claude -p` and return grading result dict."""
     has_trajectory = "trajectory_efficiency" in eval_
 
     user_content = f"""Environment: {eval_["environment"]}
@@ -136,24 +133,32 @@ Outcome criterion: {eval_["outcome"]}
 
 Trajectory efficiency criterion: {eval_.get("trajectory_efficiency", "(not provided — skip this grade)")}
 
-Transcript:
+Transcript (last 4000 chars):
 ---
-{transcript[-12000:]}
+{transcript[-4000:]}
 ---
-"""
 
-    response = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=512,
-        system=JUDGE_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_content}],
+Return ONLY valid JSON, no markdown fences."""
+
+    result = subprocess.run(
+        ["claude", "--system-prompt", JUDGE_SYSTEM_PROMPT, "-p", user_content],
+        capture_output=True,
+        text=True,
+        timeout=120,
     )
 
-    raw = response.content[0].text.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
+    if result.returncode != 0:
+        raise RuntimeError(f"claude -p judge failed (exit {result.returncode}): {result.stderr[:300]}")
+
+    raw = result.stdout.strip()
+    # Strip markdown fences if present
+    if "```" in raw:
+        for part in raw.split("```"):
+            part = part.strip().lstrip("json").strip()
+            if part.startswith("{"):
+                raw = part
+                break
+
     verdict = json.loads(raw)
 
     if not has_trajectory:
@@ -163,9 +168,9 @@ Transcript:
 
 
 def save_grading(results: list[dict], run_dir: Path) -> Path:
-    passed = sum(1 for r in results if r.get("status") != "skipped" and r["outcome"]["passed"])
-    failed = sum(1 for r in results if r.get("status") != "skipped" and not r["outcome"]["passed"])
-    skipped = sum(1 for r in results if r.get("status") == "skipped")
+    passed = sum(1 for r in results if r["outcome"]["passed"] is True)
+    failed = sum(1 for r in results if r["outcome"]["passed"] is False)
+    skipped = sum(1 for r in results if r["outcome"]["passed"] is None)
 
     grading = {
         "skill_name": "authsome",
@@ -231,19 +236,7 @@ def main() -> None:
         transcript_file.write_text(transcript)
 
         if rate_limited:
-            print(f"\n[SKIPPED] Eval {eval_['id']} — rate limit hit. Switch model and retry.")
-            results.append({
-                "id": eval_["id"],
-                "name": eval_.get("name", ""),
-                "prompt": eval_["prompt"],
-                "agent": eval_.get("agent", "claude"),
-                "environment": eval_["environment"],
-                "requires_human": eval_.get("requires_human", False),
-                "status": "skipped",
-                "outcome": {"passed": None, "evidence": "Rate limit hit"},
-                "trajectory_efficiency": {"passed": None, "evidence": "Rate limit hit"},
-            })
-            continue
+            print(f"\n[WARNING] Eval {eval_['id']} — agent hit rate limit. Grading partial transcript anyway.")
 
         print(f"\n[grading] Calling LLM judge for eval {eval_['id']}...")
         verdict = grade(eval_, transcript)
@@ -262,6 +255,7 @@ def main() -> None:
             "agent": eval_.get("agent", "claude"),
             "environment": eval_["environment"],
             "requires_human": eval_.get("requires_human", False),
+            "rate_limited": rate_limited,
             **verdict,
         })
 

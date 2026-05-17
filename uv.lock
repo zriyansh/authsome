@@ -170,11 +170,6 @@ dev = [
     { name = "ty" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "anthropic" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "anthropic", marker = "extra == 'dev'", specifier = ">=0.40" },
@@ -202,7 +197,7 @@ requires-dist = [
 provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "anthropic", specifier = ">=0.102.0" }]
+dev = []
 
 [[package]]
 name = "base58"
