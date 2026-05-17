@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.1](https://github.com/agentrhq/authsome/compare/authsome-v0.3.0...authsome-v0.3.1) (2026-05-17)
+
+
+### Bug Fixes
+
+* **cli:** resolve three CLI bugs and improve audit log command ([3b990e3](https://github.com/agentrhq/authsome/commit/3b990e3cae998d9ccaccb421b5cb577c2bb89de3))
+* **cli:** resolve three CLI bugs, improve audit log, and sync docs ([dd9cad3](https://github.com/agentrhq/authsome/commit/dd9cad326cb2817826eb8e5b8bb42f5f3df8e2a2))
+
+
+### Documentation
+
+* **cli:** sync reference and manual-testing guide with 0.3.0 implementation ([bdf659f](https://github.com/agentrhq/authsome/commit/bdf659ffffc0a0c2100cc21508daec042161656e))
+
 ## [0.3.0](https://github.com/agentrhq/authsome/compare/authsome-v0.2.4...authsome-v0.3.0) (2026-05-15)
 
 
