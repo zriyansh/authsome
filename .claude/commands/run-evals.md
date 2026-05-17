@@ -45,6 +45,15 @@ uv run authsome list
 Expected: no providers connected. If any show `connected`, the wrong
 profile may be active — check with `cat ~/.authsome/client/config.json`.
 
+**4. Verify hermes is working:**
+
+```bash
+hermes chat -Q -q "reply with the single word OK" -t ""
+```
+
+Expected: response contains `OK`. If it fails, check your hermes config
+before running evals (hermes is used as the LLM judge).
+
 ---
 
 ## Arguments
