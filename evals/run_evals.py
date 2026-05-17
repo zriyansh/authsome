@@ -135,11 +135,54 @@ def build_command(eval_: dict) -> list[str]:
     elif agent == "codex":
         return ["codex", prompt]
     else:
-        return ["claude", "-p", prompt]
+        return [
+            "claude", "--dangerously-skip-permissions",
+            "--verbose", "--output-format", "stream-json",
+            "-p", prompt,
+        ]
+
+
+def _parse_stream_json(raw: str) -> str:
+    """Convert claude stream-json output into a readable transcript."""
+    lines_out: list[str] = []
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            lines_out.append(line)
+            continue
+        t = ev.get("type", "")
+        if t == "assistant" and "message" in ev:
+            for block in ev["message"].get("content", []):
+                if block.get("type") == "text":
+                    lines_out.append(f"[assistant] {block['text']}")
+                elif block.get("type") == "tool_use":
+                    inp = json.dumps(block.get("input", {}))
+                    lines_out.append(f"[tool_use] {block['name']}({inp})")
+        elif t == "user" and "message" in ev:
+            for block in ev["message"].get("content", []):
+                if block.get("type") == "tool_result":
+                    content = block.get("content", "")
+                    if isinstance(content, list):
+                        content = " ".join(
+                            c.get("text", "") for c in content if isinstance(c, dict)
+                        )
+                    lines_out.append(f"[tool_result] {str(content)[:800]}")
+        elif t == "result":
+            if ev.get("result"):
+                lines_out.append(f"[result] {ev['result']}")
+            if ev.get("error"):
+                lines_out.append(f"[error] {ev['error']}")
+        # skip system/rate_limit_event/other scaffolding
+    return "\n".join(lines_out)
 
 
 def run_agent(cmd: list[str]) -> tuple[str, bool]:
     """Run agent command, stream output to terminal, return (transcript, rate_limited)."""
+    is_claude_stream = "--output-format" in cmd and "stream-json" in cmd
     lines: list[str] = []
 
     proc = subprocess.Popen(
@@ -152,7 +195,8 @@ def run_agent(cmd: list[str]) -> tuple[str, bool]:
     def stream():
         for raw in proc.stdout:
             line = raw.decode(errors="replace")
-            print(line, end="", flush=True)
+            if not is_claude_stream:
+                print(line, end="", flush=True)
             lines.append(line)
 
     t = threading.Thread(target=stream, daemon=True)
@@ -160,7 +204,11 @@ def run_agent(cmd: list[str]) -> tuple[str, bool]:
     proc.wait()
     t.join()
 
-    transcript = "".join(lines)
+    raw = "".join(lines)
+    transcript = _parse_stream_json(raw) if is_claude_stream else raw
+    if is_claude_stream:
+        print(transcript)
+
     rate_limited = any(sig in transcript.lower() for sig in RATE_LIMIT_SIGNALS)
 
     return transcript, rate_limited
@@ -278,6 +326,7 @@ def main() -> None:
     parser.add_argument("--id", type=int, default=None, help="Run only eval with this id")
     parser.add_argument("--profile", default=None, help="Use an existing authsome profile (skip profile creation/teardown)")
     parser.add_argument("--run-dir", default=None, help="Append results to this existing run directory")
+    parser.add_argument("--transcript-file", default=None, help="Path to a pre-captured transcript file (skips agent invocation, grades only)")
     args = parser.parse_args()
 
     preflight_check()
@@ -314,10 +363,16 @@ def main() -> None:
             authsome_state = get_authsome_state()
             print_env_banner(eval_, authsome_state)
 
-            cmd = build_command(eval_)
-            print(f"[run] {' '.join(cmd)}")
-
-            transcript, rate_limited = run_agent(cmd)
+            if args.transcript_file:
+                # Inline subagent mode: transcript already captured by caller
+                transcript_path = Path(args.transcript_file)
+                transcript = transcript_path.read_text()
+                rate_limited = any(sig in transcript.lower() for sig in RATE_LIMIT_SIGNALS)
+                print(f"[run] using pre-captured transcript: {transcript_path}")
+            else:
+                cmd = build_command(eval_)
+                print(f"[run] {' '.join(cmd)}")
+                transcript, rate_limited = run_agent(cmd)
 
             transcript_file = run_dir / f"transcript_{eval_['id']}.txt"
             transcript_file.write_text(transcript)
