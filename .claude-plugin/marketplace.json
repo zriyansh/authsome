@@ -12,7 +12,7 @@
     {
       "name": "authsome",
       "source": "./skills/authsome",
-      "description": "Login once, credentials live in an encrypted local vault, a local proxy injects them into outbound requests so the agent's env never holds raw keys. 44 providers preconfigured (13 OAuth2, 31 API key).",
+      "description": "Login once, credentials live in an encrypted local vault, a local proxy injects them into outbound requests so the agent's env never holds raw keys. 45 providers preconfigured (14 OAuth2, 31 API key).",
       "version": "1.0.0",
       "author": {
         "name": "Agentr",
