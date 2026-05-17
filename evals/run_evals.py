@@ -2,12 +2,21 @@
 """Authsome agentic eval runner.
 
 Runs each eval from skills/authsome/evals/evals.json against the specified
-agent CLI, grades the transcript with Claude as LLM judge, and writes
+agent CLI, grades the transcript with hermes as LLM judge, and writes
 results to evals/results/<timestamp>/grading.json.
 
+Designed to be called by the /run-evals Claude command, which handles the
+interactive state-check flow. Can also be run directly for batch execution.
+
 Usage:
+    # Via Claude command (recommended):
+    /run-evals
+
+    # Direct batch run:
     uv run python evals/run_evals.py
-    uv run python evals/run_evals.py --id 1
+
+    # Single eval (called by the /run-evals command per eval):
+    uv run python evals/run_evals.py --id 1 --profile <handle> --run-dir evals/results/<ts>
 """
 
 import argparse
@@ -25,6 +34,8 @@ SKILL_MD = REPO_ROOT / "skills" / "authsome" / "SKILL.md"
 HERMES_SKILL_DIR = Path.home() / ".hermes" / "skills" / "authsome"
 CLAUDE_COMMAND_FILE = REPO_ROOT / ".claude" / "commands" / "authsome.md"
 RESULTS_DIR = Path(__file__).parent / "results"
+IDENTITIES_DIR = Path.home() / ".authsome" / "client" / "identities"
+CLIENT_CONFIG = Path.home() / ".authsome" / "client" / "config.json"
 
 JUDGE_SYSTEM_PROMPT = """\
 You are an eval grader for an agent called Authsome. You receive:
@@ -49,9 +60,6 @@ Rules:
 - Be strict: burden of proof to pass is on the transcript.
 - evidence must quote or specifically reference the transcript, not repeat the criterion.
 """
-
-IDENTITIES_DIR = Path.home() / ".authsome" / "client" / "identities"
-CLIENT_CONFIG = Path.home() / ".authsome" / "client" / "config.json"
 
 RATE_LIMIT_SIGNALS = [
     "rate limit",
@@ -85,6 +93,38 @@ def install_skill_for_agent(agent: str) -> None:
         CLAUDE_COMMAND_FILE.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(SKILL_MD, CLAUDE_COMMAND_FILE)
         print(f"[setup] Copied SKILL.md → {CLAUDE_COMMAND_FILE}")
+
+
+def setup_eval_profile() -> tuple[str, str]:
+    """Create a fresh profile for the eval run; return (new_handle, old_handle)."""
+    old_handle = json.loads(CLIENT_CONFIG.read_text()).get("active_identity", "")
+    result = subprocess.run(
+        ["authsome", "profile", "create", "--json"],
+        capture_output=True, text=True, check=True,
+    )
+    new_handle = json.loads(result.stdout)["profile"]
+    print(f"[profile] Created eval profile: {new_handle} (was: {old_handle})")
+    return new_handle, old_handle
+
+
+def teardown_eval_profile(new_handle: str, old_handle: str) -> None:
+    """Switch back to the previous profile and delete the eval profile's key files."""
+    if old_handle:
+        subprocess.run(["authsome", "profile", "use", old_handle], capture_output=True)
+    for ext in ("json", "key"):
+        p = IDENTITIES_DIR / f"{new_handle}.{ext}"
+        if p.exists():
+            p.unlink()
+    print(f"[profile] Removed eval profile {new_handle}, restored {old_handle or '(none)'}")
+
+
+def get_authsome_state() -> str:
+    """Run `authsome list` and return its output."""
+    result = subprocess.run(
+        ["authsome", "list"],
+        capture_output=True, text=True,
+    )
+    return (result.stdout + result.stderr).strip()
 
 
 def build_command(eval_: dict) -> list[str]:
@@ -174,10 +214,17 @@ Return ONLY valid JSON, no markdown fences."""
     return verdict
 
 
-def save_grading(results: list[dict], run_dir: Path) -> Path:
-    passed = sum(1 for r in results if r["outcome"]["passed"] is True)
-    failed = sum(1 for r in results if r["outcome"]["passed"] is False)
-    skipped = sum(1 for r in results if r["outcome"]["passed"] is None)
+def save_grading(results: list[dict], run_dir: Path, append: bool = False) -> Path:
+    out = run_dir / "grading.json"
+
+    all_results = results
+    if append and out.exists():
+        existing = json.loads(out.read_text())
+        all_results = existing["results"] + results
+
+    passed = sum(1 for r in all_results if r["outcome"]["passed"] is True)
+    failed = sum(1 for r in all_results if r["outcome"]["passed"] is False)
+    skipped = sum(1 for r in all_results if r["outcome"]["passed"] is None)
 
     grading = {
         "skill_name": "authsome",
@@ -186,11 +233,10 @@ def save_grading(results: list[dict], run_dir: Path) -> Path:
             "passed": passed,
             "failed": failed,
             "skipped": skipped,
-            "total": len(results),
+            "total": len(all_results),
         },
-        "results": results,
+        "results": all_results,
     }
-    out = run_dir / "grading.json"
     out.write_text(json.dumps(grading, indent=2))
     return out
 
@@ -212,38 +258,6 @@ def print_env_banner(eval_: dict, authsome_state: str) -> None:
     print("=" * 60)
 
 
-def setup_eval_profile() -> tuple[str, str]:
-    """Create a fresh profile for the eval run; return (new_handle, old_handle)."""
-    old_handle = json.loads(CLIENT_CONFIG.read_text()).get("active_identity", "")
-    result = subprocess.run(
-        ["authsome", "profile", "create", "--json"],
-        capture_output=True, text=True, check=True,
-    )
-    new_handle = json.loads(result.stdout)["profile"]
-    print(f"[profile] Created eval profile: {new_handle} (was: {old_handle})")
-    return new_handle, old_handle
-
-
-def teardown_eval_profile(new_handle: str, old_handle: str) -> None:
-    """Switch back to the previous profile and delete the eval profile's key files."""
-    if old_handle:
-        subprocess.run(["authsome", "profile", "use", old_handle], capture_output=True)
-    for ext in ("json", "key"):
-        p = IDENTITIES_DIR / f"{new_handle}.{ext}"
-        if p.exists():
-            p.unlink()
-    print(f"[profile] Removed eval profile {new_handle}, restored {old_handle or '(none)'}")
-
-
-def get_authsome_state() -> str:
-    """Run `authsome list` and return its output."""
-    result = subprocess.run(
-        ["authsome", "list"],
-        capture_output=True, text=True,
-    )
-    return (result.stdout + result.stderr).strip()
-
-
 def preflight_check() -> None:
     """Verify hermes is available and can reach the LLM."""
     if not shutil.which("hermes"):
@@ -262,6 +276,8 @@ def preflight_check() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run authsome agentic evals")
     parser.add_argument("--id", type=int, default=None, help="Run only eval with this id")
+    parser.add_argument("--profile", default=None, help="Use an existing authsome profile (skip profile creation/teardown)")
+    parser.add_argument("--run-dir", default=None, help="Append results to this existing run directory")
     args = parser.parse_args()
 
     preflight_check()
@@ -275,10 +291,21 @@ def main() -> None:
             install_skill_for_agent(agent)
             agents_seen.add(agent)
 
-    eval_handle, prev_handle = setup_eval_profile()
+    # Profile management: external caller provides profile, or we create one
+    external_profile = args.profile is not None
+    if external_profile:
+        eval_handle = args.profile
+        prev_handle = None
+    else:
+        eval_handle, prev_handle = setup_eval_profile()
 
-    run_dir = RESULTS_DIR / datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_dir.mkdir(parents=True, exist_ok=True)
+    # Run directory: use provided or create timestamped
+    if args.run_dir:
+        run_dir = Path(args.run_dir)
+        run_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        run_dir = RESULTS_DIR / datetime.now().strftime("%Y%m%d_%H%M%S")
+        run_dir.mkdir(parents=True, exist_ok=True)
 
     results: list[dict] = []
 
@@ -286,11 +313,6 @@ def main() -> None:
         for eval_ in evals:
             authsome_state = get_authsome_state()
             print_env_banner(eval_, authsome_state)
-
-            prompt_msg = "Press Enter to start (or Ctrl+C to abort and fix the state)"
-            if eval_.get("requires_human"):
-                prompt_msg = "Complete any pre-conditions above, then press Enter to start"
-            input(f"\n{prompt_msg}...")
 
             cmd = build_command(eval_)
             print(f"[run] {' '.join(cmd)}")
@@ -325,9 +347,10 @@ def main() -> None:
                 **verdict,
             })
     finally:
-        teardown_eval_profile(eval_handle, prev_handle)
+        if not external_profile:
+            teardown_eval_profile(eval_handle, prev_handle)
 
-    grading_path = save_grading(results, run_dir)
+    grading_path = save_grading(results, run_dir, append=args.run_dir is not None)
     summary = json.loads(grading_path.read_text())["summary"]
     print()
     print(f"Done: {summary['passed']} passed / {summary['failed']} failed / {summary['skipped']} skipped out of {summary['total']}")
