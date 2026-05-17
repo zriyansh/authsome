@@ -50,6 +50,9 @@ Rules:
 - evidence must quote or specifically reference the transcript, not repeat the criterion.
 """
 
+IDENTITIES_DIR = Path.home() / ".authsome" / "client" / "identities"
+CLIENT_CONFIG = Path.home() / ".authsome" / "client" / "config.json"
+
 RATE_LIMIT_SIGNALS = [
     "rate limit",
     "429",
@@ -192,17 +195,53 @@ def save_grading(results: list[dict], run_dir: Path) -> Path:
     return out
 
 
-def print_env_banner(eval_: dict) -> None:
+def print_env_banner(eval_: dict, authsome_state: str) -> None:
     print()
     print("=" * 60)
     print(f"EVAL {eval_['id']}: {eval_.get('name', eval_['prompt'])}")
     print(f"Agent   : {eval_.get('agent', 'claude')}")
     print(f"Environ : {eval_['environment']}")
+    print()
+    print("CURRENT AUTHSOME STATE:")
+    for line in authsome_state.splitlines():
+        print(f"  {line}")
     if eval_.get("requires_human"):
         print()
         print("HUMAN ACTION REQUIRED:")
         print(f"  {eval_['human_instructions']}")
     print("=" * 60)
+
+
+def setup_eval_profile() -> tuple[str, str]:
+    """Create a fresh profile for the eval run; return (new_handle, old_handle)."""
+    old_handle = json.loads(CLIENT_CONFIG.read_text()).get("active_identity", "")
+    result = subprocess.run(
+        ["authsome", "profile", "create", "--json"],
+        capture_output=True, text=True, check=True,
+    )
+    new_handle = json.loads(result.stdout)["profile"]
+    print(f"[profile] Created eval profile: {new_handle} (was: {old_handle})")
+    return new_handle, old_handle
+
+
+def teardown_eval_profile(new_handle: str, old_handle: str) -> None:
+    """Switch back to the previous profile and delete the eval profile's key files."""
+    if old_handle:
+        subprocess.run(["authsome", "profile", "use", old_handle], capture_output=True)
+    for ext in ("json", "key"):
+        p = IDENTITIES_DIR / f"{new_handle}.{ext}"
+        if p.exists():
+            p.unlink()
+    print(f"[profile] Removed eval profile {new_handle}, restored {old_handle or '(none)'}")
+
+
+def get_authsome_state() -> str:
+    """Run `authsome list` and return its output."""
+    result = subprocess.run(
+        ["authsome", "list"],
+        capture_output=True, text=True,
+    )
+    return (result.stdout + result.stderr).strip()
 
 
 def preflight_check() -> None:
@@ -236,48 +275,57 @@ def main() -> None:
             install_skill_for_agent(agent)
             agents_seen.add(agent)
 
+    eval_handle, prev_handle = setup_eval_profile()
+
     run_dir = RESULTS_DIR / datetime.now().strftime("%Y%m%d_%H%M%S")
     run_dir.mkdir(parents=True, exist_ok=True)
 
     results: list[dict] = []
 
-    for eval_ in evals:
-        print_env_banner(eval_)
+    try:
+        for eval_ in evals:
+            authsome_state = get_authsome_state()
+            print_env_banner(eval_, authsome_state)
 
-        if eval_.get("requires_human"):
-            input("Press Enter when pre-conditions are met and you are ready to start...")
+            prompt_msg = "Press Enter to start (or Ctrl+C to abort and fix the state)"
+            if eval_.get("requires_human"):
+                prompt_msg = "Complete any pre-conditions above, then press Enter to start"
+            input(f"\n{prompt_msg}...")
 
-        cmd = build_command(eval_)
-        print(f"[run] {' '.join(cmd)}")
+            cmd = build_command(eval_)
+            print(f"[run] {' '.join(cmd)}")
 
-        transcript, rate_limited = run_agent(cmd)
+            transcript, rate_limited = run_agent(cmd)
 
-        transcript_file = run_dir / f"transcript_{eval_['id']}.txt"
-        transcript_file.write_text(transcript)
+            transcript_file = run_dir / f"transcript_{eval_['id']}.txt"
+            transcript_file.write_text(transcript)
 
-        if rate_limited:
-            print(f"\n[WARNING] Eval {eval_['id']} — agent hit rate limit. Grading partial transcript anyway.")
+            if rate_limited:
+                print(f"\n[WARNING] Eval {eval_['id']} — agent hit rate limit. Grading partial transcript anyway.")
 
-        print(f"\n[grading] Calling LLM judge for eval {eval_['id']}...")
-        verdict = grade(eval_, transcript)
+            print(f"\n[grading] Calling LLM judge for eval {eval_['id']}...")
+            verdict = grade(eval_, transcript)
 
-        outcome_icon = "✓" if verdict["outcome"]["passed"] else "✗"
-        traj_passed = verdict["trajectory_efficiency"]["passed"]
-        traj_icon = "✓" if traj_passed is True else ("—" if traj_passed is None else "✗")
-        print(f"[result] outcome={outcome_icon}  trajectory={traj_icon}")
-        print(f"         outcome  : {verdict['outcome']['evidence']}")
-        print(f"         trajectory: {verdict['trajectory_efficiency']['evidence']}")
+            outcome_icon = "✓" if verdict["outcome"]["passed"] else "✗"
+            traj_passed = verdict["trajectory_efficiency"]["passed"]
+            traj_icon = "✓" if traj_passed is True else ("—" if traj_passed is None else "✗")
+            print(f"[result] outcome={outcome_icon}  trajectory={traj_icon}")
+            print(f"         outcome  : {verdict['outcome']['evidence']}")
+            print(f"         trajectory: {verdict['trajectory_efficiency']['evidence']}")
 
-        results.append({
-            "id": eval_["id"],
-            "name": eval_.get("name", ""),
-            "prompt": eval_["prompt"],
-            "agent": eval_.get("agent", "claude"),
-            "environment": eval_["environment"],
-            "requires_human": eval_.get("requires_human", False),
-            "rate_limited": rate_limited,
-            **verdict,
-        })
+            results.append({
+                "id": eval_["id"],
+                "name": eval_.get("name", ""),
+                "prompt": eval_["prompt"],
+                "agent": eval_.get("agent", "claude"),
+                "environment": eval_["environment"],
+                "authsome_state": authsome_state,
+                "requires_human": eval_.get("requires_human", False),
+                "rate_limited": rate_limited,
+                **verdict,
+            })
+    finally:
+        teardown_eval_profile(eval_handle, prev_handle)
 
     grading_path = save_grading(results, run_dir)
     summary = json.loads(grading_path.read_text())["summary"]

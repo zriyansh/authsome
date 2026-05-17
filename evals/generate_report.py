@@ -165,6 +165,7 @@ def generate_html(data: dict) -> str:
 
         human_badge = "<span class='human-badge'>human</span>" if human else ""
         env_text = html.escape(r.get("environment", ""))
+        state_text = html.escape(r.get("authsome_state", ""))
         prompt_text = html.escape(r["prompt"])
         name_text = html.escape(r.get("name", r["prompt"]))
         agent_text = html.escape(r.get("agent", "claude"))
@@ -210,6 +211,13 @@ def generate_html(data: dict) -> str:
           <div class="field-row">
             <span class="field-label"></span>
             <span class="field-value">{env_text}</span>
+          </div>
+        </details>
+        <details>
+          <summary>authsome state at start</summary>
+          <div class="field-row">
+            <span class="field-label"></span>
+            <span class="field-value" style="white-space:pre;font-family:monospace;font-size:0.8rem">{state_text}</span>
           </div>
         </details>
         {body_rows}
