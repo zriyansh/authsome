@@ -233,10 +233,6 @@ if session_id:
     print(f"SESSION_ID={session_id}", file=sys.stderr)
 rate_limited = any(sig in transcript.lower() for sig in RATE_LIMIT_SIGNALS)
 print(f"RATE_LIMITED={'true' if rate_limited else 'false'}", file=sys.stderr)
-# Detect agent-initiated interrupt: agent ended by asking a question
-last_assistant = next((l for l in reversed(lines_out) if l.startswith("[assistant]")), "")
-agent_interrupted = last_assistant.rstrip().endswith("?")
-print(f"AGENT_INTERRUPTED={'true' if agent_interrupted else 'false'}", file=sys.stderr)
 PYEOF
 ```
 
@@ -246,16 +242,17 @@ Read `RUN_DIR/meta_N.txt` and extract:
 SESSION_ID=$(grep "^SESSION_ID=" RUN_DIR/meta_N.txt | cut -d= -f2)
 WAITING_URL=$(grep "^WAITING_URL=" RUN_DIR/meta_N.txt | cut -d= -f2)
 RATE_LIMITED=$(grep "^RATE_LIMITED=" RUN_DIR/meta_N.txt | cut -d= -f2)
-AGENT_INTERRUPTED=$(grep "^AGENT_INTERRUPTED=" RUN_DIR/meta_N.txt | cut -d= -f2)
 ```
 
 #### d. Human handoff (requires_human evals only)
 
-**Case 1 — Agent-initiated interrupt (`expected_interrupt` is set and `AGENT_INTERRUPTED=true`):**
+**Case 1 — Agent-initiated interrupt (`expected_interrupt` is set):**
 
-If the eval has an `expected_interrupt` field and `AGENT_INTERRUPTED=true`, the agent paused
-to ask the user a question rather than proceeding autonomously. Auto-resume without human
-input by sending `next_turn_instruction` back to the session:
+If the eval has an `expected_interrupt` field, read `RUN_DIR/transcript_N.txt` and judge
+whether the agent's final message matches the described interrupt — i.e. the agent paused
+mid-task to ask the user a clarifying question or request input instead of proceeding
+autonomously. If it matches, auto-resume without human input by sending `next_turn_instruction`
+back to the session:
 
 ```bash
 claude --resume SESSION_ID \
@@ -264,9 +261,9 @@ claude --resume SESSION_ID \
 ```
 
 Parse the continuation with the same parse script (substitute `raw_N_t2.jsonl` and
-`meta_N_t2.txt`) and append to `RUN_DIR/transcript_N.txt`. Update `RATE_LIMITED` and
-`AGENT_INTERRUPTED` from `meta_N_t2.txt`. Then continue to step e for grading — do not
-prompt the human unless `WAITING_URL` is non-empty in the resumed turn.
+`meta_N_t2.txt`) and append to `RUN_DIR/transcript_N.txt`. Update `RATE_LIMITED` from
+`meta_N_t2.txt`. Then continue to step e for grading — do not prompt the human unless
+`WAITING_URL` is non-empty in the resumed turn.
 
 **Case 2 — Browser auth flow (`WAITING_URL` is non-empty):**
 
@@ -298,9 +295,8 @@ RATE_LIMITED_T2=$(grep "^RATE_LIMITED=" RUN_DIR/meta_N_t2.txt | cut -d= -f2)
 [ "$RATE_LIMITED_T2" = "true" ] && RATE_LIMITED=true
 ```
 
-If `WAITING_URL` is empty and `AGENT_INTERRUPTED` is false (or `expected_interrupt` is not set)
-for a `requires_human` eval, the agent finished in one turn (e.g. it polled for completion
-itself) — no resume needed.
+If `WAITING_URL` is empty and no agent-initiated interrupt was detected for a `requires_human`
+eval, the agent finished in one turn (e.g. it polled for completion itself) — no resume needed.
 
 #### e. Grade the transcript
 
