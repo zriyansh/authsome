@@ -14,6 +14,7 @@ from authsome.auth.models.enums import AuthType, ConnectionStatus
 from authsome.proxy.router import RouteMatch, RouteResolution
 from authsome.proxy.server import AuthProxyAddon, ProxyRouter, _build_proxy_options, _route
 from authsome.server.dependencies import create_auth_service
+from authsome.server.urls import DEFAULT_SERVER_BASE_URL
 
 
 async def _make_auth(tmp_path: Path) -> AuthLayer:
@@ -552,7 +553,7 @@ class TestAuthProxyAddon:
         body = flow.response.content.decode("utf-8")
         assert "openai" in body
         assert "authsome login openai" in body
-        assert "http://127.0.0.1:7998/ui/apps/openai" in body
+        assert f"{DEFAULT_SERVER_BASE_URL}/ui/apps/openai" in body
         log_mock.assert_any_call(
             "proxy_no_credentials",
             host="api.openai.com",
@@ -567,11 +568,12 @@ class TestAuthProxyAddon:
         flow = self._make_flow(host="example.com", path="/")
         flow.request.method = "CONNECT"
 
-        addon, _router, patcher = self._make_addon(auth, None, miss_reason="no_match", mode="connected_deny")
-        try:
-            await addon.request(flow)
-        finally:
-            patcher.stop()
+        with patch("authsome.proxy.server.audit.log"):
+            addon, _router, patcher = self._make_addon(auth, None, miss_reason="no_match", mode="connected_deny")
+            try:
+                await addon.request(flow)
+            finally:
+                patcher.stop()
 
         flow.kill.assert_called_once()
 

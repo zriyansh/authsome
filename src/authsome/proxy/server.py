@@ -18,7 +18,9 @@ from mitmproxy.options import Options
 from mitmproxy.tools.dump import DumpMaster
 
 from authsome import audit
+from authsome.cli.client_config import ProxyMode
 from authsome.proxy.router import RouteMatch, RouteResolution
+from authsome.server.urls import DEFAULT_SERVER_BASE_URL
 from authsome.utils import utc_now
 
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
@@ -335,7 +337,7 @@ class AuthProxyAddon:
     the daemon never sees or persists a proxy mode of its own.
     """
 
-    def __init__(self, client: ProxyClient, mode: str = "connected_allow") -> None:
+    def __init__(self, client: ProxyClient, mode: ProxyMode = "connected_allow") -> None:
         self._client = client
         self._mode = mode
         self._scope, self._policy = mode.split("_", 1)
@@ -469,8 +471,7 @@ def _deny_body(reason: str, match: RouteMatch | None) -> str:
     and a dashboard URL so the agent (or human) can recover; other
     reasons fall back to a generic message.
 
-    The dashboard URL assumes the default local daemon on
-    `127.0.0.1:7998`. It still requires an active dashboard session
+    The dashboard URL uses ``DEFAULT_SERVER_BASE_URL``. It still requires an active dashboard session
     (`authsome ui`) to land on the connect screen directly.
     """
     if reason == "no_credentials" and match is not None:
@@ -478,7 +479,7 @@ def _deny_body(reason: str, match: RouteMatch | None) -> str:
         return (
             f"Forbidden: provider '{provider}' is configured but has no "
             f"active connection. Run `authsome login {provider}` to connect, "
-            f"or visit http://127.0.0.1:7998/ui/apps/{provider}."
+            f"or visit {DEFAULT_SERVER_BASE_URL}/ui/apps/{provider}."
         )
     return "Forbidden by Authsome proxy policy"
 
@@ -552,9 +553,13 @@ def start_proxy_server(
     host: str = "127.0.0.1",
     port: int = 0,
     *,
-    mode: str = "connected_allow",
+    mode: ProxyMode = "connected_allow",
 ) -> RunningProxy:
     """Start a mitmproxy DumpMaster in a background thread."""
+    from typing import get_args
+
+    if mode not in get_args(ProxyMode):
+        raise ValueError(f"Invalid proxy mode {mode!r}, expected one of {get_args(ProxyMode)}")
 
     confdir = Path.home() / ".mitmproxy"
     auth_addon = AuthProxyAddon(client=client, mode=mode)

@@ -161,6 +161,7 @@ class AuthService:
         does not persist any proxy mode of its own.
         """
         if scope not in {"connected", "configured"}:
+            logger.warning("Unknown proxy scope {!r}, falling back to 'connected'", scope)
             scope = "connected"
 
         routes = []
@@ -186,7 +187,8 @@ class AuthService:
             for definition in await self.list_providers():
                 if not definition.api_url:
                     continue
-                routes.append(self._build_route_entry(definition, "default"))
+                connection = await self.resolve_connection_name(definition.name)
+                routes.append(self._build_route_entry(definition, connection))
 
         routes.sort(key=lambda r: (r["api_url"].startswith("regex:"), r["provider"]))
         return {"routes": routes}
