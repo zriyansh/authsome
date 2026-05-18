@@ -59,7 +59,7 @@ The 256-bit master key is held by one of two backends, selected by `config.encry
 
 ### `local_key` (default)
 
-The master key is stored as base64-encoded JSON in `~/.authsome/master.key` with mode `0600`. Filesystem permissions are the only protection at rest.
+The master key is stored as base64-encoded JSON in `~/.authsome/server/master.key` with mode `0600`. Filesystem permissions are the only protection at rest.
 
 ```json
 { "encryption": { "mode": "local_key" } }

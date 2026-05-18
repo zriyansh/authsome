@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, Request
 
 from authsome import __version__
 from authsome.auth import AuthService
-from authsome.auth.models.config import current_spec_version
 from authsome.server.dependencies import get_deployment_mode
 from authsome.server.routes._deps import get_auth_service, get_protected_auth_service, get_server_base_url
 from authsome.server.schemas import HealthResponse, ReadyResponse
@@ -29,7 +28,7 @@ async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
     issues: list[str] = []
     warnings: list[str] = []
 
-    checks["spec_version"] = str(current_spec_version())
+    checks["spec_version"] = "ok"
 
     # 1. Active Identity Check
     try:

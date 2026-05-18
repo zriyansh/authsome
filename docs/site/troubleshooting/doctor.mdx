@@ -27,24 +27,24 @@ A healthy machine prints `OK` for each check and exits with code `0`.
 <AccordionGroup>
   <Accordion title="master.key not found" icon="key">
     ```text
-    [FAIL] Master key not found at ~/.authsome/master.key
+    [FAIL] Master key not found at ~/.authsome/server/master.key
     ```
 
     Causes:
 
-    - You haven't run authsome on this machine before. The first CLI invocation auto-initializes the home directory. Re-run any command (for example, `uvx authsome whoami`) to trigger initialization.
+    - You haven't initialized authsome on this machine. Run `uvx authsome init` to provision the home directory, identity, and master key.
     - You moved or deleted `~/.authsome`. If you have a backup, restore it. Without the master key, encrypted records cannot be decrypted.
   </Accordion>
 
   <Accordion title="master.key has insecure permissions" icon="lock-open">
     ```text
-    [FAIL] ~/.authsome/master.key has mode 0644 (expected 0600)
+    [FAIL] ~/.authsome/server/master.key has mode 0644 (expected 0600)
     ```
 
     Fix:
 
     ```bash
-    chmod 0600 ~/.authsome/master.key
+    chmod 0600 ~/.authsome/server/master.key
     ```
   </Accordion>
 

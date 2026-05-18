@@ -1,5 +1,127 @@
 # Changelog
 
+## [0.3.1](https://github.com/agentrhq/authsome/compare/authsome-v0.3.0...authsome-v0.3.1) (2026-05-17)
+
+
+### Bug Fixes
+
+* **cli:** resolve three CLI bugs and improve audit log command ([3b990e3](https://github.com/agentrhq/authsome/commit/3b990e3cae998d9ccaccb421b5cb577c2bb89de3))
+* **cli:** resolve three CLI bugs, improve audit log, and sync docs ([dd9cad3](https://github.com/agentrhq/authsome/commit/dd9cad326cb2817826eb8e5b8bb42f5f3df8e2a2))
+
+
+### Documentation
+
+* **cli:** sync reference and manual-testing guide with 0.3.0 implementation ([bdf659f](https://github.com/agentrhq/authsome/commit/bdf659ffffc0a0c2100cc21508daec042161656e))
+
+## [0.3.0](https://github.com/agentrhq/authsome/compare/authsome-v0.2.4...authsome-v0.3.0) (2026-05-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* unify Identity and Profile; remove profile management layer
+* Existing implicit default-profile installs must run authsome init again; profile:default credentials are not migrated.
+
+### Features
+
+* add --reload flag to daemon serve command and replace custom file watcher ([8fea50e](https://github.com/agentrhq/authsome/commit/8fea50e09a9b54a130133301876627bc67d57827))
+* add --reload flag to daemon serve command and replace custom file watcher with uvicorn native reload ([2faa3c9](https://github.com/agentrhq/authsome/commit/2faa3c957bb377b82c804d8ed5ebbd26c94d0c71))
+* add audit logging for proxy request injection and resolution misses ([6766c0e](https://github.com/agentrhq/authsome/commit/6766c0e7f5b43cd9d2d8d8645dc813cc46c447a2))
+* add audit logging for proxy request injection and resolution misses, and include pytest-asyncio dependency. ([0afaf87](https://github.com/agentrhq/authsome/commit/0afaf8780ca701505145e4c2018434ec1365bd74))
+* add copy-to-clipboard functionality to OAuth Redirect URI and update UI layout and styling ([0e1aa31](https://github.com/agentrhq/authsome/commit/0e1aa310bfdb2f0f89b153b252c6ed47cba02689))
+* add did pop daemon authorization ([7ad14f6](https://github.com/agentrhq/authsome/commit/7ad14f60a39fefaebf274df5abcccc7270f841f4))
+* add DID PoP daemon authorization ([dca2246](https://github.com/agentrhq/authsome/commit/dca2246235cb9637fa26254e8f29eb549ed7ada8))
+* add RFC 7009 token revocation support to BaseFlow and integrate into Auth service ([74b96a3](https://github.com/agentrhq/authsome/commit/74b96a319c163461109beb370c49e0b88227f966))
+* add RFC 7009 token revocation support to BaseFlow and integrate into Auth service ([7af96fc](https://github.com/agentrhq/authsome/commit/7af96fc5633871ab56c391db25018f2e9e07378b))
+* **cli:** add import-env for headless API key ingestion ([bc318ff](https://github.com/agentrhq/authsome/commit/bc318fff28781f90a0b8259beef2114b730c8d72))
+* **cli:** add import-env for headless API key ingestion ([e080286](https://github.com/agentrhq/authsome/commit/e0802865bc2052c583b2e7fa0ffed303481d651c))
+* **cli:** add scan command for env provider detection ([9f9b8d4](https://github.com/agentrhq/authsome/commit/9f9b8d4de75bd6a53795454156bbc0514cb2908e))
+* **cli:** add scan command for env provider detection and optional import ([9dee261](https://github.com/agentrhq/authsome/commit/9dee261c0164ed3e202977dfd4ad199804aae6ef))
+* display OAuth redirect URI in auth UI and improve CLI command documentation and validation ([878461b](https://github.com/agentrhq/authsome/commit/878461ba6f2cd3999a9181957a877b69fb57531b))
+* display OAuth redirect URI in auth UI and improve CLI command documentation and validation ([a0d72aa](https://github.com/agentrhq/authsome/commit/a0d72aa767f3c7f60c17d22e3cdd04a34e70a13b))
+* enhance system health checks with permission, integrity, and key rotation monitoring ([dede72a](https://github.com/agentrhq/authsome/commit/dede72a1a6defd8167600ab7859f7c640550a5fa))
+* expand doctor checks ([97afd37](https://github.com/agentrhq/authsome/commit/97afd37cfc04120c6cf635cdc69b7ba20cde17ce))
+* expand doctor checks ([03ad70f](https://github.com/agentrhq/authsome/commit/03ad70fa3655a05daf82fcc7ba8513beb3ada6a6))
+* expand health checks with integrity, permission, and rotation w… ([0956ef1](https://github.com/agentrhq/authsome/commit/0956ef1688e4cce4cf8454d2665ecea06457fe37))
+* expand health checks with integrity, permission, and rotation warnings and update CLI UI to support warn status ([c885067](https://github.com/agentrhq/authsome/commit/c885067f046fa4b65fe6c3f99e1c4e694db2064b))
+* global client credentials ([aa6aa56](https://github.com/agentrhq/authsome/commit/aa6aa56cfcaf4a82cdd2cdd808d4383f9506da47))
+* global client credentials ([747b48f](https://github.com/agentrhq/authsome/commit/747b48f276eef0aeccfb8087423f4a24b163a4a9))
+* implement auto-restart for daemon when source files are modified during development ([6fd7a6b](https://github.com/agentrhq/authsome/commit/6fd7a6b34b480d20b14b3926f64f9dd57095c47d))
+* implement centralized audit logging and refactor duration formatting utility ([f9b5b89](https://github.com/agentrhq/authsome/commit/f9b5b8995a5fc5408d3e1b2c28affdd0f14cff65))
+* implement hosted UI session management and multitenant provider visibility policy ([9ed0714](https://github.com/agentrhq/authsome/commit/9ed0714455d19a62ef51a3f035418f9785d34ed0))
+* implement hosted UI session management and multitenant provider… ([c482817](https://github.com/agentrhq/authsome/commit/c48281734307035784b64d9ea99a9ed002a31411))
+* implement local client profile management and update error handling for session authentication ([46a981a](https://github.com/agentrhq/authsome/commit/46a981a448c916a5e6cd5e22eb5e98687a473313))
+* introduce parse_store_key utility and integrate into service for robust key parsing ([87b65e7](https://github.com/agentrhq/authsome/commit/87b65e7530e946fdff4a8b8bd8195d971f81117d))
+* introduce parse_store_key utility and integrate into service for robust key parsing ([78ac38c](https://github.com/agentrhq/authsome/commit/78ac38ceaa3000de052a52fd94b519e4c49257b2))
+* make provider client credentials a global property of hosted deployment ([be78393](https://github.com/agentrhq/authsome/commit/be78393d23358f370c38db4aa1d8c8768d04d3c6))
+* move OAuth2 refresh token logic to BaseFlow and update service to use flow-specific handlers ([9b0366d](https://github.com/agentrhq/authsome/commit/9b0366dd014e3542a3f8156909ead8fd91a61561))
+* move OAuth2 refresh token logic to BaseFlow and update service to use flow-specific handlers ([77b07d0](https://github.com/agentrhq/authsome/commit/77b07d0b41fc3e39bbee79c2409a68c85fadf64c))
+* require server-registered identities ([019bdd1](https://github.com/agentrhq/authsome/commit/019bdd11e8fdc343ca0f571c2c7ef15f1347ba23))
+* server store cleanup ([ec06181](https://github.com/agentrhq/authsome/commit/ec061812d284b7c9cef8f93a1d215b6df111cb8e))
+* stabilize and document specific CLI exit codes for error states ([9f40cc6](https://github.com/agentrhq/authsome/commit/9f40cc6e02c5a95f9304c5948ca7cb5e222fa8cd))
+* standardize CLI exit codes and add comprehensive documentation for error states ([8024433](https://github.com/agentrhq/authsome/commit/80244339c9990b741f48093123a9fbaf54f7c3c6))
+* standardize CLI JSON output format with versioning ([c1c4fec](https://github.com/agentrhq/authsome/commit/c1c4fec7a0ea5a1715d8d818ecee191f64dde719))
+* standardize CLI JSON output format with versioning and stable schema fields ([933d106](https://github.com/agentrhq/authsome/commit/933d106f1f14f370ca829b9e03843d43fa4d32ce))
+
+
+### Bug Fixes
+
+* client secret field made default ([3929b86](https://github.com/agentrhq/authsome/commit/3929b86ea934023cec0e4b58e14c7761bdf79b93))
+* client secret field made default ([e3a4939](https://github.com/agentrhq/authsome/commit/e3a4939136d4c694e6c18743e15832dcd9191d83))
+* correct daemon health check logic to properly validate client status and readiness ([e92bdad](https://github.com/agentrhq/authsome/commit/e92bdad5bbe208f3942618a06ae193f72eefd520))
+* **docs:** repoint canonical to authsome.ai and drop dead links ([459259e](https://github.com/agentrhq/authsome/commit/459259ea8ef9e4b277706644fb88875188859cca))
+* **docs:** repoint canonical to authsome.ai and drop dead links ([c97c1af](https://github.com/agentrhq/authsome/commit/c97c1afb5f9f79ddf5727ba965a2c2bdc0c13ce8))
+* **docs:** unwrap call-graph diagram from Frame component ([bd28b9c](https://github.com/agentrhq/authsome/commit/bd28b9c647bfd233d702f393c2cf39055318d82c))
+* **docs:** unwrap call-graph diagram from Frame component ([4d8e548](https://github.com/agentrhq/authsome/commit/4d8e54807728340e630eeb649c24e557b0e8259b))
+* modify return type of _request function in cli client ([d7ddb2e](https://github.com/agentrhq/authsome/commit/d7ddb2ee33afbb406bc89913b7bc551a0e382697))
+* prevent accidental termination of unrelated processes by validat ([f6b2f30](https://github.com/agentrhq/authsome/commit/f6b2f30c77a85ba56e0409fd5028417ea0b09c8f))
+* prevent accidental termination of unrelated processes by validating daemon PID against local lock record during shutdown ([c25fe9c](https://github.com/agentrhq/authsome/commit/c25fe9c2cab05eabcb4707df53082f551ab8aad0))
+* **proxy:** add mitmproxy CA to macOS keychain for Go tool TLS compatibility ([145734a](https://github.com/agentrhq/authsome/commit/145734accec2b5f1a3ad1f3c8478f82a461dc218))
+* **proxy:** add mitmproxy CA to macOS keychain for Go tool TLS compatibility ([c9a9842](https://github.com/agentrhq/authsome/commit/c9a98425e59934906302f0fc46818771c7300a3b)), closes [#234](https://github.com/agentrhq/authsome/issues/234)
+* refactoring ([cbf3a40](https://github.com/agentrhq/authsome/commit/cbf3a40b41f51c548cf9b377ad50e71e53e35af3))
+* remove redundant flexbox properties from summary element styling ([8fc0b32](https://github.com/agentrhq/authsome/commit/8fc0b32e3801408a373f22dcf864609a562f02b7))
+* save library version in client config ([5f52807](https://github.com/agentrhq/authsome/commit/5f52807b68012e3b46e9b62fb7ad63b0c0c383a5))
+* update vault storage to use collection-scoped path in _save_provider_state ([c9eba5b](https://github.com/agentrhq/authsome/commit/c9eba5bb78ff54215a6660f70836e00716fcaae7))
+* warn when token refresh fails ([627d579](https://github.com/agentrhq/authsome/commit/627d579d6ef65dda58b764a43ee3705ad72344d5))
+
+
+### Reverts
+
+* expand health checks with integrity, permission, and rotation w… ([6090d69](https://github.com/agentrhq/authsome/commit/6090d699c610b786fc2674ca20aebcdf409918b4))
+
+
+### Documentation
+
+* add API call constraints and troubleshooting guide to SKILL.md ([8313a27](https://github.com/agentrhq/authsome/commit/8313a270e2db8fb490e920bca09c925738e9ac7b))
+* **readme:** add codecov badge and star history chart ([373a4a8](https://github.com/agentrhq/authsome/commit/373a4a80e9de7e1e4dd587e270fe960774d0d6aa))
+* **readme:** overhaul with logo, community, security, and integrations ([3009e95](https://github.com/agentrhq/authsome/commit/3009e9505bf22dd51ae6efe9902261fce291d8c8))
+* **readme:** overhaul with logo, community, security, and integrations ([2135499](https://github.com/agentrhq/authsome/commit/2135499d1aed84e8127f8607ffecdac698faef4b))
+* remove restrictive constraints on CLI tool usage from SKILL.md ([98ee7ef](https://github.com/agentrhq/authsome/commit/98ee7efb36fe1bb5de800ce156146c7a5a9823f1))
+* **site:** add CodeGroup, Expandable; remove now-unused proxy-injection snippet ([02d97f0](https://github.com/agentrhq/authsome/commit/02d97f025befb8f25bec882a56b05a1c38a54049))
+* **site:** add logo wordmark, Discord link, and navbar icons ([38b3704](https://github.com/agentrhq/authsome/commit/38b3704a3e1911a0294cf9aa3bbdc7bc12ef2767))
+* **site:** add logo wordmark, Discord link, and navbar icons ([bccf288](https://github.com/agentrhq/authsome/commit/bccf288447602df23c333fe79d662877bc7c4399))
+* **site:** audit fixes across all four tiers ([89700e5](https://github.com/agentrhq/authsome/commit/89700e5b11657936adb54968b7d335bd6e96aef8))
+* **site:** drop dead ProxyInjection import from provider pages ([eb5f0a6](https://github.com/agentrhq/authsome/commit/eb5f0a6afb841497400432774ca8fcad3046cc9a))
+* **site:** four-tab nav + CLI/proxy-first framing ([f8fcab4](https://github.com/agentrhq/authsome/commit/f8fcab42ea0af9026829f85a18d2a67ab0c8d590))
+* **site:** full audit pass — fix factual errors, dedupe, expand CLI/API surface ([ee33a49](https://github.com/agentrhq/authsome/commit/ee33a4932ae711fab0cefc30df482638876e4e41))
+* **site:** lead with CLI + proxy; demote library to embedding case ([3f3cdd8](https://github.com/agentrhq/authsome/commit/3f3cdd8fccd623978c7fcbbabb9b4eef8bcde20b))
+* **site:** rebuild docs into tabbed structure with shared snippets and component upgrades ([ced2422](https://github.com/agentrhq/authsome/commit/ced242215e70fe633ef27934fb9bef57df685ec3))
+* **site:** split Guides and Reference into top-level tabs ([fac06d6](https://github.com/agentrhq/authsome/commit/fac06d6275044737265570a24c861c7d44edffe8))
+* **skill:** add proxy mental model to Usage section ([7ca72a5](https://github.com/agentrhq/authsome/commit/7ca72a53ae89394db5a31a725eeacf9ef255f820))
+* **skill:** bump to 0.1.5, soften CRITICAL RULE, clean up examples ([70c95ff](https://github.com/agentrhq/authsome/commit/70c95ffd82be6a7816f991136be2e5e6d47d31ed))
+* **skill:** fix repo refs, sharpen description, move CRITICAL RULE to body ([d52244c](https://github.com/agentrhq/authsome/commit/d52244cbb93840aa54a4b645f67fd06fa9f404fc))
+* **skill:** lead with usage, move install/login to reference sections ([51fcf74](https://github.com/agentrhq/authsome/commit/51fcf740c16d25937ccac81cc71d8777c3424f26))
+* **skill:** radically simplify — usage first, minimal prose ([6e9ab01](https://github.com/agentrhq/authsome/commit/6e9ab01400ef49e7f6f13eb7f21a089bdc096c00))
+* **skill:** recommend uv tool install over uvx alias ([a4b3355](https://github.com/agentrhq/authsome/commit/a4b335533afdaab5399fbc8db82d7b820560d962)), closes [#251](https://github.com/agentrhq/authsome/issues/251)
+* **skill:** recommend uv tool install, simplify usage, v0.1.5 ([f264696](https://github.com/agentrhq/authsome/commit/f2646960a840fde4b513dcd3af6e926a36ef1e61))
+* **skill:** remove registering a new provider section ([3342b5b](https://github.com/agentrhq/authsome/commit/3342b5b59adf41bb9e77995cbca3bae0c14cea77))
+* **skill:** simplify Step 3 with concrete examples and always-run pattern ([727dccc](https://github.com/agentrhq/authsome/commit/727dcccc4173fe41c287593041771697b262e291))
+* Update README how-it-works diagram ([26dcd74](https://github.com/agentrhq/authsome/commit/26dcd74a8687c2e295bf6b4ab7df3a58b14a72e2))
+
+
+### Code Refactoring
+
+* unify Identity and Profile; remove profile management layer ([d6958c8](https://github.com/agentrhq/authsome/commit/d6958c8434f4aa20a8d82c8fb4ecc143a3fa3d69))
+
 ## [0.2.4](https://github.com/manojbajaj95/authsome/compare/authsome-v0.2.3...authsome-v0.2.4) (2026-05-08)
 
 
