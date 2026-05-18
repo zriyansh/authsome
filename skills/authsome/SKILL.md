@@ -55,9 +55,9 @@ If there is a login error due to wrong client id/client secret you can delete th
 
 **4. If relevant provider does not exist, then → add it first and then try [Login](#login)**
 
-Determine what the provider needs:
-- **API key** — prompt the user to supply the key; `authsome` will capture it via the browser bridge.
-- **OAuth app** — guide the user to create an OAuth app (client ID + secret) in the provider's developer console, then run login.
+## Adding a new provider
+
+See [references/adding-provider.md](references/adding-provider.md).
 
 
 ---
@@ -74,10 +74,14 @@ Fallback: `pipx install authsome` or `uvx authsome@latest <command>` for one-off
 
 ## Login
 
-```bash
-authsome login <provider>   # opens browser, captures credentials securely
-authsome list               # verify the provider shows as connected
-```
+1. Run `authsome login <provider>`, it opens browser, captures credentials securely
+2. **Wait 5 seconds** for the user to authenticate in the opened browser:
+   ```bash
+   sleep 5
+   ```
+3. Run `authsome list` to check whether the provider now shows as connected.
+- **If connected** — proceed normally.
+- **If not yet connected** — display the authentication URL to the user (helps in headless mode) and ask them to complete the login in their browser, then report back once done. Once the user confirms, run `authsome list` again to verify the connection before continuing.
 
 ---
 
@@ -96,11 +100,15 @@ authsome run --help
   request through the proxy.
 - **Never** use browser extensions, gcloud, or manual auth flows. The
   gateway handles credentials for you.
-- **Never** ask the user for API keys or tokens directly. Direct them to
-  connect the service in the Authsome dashboard.
+- **Never** ask the user for API keys or tokens directly. Run `authsome login
+  <provider>`. It opens a browser window and captures them directly, so secrets
+  never enter the conversation.
 - **Never** suggest the user open Gmail/Calendar/GitHub in their browser
   when they ask you to read or interact with those services. You have API
   access. Use it.
 - If the gateway returns a policy error (403 with a JSON body), respect
   the block. Do not retry or circumvent it.
-- If the skill fails, the goal took too many steps, the CLI behaved unexpectedly, or the user asks you to report an issue — file a bug following [feedback.md](references/feedback.md).
+- If the skill fails, the goal took too many steps, the CLI behaved unexpectedly,
+  or the user asks you to report an issue — file a bug following
+  [references/feedback.md](references/feedback.md).
+- **Never** ask the user to run commands in their terminal that you can run yourself.
