@@ -92,7 +92,7 @@ Expected: both respond with `OK`. Hermes runs the eval agents; claude is the LLM
 
 ### 1. Load evals
 
-Read `skills/authsome/evals/evals.json`. Show the user a table of which
+Read `evals/evals.json`. Show the user a table of which
 evals will run (id, name, agent, requires_human, optional).
 
 Read `~/.authsome/client/config.json` and save `active_identity` as
@@ -288,7 +288,7 @@ from pathlib import Path
 
 transcript = Path(sys.argv[1]).read_text()
 eval_id = int(sys.argv[2])
-evals = json.loads(Path("skills/authsome/evals/evals.json").read_text())["evals"]
+evals = json.loads(Path("evals/evals.json").read_text())["evals"]
 eval_ = next(e for e in evals if e["id"] == eval_id)
 
 JUDGE_PROMPT = """\
@@ -374,7 +374,7 @@ grading_path = Path(sys.argv[1])
 eval_id = int(sys.argv[2])
 rate_limited = sys.argv[3] == "true"
 
-evals = json.loads(Path("skills/authsome/evals/evals.json").read_text())["evals"]
+evals = json.loads(Path("evals/evals.json").read_text())["evals"]
 eval_ = next(e for e in evals if e["id"] == eval_id)
 
 run_dir = grading_path.parent
