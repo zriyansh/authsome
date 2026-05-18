@@ -1,8 +1,8 @@
 ---
 name: authsome
-version: 0.1.5
+version: 0.2.0
 description: |
-  OAuth2 and API key credential manager for connecting agents to external services. Use this skill whenever your task requires calling any external API — GitHub, Google, OpenAI, Linear, Slack, and more — even if the user hasn't mentioned authentication. It handles the full flow: installing the tool, logging in via a secure browser flow, and running commands with credentials injected automatically.
+  Use this to access external services/APIs: Github/Gmail/Stripe etc. or when running any bash command, script, or curl/wget that makes outbound HTTP calls. Make HTTP requests directly and the gateway injects credentials automatically.
 ---
 
 # Authsome Skill

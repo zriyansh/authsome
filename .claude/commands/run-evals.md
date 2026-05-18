@@ -161,7 +161,7 @@ Before running the agent, read `max_turns` from the eval object (default
 **Hermes evals:**
 
 ```bash
-hermes chat -q "PROMPT" --yolo --max-turns MAX_TURNS \
+hermes chat -v -q "PROMPT" --yolo --max-turns MAX_TURNS \
   2>&1 | tee RUN_DIR/transcript_N.txt
 ```
 
@@ -268,7 +268,15 @@ Parse the continuation with the same parse script (substitute `raw_N_t2.jsonl` a
 **Case 2 — Browser auth flow (`WAITING_URL` is non-empty):**
 
 If `WAITING_URL` is non-empty, the agent started an auth flow and is
-suspended at its session boundary. Show the user:
+suspended at its session boundary. Wait 5 seconds, then check whether
+the auth flow completed automatically:
+
+```bash
+sleep 5 && uv run authsome list
+```
+
+If the relevant provider now shows `connected`, proceed directly to resuming
+the session (skip the user prompt). If it is still `not_connected`, show the user:
 
 > The agent is waiting. Please complete the auth flow at: `WAITING_URL`
 > Tell me "done" when finished.
