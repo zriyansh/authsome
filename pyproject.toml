@@ -78,3 +78,6 @@ ignore = []
 
 [tool.ruff.lint.mccabe]
 max-complexity = 20
+
+[dependency-groups]
+dev = []
