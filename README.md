@@ -172,9 +172,22 @@ Authsome is a credential tool. If you find a vulnerability, please do **not** op
 
 See the [responsible disclosure policy](https://authsome.ai/docs/security/disclosure) for how to report it privately.
 
+## Roadmap
+
+See [authsome.ai/docs/roadmap](https://authsome.ai/docs/roadmap) for what's shipped, what's next, and what's out of scope.
+
 ## Contributing
 
-Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and the engineering principles we follow.
+- **Found a bug?** [Open an issue](https://github.com/agentrhq/authsome/issues/new?template=bug_report.md)
+- **Have an idea?** [Start a discussion](https://github.com/agentrhq/authsome/discussions/new?category=ideas)
+- **Want to contribute?** Read [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and the engineering principles we follow.
+
+## Links
+
+- **Website:** [authsome.ai](https://authsome.ai)
+- **Docs:** [authsome.ai/docs](https://authsome.ai/docs)
+- **Discord:** [discord.gg/9YP2C9tvMp](https://discord.gg/9YP2C9tvMp)
+- **Issues:** [github.com/agentrhq/authsome/issues](https://github.com/agentrhq/authsome/issues)
 
 ## Star History
 
