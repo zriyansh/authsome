@@ -62,7 +62,9 @@
       "outcome": "The agent successfully fetches and displays the user's assigned ClickUp tasks after setting up the provider and completing OAuth.",
       "trajectory_efficiency": "4 meaningful steps: (1) checks authsome list and finds ClickUp absent or not connected, (2) registers ClickUp as a custom OAuth provider using authsome register, (3) runs authsome login clickup and completes OAuth in browser, (4) calls the ClickUp API via authsome run and returns results.",
       "requires_human": true,
-      "human_instructions": "When the browser opens for ClickUp OAuth authorization, complete the flow and return to the terminal. The agent will continue automatically."
+      "human_instructions": "When the browser opens for ClickUp OAuth authorization, complete the flow and return to the terminal. The agent will continue automatically.",
+      "expected_interrupt": "Agent asks whether to use OAuth or API key flow, or asks the user to provide a ClickUp personal API token.",
+      "next_turn_instruction": "Use the OAuth flow. Register ClickUp as a custom OAuth provider using authsome register with ClickUp's OAuth credentials, then run authsome login clickup to complete the browser auth flow."
     },
     {
       "id": 7,

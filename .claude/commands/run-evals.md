@@ -246,6 +246,27 @@ RATE_LIMITED=$(grep "^RATE_LIMITED=" RUN_DIR/meta_N.txt | cut -d= -f2)
 
 #### d. Human handoff (requires_human evals only)
 
+**Case 1 — Agent-initiated interrupt (`expected_interrupt` is set):**
+
+If the eval has an `expected_interrupt` field, read `RUN_DIR/transcript_N.txt` and judge
+whether the agent's final message matches the described interrupt — i.e. the agent paused
+mid-task to ask the user a clarifying question or request input instead of proceeding
+autonomously. If it matches, auto-resume without human input by sending `next_turn_instruction`
+back to the session:
+
+```bash
+claude --resume SESSION_ID \
+  --dangerously-skip-permissions --verbose --output-format stream-json \
+  --max-turns MAX_TURNS -p "NEXT_TURN_INSTRUCTION" > RUN_DIR/raw_N_t2.jsonl 2>&1
+```
+
+Parse the continuation with the same parse script (substitute `raw_N_t2.jsonl` and
+`meta_N_t2.txt`) and append to `RUN_DIR/transcript_N.txt`. Update `RATE_LIMITED` from
+`meta_N_t2.txt`. Then continue to step e for grading — do not prompt the human unless
+`WAITING_URL` is non-empty in the resumed turn.
+
+**Case 2 — Browser auth flow (`WAITING_URL` is non-empty):**
+
 If `WAITING_URL` is non-empty, the agent started an auth flow and is
 suspended at its session boundary. Show the user:
 
@@ -274,8 +295,8 @@ RATE_LIMITED_T2=$(grep "^RATE_LIMITED=" RUN_DIR/meta_N_t2.txt | cut -d= -f2)
 [ "$RATE_LIMITED_T2" = "true" ] && RATE_LIMITED=true
 ```
 
-If `WAITING_URL` is empty for a `requires_human` eval, the agent finished
-in one turn (e.g. it polled for completion itself) — no resume needed.
+If `WAITING_URL` is empty and no agent-initiated interrupt was detected for a `requires_human`
+eval, the agent finished in one turn (e.g. it polled for completion itself) — no resume needed.
 
 #### e. Grade the transcript
 
