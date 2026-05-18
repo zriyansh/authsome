@@ -10,6 +10,7 @@ from typing import Any, Protocol
 
 from loguru import logger
 
+from authsome.cli.client_config import load_client_config
 from authsome.proxy.certs import ensure_local_proxy_ca
 from authsome.proxy.server import RunningProxy, start_proxy_server
 
@@ -21,7 +22,7 @@ class ProxyClient(Protocol):
 
     async def resolve_credentials(self, **kwargs: Any) -> Any: ...
 
-    async def proxy_routes(self) -> Any: ...
+    async def proxy_routes(self, scope: str = "connected") -> Any: ...
 
     async def list_providers_by_source(self) -> Any: ...
 
@@ -75,7 +76,8 @@ class ProxyRunner:
 
     def _start_proxy(self) -> tuple[str, RunningProxy]:
         ensure_local_proxy_ca(self._home)
-        server = start_proxy_server(self._client)
+        mode = load_client_config(self._home).proxy_mode
+        server = start_proxy_server(self._client, mode=mode)
         return server.url, server
 
     async def _inject_dummy_credentials(self, env: dict[str, str]) -> None:
