@@ -2,12 +2,31 @@
 
 from __future__ import annotations
 
+import base64
 import builtins
 import json
+import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
+
+from key_value.aio._utils.compound import uncompound_key
+from loguru import logger
 
 from authsome.store.interfaces import AppStore
+from authsome.vault.crypto import (
+    _KEYRING_SERVICE,
+    _KEYRING_USERNAME,
+    _AesGcmCrypto,
+    create_crypto,
+)
+
+kr: Any
+try:
+    import keyring
+
+    kr = keyring
+except ImportError:
+    kr = None
 
 if TYPE_CHECKING:
     from authsome.vault.crypto import VaultCrypto
@@ -35,8 +54,6 @@ class Vault:
     @property
     def crypto(self) -> VaultCrypto:
         if self._crypto is None:
-            from authsome.vault.crypto import create_crypto
-
             self._crypto = create_crypto(self._master_key_path, self._crypto_mode)
         return self._crypto
 
@@ -97,6 +114,78 @@ class Vault:
         """Perform health check on underlying store."""
         _ = identity
         return await self._app_store.check_integrity()
+
+    async def rekey(self, new_key_bytes: bytes) -> None:
+        """Re-encrypt all encrypted keys in the underlying KV store using a new master key."""
+        # 1. Create a new crypto instance using the new key
+        new_crypto = _AesGcmCrypto(new_key_bytes)
+        old_crypto = self.crypto
+
+        # 2. Iterate over all entries in the underlying DiskStore cache
+        # DiskStore stores compound keys as collection::key
+        cache = cast(Any, self._app_store.kv)._cache
+        # Collect all keys first to avoid iterating while modifying
+        all_compound_keys = list(cache.iterkeys())
+
+        # Perform in-place re-encryption
+        reencrypted_count = 0
+        for comp_key in all_compound_keys:
+            try:
+                collection, key = uncompound_key(comp_key)
+            except Exception:
+                continue
+
+            if collection == "config" or key == "__index__":
+                continue
+
+            # Retrieve and decrypt the entry
+            val = await self._app_store.kv.get(key, collection=collection)
+            if val is not None and "data" in val:
+                ciphertext = val["data"]
+                # Decrypt with old crypto and re-encrypt with new crypto
+                plaintext = old_crypto.decrypt(ciphertext)
+                new_ciphertext = new_crypto.encrypt(plaintext)
+                # Store the re-encrypted value back
+                await self._app_store.kv.put(key, {"data": new_ciphertext}, collection=collection)
+                reencrypted_count += 1
+
+        # 3. Swap the key file or keyring entry
+        if self._crypto_mode == "local_key":
+            if self._master_key_path is None:
+                raise ValueError("master_key_path is required for 'local_key' mode")
+
+            # Atomic swap of master key file
+            temp_path = self._master_key_path.with_suffix(".tmp")
+            key_data = {
+                "version": 1,
+                "key": base64.b64encode(new_key_bytes).decode("ascii"),
+                "algorithm": "AES-256-GCM",
+                "note": "Local master key for authsome. Protect this file.",
+            }
+            temp_path.write_text(json.dumps(key_data, indent=2), encoding="utf-8")
+            try:
+                os.chmod(temp_path, 0o600)
+            except OSError:
+                pass
+
+            # Replace old key file atomically
+            temp_path.replace(self._master_key_path)
+
+        elif self._crypto_mode == "keyring":
+            if kr is None:
+                raise RuntimeError(
+                    "The 'keyring' package is required for keyring mode. Install it with: pip install keyring"
+                )
+
+            key_b64_str = base64.b64encode(new_key_bytes).decode("ascii")
+            try:
+                kr.set_password(_KEYRING_SERVICE, _KEYRING_USERNAME, key_b64_str)
+            except Exception as exc:
+                raise RuntimeError(f"Failed to store new master key in OS keyring: {exc}") from exc
+
+        # 4. Clear the active crypto in memory so it reloads on next access
+        self._crypto = None
+        logger.info("Rekey completed successfully. Re-encrypted {} keys.", reencrypted_count)
 
     async def close(self) -> None:
         """Release resources."""

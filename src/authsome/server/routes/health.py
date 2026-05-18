@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import secrets
 from typing import Literal, cast
 
 from fastapi import APIRouter, Depends, Request
@@ -84,6 +86,20 @@ async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
 
     status = "ready" if not issues else "not_ready"
     return ReadyResponse(status=status, checks=checks, issues=issues, warnings=warnings)
+
+
+_rekey_lock = asyncio.Lock()
+
+
+@router.post("/rekey")
+async def rekey(
+    request: Request,
+    auth: AuthService = Depends(get_protected_auth_service),
+) -> dict[str, str]:
+    async with _rekey_lock:
+        new_key_bytes = secrets.token_bytes(32)
+        await auth.vault.rekey(new_key_bytes)
+        return {"status": "ok", "message": "Master key successfully rotated"}
 
 
 @router.get("/whoami")

@@ -1008,6 +1008,28 @@ async def doctor(ctx_obj: ContextObj) -> None:
             sys.exit(1)
 
 
+@cli.command(name="rekey")
+@auth_command
+async def rekey(ctx_obj: ContextObj) -> None:
+    """Generate a new master key and re-encrypt all stored credentials in place."""
+    actx = await ctx_obj.initialize()
+    if not ctx_obj.json_output and not ctx_obj.quiet:
+        ctx_obj.echo("Generating a new master key and re-encrypting the vault...", color="cyan")
+
+    try:
+        await actx.runtime_client.rekey()
+
+        if ctx_obj.json_output:
+            ctx_obj.print_json({"status": "success", "message": "Master key successfully rotated"})
+        else:
+            ctx_obj.echo("Master key successfully rotated and credentials re-encrypted.", color="green")
+
+        logger.info("client_event event=rekey status=success")
+    except Exception:
+        logger.warning("client_event event=rekey status=failure")
+        raise
+
+
 @cli.command()
 @click.option("--no-browser", is_flag=True, help="Print the URL instead of opening a browser.")
 @auth_command
