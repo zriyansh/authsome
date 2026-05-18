@@ -51,7 +51,7 @@ If there is a login error due to wrong client id/client secret you can delete th
 **3. If relevant provider exists and it is connected → you need to re-login, creds have expired**
 
 - revoke the creds using `authsome revoke <provider>`
-- then do a normal [Login](#login)
+- then try [Login](#login)
 
 **4. If relevant provider does not exist, then → add it first and then try [Login](#login)**
 
@@ -74,14 +74,10 @@ Fallback: `pipx install authsome` or `uvx authsome@latest <command>` for one-off
 
 ## Login
 
-1. Run `authsome login <provider>`, it opens browser, captures credentials securely
-2. **Wait 5 seconds** for the user to authenticate in the opened browser:
-   ```bash
-   sleep 5
-   ```
-3. Run `authsome list` to check whether the provider now shows as connected.
-- **If connected** — proceed normally.
-- **If not yet connected** — display the authentication URL to the user (helps in headless mode) and ask them to complete the login in their browser, then report back once done. Once the user confirms, run `authsome list` again to verify the connection before continuing.
+```bash
+authsome login <provider>   # opens browser, captures credentials securely
+authsome list               # verify the provider shows as connected
+```
 
 ---
 
