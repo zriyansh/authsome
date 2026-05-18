@@ -11,19 +11,20 @@ keywords: ["authsome roadmap", "authsome planned features", "authsome future"]
 - **One-command login** — authenticate with any of 45+ providers in one step. Works in the browser, over SSH, and in CI.
 - **Headless credential access** — agents get a valid token with a single CLI call. No browser, no prompt, no secrets in env vars.
 - **Automatic token refresh** — tokens are silently refreshed before they expire. Agents never see an auth error.
-- **Zero-knowledge proxy** — run any agent or script behind a local proxy that injects credentials at request time, without ever exposing them in environment variables or process args.
+- **Zero-knowledge proxy** — run any agent or script behind a local proxy that injects credentials at request time, without exposing them in environment variables or process args.
 - **Encrypted local vault** — all credentials are encrypted at rest on your machine. No cloud account, no SaaS dependency.
 - **45+ bundled providers** — GitHub, Google, Linear, OpenAI, Slack, Notion, and more. Custom providers via a JSON file.
-- **Multiple accounts per provider** — log into GitHub as your personal account and your work account, then pick which one each agent uses.
+- **Multi-tenant provider support** — connect to GitHub Enterprise, self-managed GitLab, Okta, and other multi-tenant services with a custom `--base-url` at login time.
 - **Web dashboard** — view and manage all your connections in a local browser UI.
-- **Audit log** — a complete record of every credential access, login, and logout.
-- **Per-agent access control** — decide which agents are allowed to use which credentials, without changing the agent itself.
-- **Firewall rules** — block or allow outbound requests at the proxy layer per agent and per service.
+- **Audit log** — a structured record of every credential access, login, and logout.
+- **Hosted daemon mode** — deploy authsome on an internal server and point multiple machines at it. Approved for VPN / private networks only; not yet hardened for public internet use.
 - **Agent integrations** — drop-in setup guides for Claude Code, Codex, Cursor, LangChain, LlamaIndex, OpenAI Agents SDK, and Anthropic SDK.
 
 ## Coming next
 
-- **Multi-user support** — share a single authsome instance across multiple users, with proper credential isolation between them.
+- **Per-agent access control** — decide which agents are allowed to use which credentials, without changing the agent itself.
+- **Proxy firewall rules** — block or allow outbound requests at the proxy layer per agent and per service.
+- **Multi-user support** — multiple users sharing a deployed daemon with proper credential isolation between them.
 - **Native MCP tool** — use authsome as an MCP tool in any MCP-compatible agent, not just via the CLI.
 - **Homebrew** — `brew install authsome` for macOS.
 
