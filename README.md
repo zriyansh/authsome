@@ -174,7 +174,7 @@ See the [responsible disclosure policy](https://authsome.ai/docs/security/disclo
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for planned features and the direction of the project.
+See [authsome.ai/docs/roadmap](https://authsome.ai/docs/roadmap) for what's shipped, what's next, and what's out of scope.
 
 ## Contributing
 
