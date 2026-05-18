@@ -6,6 +6,7 @@
       "name": "Skill Triggering",
       "prompt": "Can you list my last 5 starred repositories on GitHub?",
       "agent": "hermes",
+      "max_turns": 5,
       "environment": "hermes is installed with the authsome skill available alongside its full set of bundled skills. No GitHub connection is required — this test only checks whether the skill is loaded.",
       "outcome": "The agent loads the authsome skill (calls skill_view with name=authsome) without being explicitly told to use authsome.",
       "requires_human": false
