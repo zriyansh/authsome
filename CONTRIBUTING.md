@@ -86,7 +86,7 @@ The diff shows what changed. The commit message should say why. Future readers (
 ## Getting started
 
 ```bash
-git clone https://github.com/manojbajaj95/authsome.git
+git clone https://github.com/agentrhq/authsome.git
 cd authsome
 uv pip install -e ".[dev]"
 pre-commit install          # runs ruff automatically on every commit
