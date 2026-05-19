@@ -30,7 +30,7 @@ Create an API key in the Optimizely dashboard at [https://app.optimizely.com/v2/
 ## Log in
 
 ```bash
-uvx authsome login optimizely
+authsome login optimizely
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get optimizely --field status
+authsome get optimizely --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export optimizely --format env)"
+eval "$(authsome export optimizely --format env)"
 echo $OPTIMIZELY_API_KEY
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `OPTIMIZELY_API_KEY=authsome-proxy-managed` in th
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login optimizely --connection personal
-uvx authsome login optimizely --connection team
+authsome login optimizely --connection personal
+authsome login optimizely --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login optimizely --force          # rotate
-uvx authsome logout optimizely                  # remove local credential
-uvx authsome remove optimizely                  # remove all local state for the provider
+authsome login optimizely --force          # rotate
+authsome logout optimizely                  # remove local credential
+authsome remove optimizely                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Optimizely.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect optimizely > ~/.authsome/providers/optimizely.json
+authsome inspect optimizely > ~/.authsome/providers/optimizely.json
 # edit fields
-uvx authsome list   # source now shows "custom" for optimizely
+authsome list   # source now shows "custom" for optimizely
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

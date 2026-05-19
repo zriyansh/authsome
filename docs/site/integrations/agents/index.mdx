@@ -7,7 +7,7 @@ keywords: ["agent credential management", "agent oauth", "agent api keys", "auth
 
 Authsome is provider-side, not framework-side. It manages credentials for the services your agents call.
 
-The supported pattern for every framework is the same: **wrap the agent invocation with `uvx authsome run --`**. The local HTTP proxy intercepts outbound requests and injects the right `Authorization` header per provider. The agent's environment never contains real secrets.
+The supported pattern for every framework is the same: **wrap the agent invocation with `authsome run --`**. The local HTTP proxy intercepts outbound requests and injects the right `Authorization` header per provider. The agent's environment never contains real secrets.
 
 If your agent is Python-native and you're embedding authsome inside a larger orchestrator with custom storage or wiring, the library is available as a secondary surface. For everything else, the CLI and proxy are the right tools.
 
@@ -54,7 +54,7 @@ This section has a page per agent framework with the install path, the proxy wir
 ## The recommended pattern
 
 ```bash
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 The agent runs as a subprocess of authsome. A local HTTP proxy intercepts outbound requests and injects the right `Authorization` header per provider. The child process never sees the real secret because the proxy substitutes a placeholder env var like `OPENAI_API_KEY=authsome-proxy-managed`. See [Run agents with the proxy](/guides/run-agents-with-proxy).
@@ -62,7 +62,7 @@ The agent runs as a subprocess of authsome. A local HTTP proxy intercepts outbou
 For SDKs that can't route through an HTTP proxy (pinned TLS, non-HTTP protocols), fall back to:
 
 ```bash
-eval "$(uvx authsome export <provider> --format env)"
+eval "$(authsome export <provider> --format env)"
 python my_agent.py
 ```
 

@@ -44,7 +44,7 @@ Dashboard: [https://www.klaviyo.com/oauth/client](https://www.klaviyo.com/oauth/
 ## Log in
 
 ```bash
-uvx authsome login klaviyo-oauth
+authsome login klaviyo-oauth
 ```
 
 The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://www.klaviyo.com/oauth/authorize` for the authorization step.
@@ -52,7 +52,7 @@ The first time, authsome opens a local form at `http://127.0.0.1:7998` to collec
 Verify:
 
 ```bash
-uvx authsome get klaviyo-oauth --field status
+authsome get klaviyo-oauth --field status
 # → connected
 ```
 
@@ -61,18 +61,18 @@ uvx authsome get klaviyo-oauth --field status
 The bundled definition requests `accounts:read`. Override at login time:
 
 ```bash
-uvx authsome login klaviyo-oauth --scopes "<comma-separated>"
+authsome login klaviyo-oauth --scopes "<comma-separated>"
 ```
 
-The granted scopes are stored on the connection and visible in `uvx authsome get klaviyo-oauth`.
+The granted scopes are stored on the connection and visible in `authsome get klaviyo-oauth`.
 
 ## Multiple accounts
 
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login klaviyo-oauth --connection personal
-uvx authsome login klaviyo-oauth --connection work
+authsome login klaviyo-oauth --connection personal
+authsome login klaviyo-oauth --connection work
 ```
 
 ## Use the token
@@ -82,11 +82,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export klaviyo-oauth --format env)"
+eval "$(authsome export klaviyo-oauth --format env)"
 ```
 
 ```python Python library
@@ -103,9 +103,9 @@ Under the proxy, authsome sets `KLAVIYO_OAUTH_ACCESS_TOKEN=authsome-proxy-manage
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect klaviyo-oauth > ~/.authsome/providers/klaviyo-oauth.json
+authsome inspect klaviyo-oauth > ~/.authsome/providers/klaviyo-oauth.json
 # edit scopes, base_url, or anything else
-uvx authsome list   # source now shows "custom" for klaviyo-oauth
+authsome list   # source now shows "custom" for klaviyo-oauth
 ```
 
 User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).

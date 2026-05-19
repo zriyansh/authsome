@@ -36,9 +36,9 @@ profile:<profile_name>:<provider_name>:connection:<connection_name>
 **Two GitHub accounts.** You want to push to a personal repo and a work repo from the same shell. Use one profile, two connections:
 
 ```bash
-uvx authsome login github --connection personal
-uvx authsome login github --connection work
-uvx authsome get github --connection work --field access_token --show-secret
+authsome login github --connection personal
+authsome login github --connection work
+authsome get github --connection work --field access_token --show-secret
 ```
 
 **Personal vs employer's tooling.** You don't want personal Slack credentials anywhere near work tooling. Use separate profiles. The `work` profile is its own SQLite store with its own audit log.

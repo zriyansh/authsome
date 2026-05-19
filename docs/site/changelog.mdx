@@ -31,7 +31,7 @@ A curated summary of authsome releases. For the full per-commit log, see [CHANGE
 <Update label="0.2.2" description="2026-04-29">
   **Audit logging.** Structured JSON event log written to `~/.authsome/audit.log` for every significant action (login, logout, revoke, export, register). See [Audit log format](/reference/audit-log).
 
-  **List output rendered as a table.** `uvx authsome list` shows providers, source (bundled / custom), auth type, default connection, and status in a single tabular view.
+  **List output rendered as a table.** `authsome list` shows providers, source (bundled / custom), auth type, default connection, and status in a single tabular view.
 
   **Expanded `whoami` context.** Reports the home directory, encryption mode, registered identity handle, and DID.
 
@@ -69,14 +69,14 @@ Authsome follows [Semantic Versioning](https://semver.org). The current series i
 Authsome is installed as a regular Python package:
 
 ```bash
-# uvx (recommended). fetches the latest on first use
-uvx authsome --version
-
-# uv tool
+# uv tool (recommended)
 uv tool upgrade authsome
 
 # pip
 pip install --upgrade authsome
+
+# uvx (one-off, no install)
+uvx authsome@latest --version
 ```
 
 Stored credentials, providers, and `config.json` persist across upgrades. The `schema_version` field in `~/.authsome/config.json` and on every `ConnectionRecord` is reserved for forward-compatibility migrations.

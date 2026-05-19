@@ -67,8 +67,8 @@ For per-provider setup pages with login walkthroughs and code samples, see the [
 To see the full JSON for any bundled provider, including endpoints, scopes, and export map:
 
 ```bash
-uvx authsome inspect github
-uvx authsome inspect openai --json
+authsome inspect github
+authsome inspect openai --json
 ```
 
 ## Override a bundled provider
@@ -76,9 +76,9 @@ uvx authsome inspect openai --json
 To change a bundled definition, add scopes, point at a self-hosted instance, swap the host URL, copy the JSON to `~/.authsome/providers/<name>.json` and edit it. Custom providers always win over bundled ones with the same name.
 
 ```bash
-uvx authsome inspect github > ~/.authsome/providers/github.json
+authsome inspect github > ~/.authsome/providers/github.json
 # edit the file
-uvx authsome list   # github now shows source=custom
+authsome list   # github now shows source=custom
 ```
 
 See [Provider registry](/concepts/provider-registry) for the resolution rules.

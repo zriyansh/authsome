@@ -8,6 +8,10 @@ keywords: ["claude code authsome", "claude code oauth", "claude code api key", "
 
 [Claude Code](https://claude.com/claude-code) is Anthropic's CLI for coding agents. Authsome integrates with Claude Code through the `/anthropic-skills:authsome` skill. Once installed, Claude can log in to any provider, list connected services, and run agents that pull fresh credentials from the local vault.
 
+<Note>
+  **The agent drives login.** When Claude hits a missing credential it runs `authsome login <provider>` itself, opens a browser on your machine for OAuth consent, and picks up from there. Don't paste keys into prompts and don't pre-run login commands unless you're seeding a credential ahead of time.
+</Note>
+
 <Prompt
   description="**Set up authsome in Claude Code.** Paste this prompt to install the skill and authenticate a first provider."
   icon="rocket"
@@ -17,15 +21,15 @@ keywords: ["claude code authsome", "claude code oauth", "claude code api key", "
 Install the authsome skill into Claude Code and log me into GitHub.
 
 1. Run `git clone https://github.com/agentrhq/authsome.git /tmp/authsome && mkdir -p ~/.claude/skills && cp -r /tmp/authsome/skills/authsome ~/.claude/skills/` to install the bundled skill.
-2. Then run `uvx authsome login github` and walk me through approving the OAuth flow.
-3. After the login completes, run `uvx authsome list` and report which providers are now connected.
+2. Then run `authsome login github` and walk me through approving the OAuth flow.
+3. After the login completes, run `authsome list` and report which providers are now connected.
 
-If anything fails, show me the exact error and `uvx authsome doctor` output.
+If anything fails, show me the exact error and `authsome doctor` output.
 </Prompt>
 
 ## What the integration gives you
 
-- **One login per service.** OAuth2 and API-key flows run from inside Claude Code. The skill drives the same `uvx authsome login` commands a human would type.
+- **One login per service.** OAuth2 and API-key flows run from inside Claude Code. The skill drives the same `authsome login` commands a human would type.
 - **No credentials in prompts or files.** Claude never sees raw tokens. The skill calls authsome, which collects secrets through a local browser bridge or the masked terminal fallback.
 - **Automatic refresh.** Tokens stay fresh for every agent run Claude triggers. You do not re-authenticate when an access token expires.
 - **The same vault.** Connections you create through the skill are stored in `~/.authsome/`, identical to connections created from the regular CLI. Nothing is duplicated.
@@ -46,7 +50,7 @@ In Claude Code, invoke the skill by name once it's installed:
 Use the authsome skill to log me into GitHub.
 ```
 
-Claude will read the skill manifest and run the appropriate `uvx authsome` commands. The skill teaches Claude the `list → login → run` flow plus authsome's safety rules (no `client_secret` in shell history, no `--scopes` workaround for missing access, etc.).
+Claude will read the skill manifest and run the appropriate `authsome` commands. The skill teaches Claude the `list → login → run` flow plus authsome's safety rules (no `client_secret` in shell history, no `--scopes` workaround for missing access, etc.).
 
 ## First run
 
@@ -58,7 +62,7 @@ A typical first session looks like this:
     /anthropic-skills:authsome list
     ```
 
-    Claude runs `uvx authsome list` and reports which providers are bundled, configured, and connected.
+    Claude runs `authsome list` and reports which providers are bundled, configured, and connected.
   </Step>
   <Step title="Log in to a provider">
     ```text
@@ -72,7 +76,7 @@ A typical first session looks like this:
     Use authsome to fetch my last 5 GitHub notifications.
     ```
 
-    Claude runs the agent under `uvx authsome run`. The HTTP proxy injects the `Authorization` header at the `api.github.com` host. The agent's environment never contains the raw token.
+    Claude runs the agent under `authsome run`. The HTTP proxy injects the `Authorization` header at the `api.github.com` host. The agent's environment never contains the raw token.
   </Step>
 </Steps>
 
@@ -82,12 +86,12 @@ Concrete requests Claude understands. Each one maps to a specific authsome comma
 
 | Prompt | What Claude runs |
 |--------|------------------|
-| "Log me in to GitHub via authsome." | `uvx authsome login github` |
-| "Use the Resend API key from authsome to send an email." | `uvx authsome run -- python <script>` |
-| "Switch the active GitHub connection to my work account." | `uvx authsome login github --connection work` |
-| "Show me which providers are connected." | `uvx authsome list` |
-| "Revoke my OpenAI key." | `uvx authsome revoke openai` |
-| "Add a custom provider for Acme CRM." | `uvx authsome register ./acmecrm.json` |
+| "Log me in to GitHub via authsome." | `authsome login github` |
+| "Use the Resend API key from authsome to send an email." | `authsome run -- python <script>` |
+| "Switch the active GitHub connection to my work account." | `authsome login github --connection work` |
+| "Show me which providers are connected." | `authsome list` |
+| "Revoke my OpenAI key." | `authsome revoke openai` |
+| "Add a custom provider for Acme CRM." | `authsome register ./acmecrm.json` |
 
 ## Why this is the safe pattern
 
@@ -98,7 +102,7 @@ Without authsome, agents inside Claude Code typically read tokens from environme
 | `export GITHUB_TOKEN=...` | `ps`, `/proc/<pid>/environ`, shell history, subprocess env |
 | `.env` file in the repo | The repo, backups, git history if committed by accident |
 | Manual paste into Claude | Claude's transcript |
-| `uvx authsome run -- ...` | None of the above |
+| `authsome run -- ...` | None of the above |
 
 `authsome run` is the recommended pattern for any Claude Code agent that calls third-party APIs. The child process never sees the real secret because the proxy injects headers at request time.
 
@@ -118,7 +122,7 @@ token = auth.get_access_token("github", connection="default")
 Or use the proxy without library access:
 
 ```bash
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 The library is documented in [Python library reference](/reference/python-library).
@@ -134,7 +138,7 @@ Log me into GitHub as my work account.
 Claude runs:
 
 ```bash
-uvx authsome login github --connection work
+authsome login github --connection work
 ```
 
 Read it back:
@@ -146,7 +150,7 @@ Use the work GitHub connection to open a PR.
 Claude runs:
 
 ```bash
-uvx authsome get github --connection work --field access_token --show-secret
+authsome get github --connection work --field access_token --show-secret
 ```
 
 For the underlying model, see [Profiles vs connections](/concepts/profiles-vs-connections).
@@ -161,8 +165,8 @@ For the underlying model, see [Profiles vs connections](/concepts/profiles-vs-co
 
 If a Claude-driven login hangs:
 
-- Run `uvx authsome doctor` directly from the terminal to surface initialization errors.
-- Run `uvx authsome --verbose login <provider>` to see the full flow including the daemon round-trips.
+- Run `authsome doctor` directly from the terminal to surface initialization errors.
+- Run `authsome --verbose login <provider>` to see the full flow including the daemon round-trips.
 - Check `~/.authsome/audit.log` for the most recent action and outcome.
 
 For provider-specific errors, see [OAuth callbacks](/troubleshooting/oauth-callbacks) and [Token refresh](/troubleshooting/token-refresh).

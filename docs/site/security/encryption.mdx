@@ -99,7 +99,7 @@ The master key is stored in the OS keychain via the [`keyring`](https://github.c
 | Sharable across users | No |
 | Recovery if lost | Same as `local_key`. Lost key, lost records. |
 
-`uvx authsome doctor` verifies the configured backend is reachable.
+`authsome doctor` verifies the configured backend is reachable.
 
 ## Switching backends
 
@@ -107,11 +107,11 @@ To move from `local_key` to `keyring`, you need to read the current key, migrate
 
 In the meantime, the safest path is:
 
-1. Note your active connections (`uvx authsome list`).
-2. `uvx authsome revoke <provider>` for each connection that supports revocation.
+1. Note your active connections (`authsome list`).
+2. `authsome revoke <provider>` for each connection that supports revocation.
 3. `rm -rf ~/.authsome/` (this destroys every stored credential).
 4. Edit a fresh `~/.authsome/config.json` with the desired `encryption.mode`.
-5. Re-run `uvx authsome login <provider>` for each connection.
+5. Re-run `authsome login <provider>` for each connection.
 
 ## What encryption does not do
 

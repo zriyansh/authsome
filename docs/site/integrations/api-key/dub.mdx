@@ -30,7 +30,7 @@ Create an API key in the Dub.co dashboard at [https://app.dub.co/settings/tokens
 ## Log in
 
 ```bash
-uvx authsome login dub
+authsome login dub
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get dub --field status
+authsome get dub --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export dub --format env)"
+eval "$(authsome export dub --format env)"
 echo $DUB_API_KEY
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `DUB_API_KEY=authsome-proxy-managed` in the child
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login dub --connection personal
-uvx authsome login dub --connection team
+authsome login dub --connection personal
+authsome login dub --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login dub --force          # rotate
-uvx authsome logout dub                  # remove local credential
-uvx authsome remove dub                  # remove all local state for the provider
+authsome login dub --force          # rotate
+authsome logout dub                  # remove local credential
+authsome remove dub                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Dub.co.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect dub > ~/.authsome/providers/dub.json
+authsome inspect dub > ~/.authsome/providers/dub.json
 # edit fields
-uvx authsome list   # source now shows "custom" for dub
+authsome list   # source now shows "custom" for dub
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

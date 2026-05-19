@@ -11,9 +11,9 @@ keywords: ["llamaindex authsome", "llamaindex credentials", "llamaindex oauth", 
 ## Run the whole script under the proxy
 
 ```bash
-uvx authsome login openai
-uvx authsome login github
-uvx authsome run -- python my_index.py
+authsome login openai
+authsome login github
+authsome run -- python my_index.py
 ```
 
 LlamaIndex's HTTP clients see `OPENAI_API_KEY=authsome-proxy-managed` and similar placeholders. The proxy injects the real value for outbound requests to matched provider hosts. No code changes needed in your script.
@@ -22,9 +22,9 @@ LlamaIndex's HTTP clients see `OPENAI_API_KEY=authsome-proxy-managed` and simila
 
 LlamaIndex's data readers cover dozens of services (Notion, Confluence, Slack, Google Drive, etc.). For each one:
 
-- Check `uvx authsome list` for the matching provider name.
-- If bundled, log in: `uvx authsome login <provider>`.
-- Run your script under `uvx authsome run --`. The reader picks the credential up from its standard env var.
+- Check `authsome list` for the matching provider name.
+- If bundled, log in: `authsome login <provider>`.
+- Run your script under `authsome run --`. The reader picks the credential up from its standard env var.
 
 For services not bundled, see [Custom providers](/guides/custom-providers).
 

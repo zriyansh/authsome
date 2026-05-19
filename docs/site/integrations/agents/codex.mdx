@@ -6,7 +6,11 @@ icon: "terminal"
 keywords: ["codex authsome", "openai codex credentials", "codex oauth", "codex api key broker"]
 ---
 
-OpenAI's [Codex CLI](https://github.com/openai/codex) is a coding agent that runs locally and shells out to other tools. Authsome plugs in cleanly: wrap the agent invocation with `uvx authsome run --` and the proxy injects fresh credentials for every service the agent calls.
+OpenAI's [Codex CLI](https://github.com/openai/codex) is a coding agent that runs locally and shells out to other tools. Authsome plugs in cleanly: wrap the agent invocation with `authsome run --` and the proxy injects fresh credentials for every service the agent calls.
+
+<Note>
+  **The agent drives login.** When Codex hits a missing credential it runs `authsome login <provider>` itself, opens a browser on your machine for OAuth consent, and picks up from there. Don't paste keys into prompts and don't pre-run login commands unless you're seeding a credential ahead of time.
+</Note>
 
 <Prompt
   description="**Run Codex under the auth proxy.** Paste this to set up the wrapper."
@@ -16,8 +20,8 @@ OpenAI's [Codex CLI](https://github.com/openai/codex) is a coding agent that run
 >
 Set me up to run Codex under authsome's auth proxy so my OpenAI key and GitHub token are injected at request time instead of sitting in my environment.
 
-1. Run `uvx authsome login openai` and `uvx authsome login github` if I'm not already logged in.
-2. Launch Codex with `uvx authsome run -- codex`.
+1. Run `authsome login openai` and `authsome login github` if I'm not already logged in.
+2. Launch Codex with `authsome run -- codex`.
 3. After Codex starts, verify the env is clean by running `env | grep -E "OPENAI|GITHUB"` in the agent's shell. The values should read `authsome-proxy-managed`.
 4. Make one real API call (a quick `gh api user` or an OpenAI chat completion) to confirm the proxy is injecting the real credentials.
 </Prompt>
@@ -32,9 +36,9 @@ Set me up to run Codex under authsome's auth proxy so my OpenAI key and GitHub t
 ## Recommended pattern: run Codex under the proxy
 
 ```bash
-uvx authsome login github
-uvx authsome login openai
-uvx authsome run -- codex
+authsome login github
+authsome login openai
+authsome run -- codex
 ```
 
 Inside Codex:
@@ -48,8 +52,8 @@ Inside Codex:
 If Codex is running in an environment where the proxy CA cannot be trusted, fall back to env-var export:
 
 ```bash
-eval "$(uvx authsome export openai --format env)"
-eval "$(uvx authsome export github --format env)"
+eval "$(authsome export openai --format env)"
+eval "$(authsome export github --format env)"
 codex
 ```
 
@@ -58,10 +62,10 @@ The variables persist for the shell session. Codex (and anything it spawns) read
 ## Multiple accounts
 
 ```bash
-uvx authsome login github --connection personal
-uvx authsome login github --connection work
-uvx authsome login github --connection work --force   # switch default to work
-uvx authsome run -- codex
+authsome login github --connection personal
+authsome login github --connection work
+authsome login github --connection work --force   # switch default to work
+authsome run -- codex
 ```
 
 The proxy uses each provider's default connection. To target a non-default connection in a single Codex session, set it as the default with `--force` first. See [Multiple connections per provider](/guides/multiple-connections).
@@ -84,8 +88,8 @@ This pattern is cleaner than passing keys through prompts or hardcoding them int
 | Symptom | Fix |
 |---------|-----|
 | Codex starts but every API call fails with TLS errors | The mitmproxy CA isn't trusted. See [Proxy networking](/troubleshooting/proxy-networking). |
-| Codex doesn't see the env var even though `authsome run` set it | Verify with `uvx authsome run -- env \| grep OPENAI`. |
-| Authsome login hangs | `uvx authsome doctor` and check port 7998 availability. |
+| Codex doesn't see the env var even though `authsome run` set it | Verify with `authsome run -- env \| grep OPENAI`. |
+| Authsome login hangs | `authsome doctor` and check port 7998 availability. |
 
 ## What's next
 

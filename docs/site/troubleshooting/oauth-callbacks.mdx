@@ -30,13 +30,13 @@ The PKCE flow uses the local daemon on `127.0.0.1:7998` to receive the OAuth cal
       </Step>
       <Step title="Save and retry login">
         ```bash
-        uvx authsome login <provider> --force
+        authsome login <provider> --force
         ```
       </Step>
     </Steps>
 
     <Tip>
-      For services that support Dynamic Client Registration, the `dcr_pkce` flow registers a fresh OAuth client with the right redirect URI automatically. Check `uvx authsome inspect <provider>` for `supports_dcr: true`.
+      For services that support Dynamic Client Registration, the `dcr_pkce` flow registers a fresh OAuth client with the right redirect URI automatically. Check `authsome inspect <provider>` for `supports_dcr: true`.
     </Tip>
   </Accordion>
 
@@ -73,7 +73,7 @@ The PKCE flow uses the local daemon on `127.0.0.1:7998` to receive the OAuth cal
 
     | Cause | Fix |
     |-------|-----|
-    | The browser landed on `http://127.0.0.1:7998/auth/callback/oauth` but authsome timed out | Re-run `uvx authsome login --force`. |
+    | The browser landed on `http://127.0.0.1:7998/auth/callback/oauth` but authsome timed out | Re-run `authsome login --force`. |
     | A corporate proxy is intercepting `127.0.0.1` traffic | Add `127.0.0.1` and `localhost` to your `NO_PROXY` env var. |
     | You authorized in a different browser profile that can't reach localhost | Use the same browser profile as your authsome shell. |
   </Accordion>
@@ -99,8 +99,8 @@ The PKCE flow uses the local daemon on `127.0.0.1:7998` to receive the OAuth cal
     The stored client credentials don't match what the provider expects.
 
     ```bash
-    uvx authsome revoke <provider>     # clear stored client + tokens
-    uvx authsome login <provider>      # re-enter client_id and client_secret via browser bridge
+    authsome revoke <provider>     # clear stored client + tokens
+    authsome login <provider>      # re-enter client_id and client_secret via browser bridge
     ```
 
     If you've recently rotated the OAuth app's client secret, this is the expected flow.
@@ -110,13 +110,13 @@ The PKCE flow uses the local daemon on `127.0.0.1:7998` to receive the OAuth cal
     The login completes but the agent gets `403 Insufficient scope` on real API calls.
 
     ```bash
-    uvx authsome get <provider> --field scopes
+    authsome get <provider> --field scopes
     ```
 
     If the granted scopes don't include what your agent needs:
 
     ```bash
-    uvx authsome login <provider> --scopes "<scope1>,<scope2>" --force
+    authsome login <provider> --scopes "<scope1>,<scope2>" --force
     ```
 
     The provider re-prompts for consent on the additional scopes.

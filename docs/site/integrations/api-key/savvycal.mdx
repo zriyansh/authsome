@@ -30,7 +30,7 @@ Create an API key in the SavvyCal dashboard at [https://savvycal.com/settings/de
 ## Log in
 
 ```bash
-uvx authsome login savvycal
+authsome login savvycal
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get savvycal --field status
+authsome get savvycal --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export savvycal --format env)"
+eval "$(authsome export savvycal --format env)"
 echo $SAVVYCAL_API_KEY
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `SAVVYCAL_API_KEY=authsome-proxy-managed` in the 
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login savvycal --connection personal
-uvx authsome login savvycal --connection team
+authsome login savvycal --connection personal
+authsome login savvycal --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login savvycal --force          # rotate
-uvx authsome logout savvycal                  # remove local credential
-uvx authsome remove savvycal                  # remove all local state for the provider
+authsome login savvycal --force          # rotate
+authsome logout savvycal                  # remove local credential
+authsome remove savvycal                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for SavvyCal.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect savvycal > ~/.authsome/providers/savvycal.json
+authsome inspect savvycal > ~/.authsome/providers/savvycal.json
 # edit fields
-uvx authsome list   # source now shows "custom" for savvycal
+authsome list   # source now shows "custom" for savvycal
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

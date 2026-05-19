@@ -11,8 +11,8 @@ The [OpenAI Agents SDK](https://github.com/openai/openai-agents-python) reads `O
 ## Recommended: run the agent under the proxy
 
 ```bash
-uvx authsome login openai
-uvx authsome run -- python my_agent.py
+authsome login openai
+authsome run -- python my_agent.py
 ```
 
 The Agents SDK initializes with `OPENAI_API_KEY=authsome-proxy-managed`. Outbound requests to `api.openai.com` are intercepted and authenticated at the proxy layer. The agent's process never sees the real key.
@@ -37,8 +37,8 @@ Use this when you need to control which connection the SDK uses, or when the pro
 ## Multi-account workflows
 
 ```bash
-uvx authsome login openai --connection personal
-uvx authsome login openai --connection team
+authsome login openai --connection personal
+authsome login openai --connection team
 ```
 
 Through the proxy, set the default with `--force`. In code, pass `connection=`:
@@ -52,7 +52,7 @@ client = AsyncOpenAI(api_key=key)
 
 The Agents SDK supports tools that call external APIs. Each tool typically reads its own credential. Authsome covers both bundled (OpenAI, GitHub, etc.) and custom (see [Custom providers](/guides/custom-providers)).
 
-For an MCP-style tool that calls `api.github.com`, just log in once: `uvx authsome login github`. The proxy will inject the GitHub token automatically when the tool makes its request.
+For an MCP-style tool that calls `api.github.com`, just log in once: `authsome login github`. The proxy will inject the GitHub token automatically when the tool makes its request.
 
 ## What's next
 

@@ -32,7 +32,7 @@ Mention Me API keys are account-managed; contact your account manager to enable 
 ## Log in
 
 ```bash
-uvx authsome login mention-me
+authsome login mention-me
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -42,7 +42,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get mention-me --field status
+authsome get mention-me --field status
 # → connected
 ```
 
@@ -53,11 +53,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export mention-me --format env)"
+eval "$(authsome export mention-me --format env)"
 echo $MENTIONME_API_KEY
 ```
 
@@ -77,16 +77,16 @@ Under the proxy, authsome sets `MENTIONME_API_KEY=authsome-proxy-managed` in the
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login mention-me --connection personal
-uvx authsome login mention-me --connection team
+authsome login mention-me --connection personal
+authsome login mention-me --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login mention-me --force          # rotate
-uvx authsome logout mention-me                  # remove local credential
-uvx authsome remove mention-me                  # remove all local state for the provider
+authsome login mention-me --force          # rotate
+authsome logout mention-me                  # remove local credential
+authsome remove mention-me                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Mention Me.
@@ -94,9 +94,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect mention-me > ~/.authsome/providers/mention-me.json
+authsome inspect mention-me > ~/.authsome/providers/mention-me.json
 # edit fields
-uvx authsome list   # source now shows "custom" for mention-me
+authsome list   # source now shows "custom" for mention-me
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

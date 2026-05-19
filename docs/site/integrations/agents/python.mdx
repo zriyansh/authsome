@@ -13,9 +13,9 @@ The general pattern for any Python script that calls external APIs. No framework
 The script reads env vars normally; authsome injects the real values at the proxy layer.
 
 ```bash
-uvx authsome login openai
-uvx authsome login github
-uvx authsome run -- python my_script.py
+authsome login openai
+authsome login github
+authsome run -- python my_script.py
 ```
 
 In the script:

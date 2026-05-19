@@ -26,7 +26,7 @@ Authsome is a local-first credential broker. It assumes the local machine and us
 
 **Credential sprawl.** Tokens and API keys live in one encrypted store rather than as plaintext environment variables scattered across every project's `.env`, shell config, and CI secret store.
 
-**Secrets in process listings.** `uvx authsome run` injects credentials at the HTTP proxy layer. The child process never sees the real secret, so it cannot leak through `ps`, `/proc/<pid>/environ`, or subprocess environment inheritance.
+**Secrets in process listings.** `authsome run` injects credentials at the HTTP proxy layer. The child process never sees the real secret, so it cannot leak through `ps`, `/proc/<pid>/environ`, or subprocess environment inheritance.
 
 **Secrets in shell history.** `client_secret`, access tokens, refresh tokens, and API keys are never accepted as command-line arguments. They are collected through a local browser bridge or, on headless machines, through masked terminal input via `getpass`.
 

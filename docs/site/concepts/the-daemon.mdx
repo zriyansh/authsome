@@ -47,7 +47,7 @@ agent / CLI / dashboard
 
 In-memory state is lost on restart. A login that is mid-flight when the daemon restarts must be re-started.
 
-`uvx authsome run` shares the daemon with the rest of the CLI. The local HTTP proxy started by `run` calls back to the daemon's `/proxy/...` routes to resolve fresh credentials on every intercepted request. This keeps decryption logic in one place and avoids handing the proxy direct vault access.
+`authsome run` shares the daemon with the rest of the CLI. The local HTTP proxy started by `run` calls back to the daemon's `/proxy/...` routes to resolve fresh credentials on every intercepted request. This keeps decryption logic in one place and avoids handing the proxy direct vault access.
 
 ## Override the daemon URL
 
@@ -61,7 +61,7 @@ Two environment variables control daemon discovery. Both are documented in [Envi
 Local default. Neither variable needs to be set:
 
 ```bash
-uvx authsome login github
+authsome login github
 ```
 
 Hosted shared daemon for an internal team. Set both, on the right side:
@@ -73,7 +73,7 @@ export AUTHSOME_SERVER_BASE_URL=https://authsome.internal.example.com
 
 # on developer machines:
 export AUTHSOME_DAEMON_URL=https://authsome.internal.example.com
-uvx authsome list
+authsome list
 ```
 
 See [Hosted deployment model](/security/hosted-deployment) for the trust caveats. Hosted mode is recommended only on a private network.
