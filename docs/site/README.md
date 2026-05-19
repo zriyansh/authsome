@@ -1,6 +1,6 @@
 # authsome docs
 
-The Mintlify documentation site for [authsome](https://github.com/manojbajaj95/authsome).
+The Mintlify documentation site for [authsome](https://github.com/agentrhq/authsome).
 
 ## Local preview
 
