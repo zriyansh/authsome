@@ -146,11 +146,13 @@ For `requires_human` evals, also show `human_instructions` now.
 
 ```bash
 # For hermes evals
-mkdir -p ~/.hermes/skills/authsome
-cp skills/authsome/SKILL.md ~/.hermes/skills/authsome/SKILL.md
+rm -rf ~/.hermes/skills/authsome
+cp -r skills/authsome ~/.hermes/skills/authsome
 
 # For claude evals
-cp skills/authsome/SKILL.md .claude/commands/authsome.md
+rm -rf .claude/skills/authsome
+mkdir -p .claude/skills
+cp -r skills/authsome .claude/skills/authsome
 ```
 
 #### c. Run the agent
@@ -335,9 +337,10 @@ Return a JSON object with this exact structure:
 
 Rules:
 - Grade outcome and trajectory_efficiency independently.
-- When counting steps for trajectory_efficiency, ignore scaffolding: skill loading,
-  reading --help, version checks, and similar overhead. Only task-relevant actions
-  count (API calls, auth flows, returning results to the user).
+- When counting meaningful steps for trajectory_efficiency, **ignore scaffolding steps**:
+  skill loading or calling skill tool, using one extra step to parse and format a
+  response, returning results to the user, reading --help, version checks, and similar
+  overhead. Only task-relevant actions count (API calls, auth flows, etc).
 - The actual number of LLM calls will be higher than the expected step count — this is normal.
 - If trajectory_efficiency criterion is absent, return {"passed": null, "evidence": "not evaluated"} for it.
 - Be strict: burden of proof to pass is on the transcript.
@@ -458,9 +461,10 @@ uv run authsome list > RUN_DIR/authsome_state_N.txt 2>&1
 After showing the verdict, immediately prepare for the next eval:
 
 1. Run `uv run authsome list` and compare against the next eval's `environment` field.
-2. Fix any mismatches inline (e.g. `uv run authsome logout github`). Re-check until state matches.
-3. Only pause and ask the user when:
-   - An OAuth login requires a browser flow (show the URL, wait for "done")
+2. Fix any mismatches inline (e.g. `uv run authsome revoke github`). Re-check until state matches.
+3. If you need to login (e.g. for provider X) and the environment says provider X is NOT connected, it is okay to use `uv run authsome login <provider>` and `uv run authsome list` to poll the status of the provider a few seconds later to see if the login was successful.
+4. Only pause and ask the user when:
+   - If polling fails during login (show the URL, wait for "done")
    - A `requires_human` eval where the user must act during the run
 
 ---
