@@ -2,15 +2,16 @@ from pathlib import Path
 
 import pytest
 
-from authsome.cli.client_config import ClientConfig, load_client_config, save_client_config
-from authsome.identity import current_from_home
-from authsome.identity.keys import (
+from authsome.actors import current_from_home
+from authsome.actors.identity import (
     create_identity,
     ensure_local_identity,
     identity_key_path,
+    mark_claimed,
     public_key_from_did_key,
     public_key_to_did_key,
 )
+from authsome.cli.client_config import ClientConfig, load_client_config, save_client_config
 
 
 @pytest.mark.asyncio
@@ -29,6 +30,16 @@ def test_create_identity_writes_private_key_mode_0600(tmp_path: Path) -> None:
     assert key_path.exists()
     assert key_path.stat().st_mode & 0o777 == 0o600
     assert load_client_config(tmp_path).active_identity == identity.handle
+    assert identity.claimed is False
+
+
+def test_mark_claimed_persists_identity_state(tmp_path: Path) -> None:
+    identity = create_identity(tmp_path, "steady-wisely-boldly-0042")
+
+    updated = mark_claimed(tmp_path, identity.handle)
+
+    assert updated.claimed is True
+    assert ensure_local_identity(tmp_path, active_handle=identity.handle).claimed is True
 
 
 def test_did_key_roundtrip(tmp_path: Path) -> None:

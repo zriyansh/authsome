@@ -1,0 +1,196 @@
+"""Actor-domain registries for principals, vaults, and ownership bindings."""
+
+from __future__ import annotations
+
+import json
+import uuid
+from datetime import datetime
+from pathlib import Path
+
+from pydantic import BaseModel, Field
+
+from authsome.utils import utc_now
+
+
+class PrincipalRecord(BaseModel):
+    """Principal account record."""
+
+    principal_id: str
+    email: str
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
+class VaultRecord(BaseModel):
+    """Vault record owned as a first-class resource."""
+
+    vault_id: str
+    slug: str = "default"
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
+class IdentityClaimRecord(BaseModel):
+    """Immutable binding from identity to principal."""
+
+    identity_handle: str
+    principal_id: str
+    created_at: datetime = Field(default_factory=utc_now)
+
+
+class PrincipalVaultBindingRecord(BaseModel):
+    """Binding from principal to a vault."""
+
+    principal_id: str
+    vault_id: str
+    is_default: bool = False
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
+class _JsonRegistry[T: BaseModel]:
+    """Simple JSON-list persistence helper."""
+
+    def __init__(self, path: Path, model_type: type[T]) -> None:
+        self._path = path
+        self._model_type = model_type
+
+    def _load_all(self) -> list[T]:
+        try:
+            raw = json.loads(self._path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return []
+        if not isinstance(raw, list):
+            return []
+        items: list[T] = []
+        for item in raw:
+            try:
+                items.append(self._model_type.model_validate(item))
+            except Exception:
+                continue
+        return items
+
+    def _save_all(self, records: list[T]) -> None:
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._path.write_text(json.dumps([r.model_dump(mode="json") for r in records], indent=2), encoding="utf-8")
+
+
+class PrincipalRegistry(_JsonRegistry[PrincipalRecord]):
+    """Filesystem-backed principal registry."""
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(path, PrincipalRecord)
+
+    async def get(self, principal_id: str) -> PrincipalRecord | None:
+        return next((record for record in self._load_all() if record.principal_id == principal_id), None)
+
+    async def get_by_email(self, email: str) -> PrincipalRecord | None:
+        normalized = email.strip().lower()
+        return next((record for record in self._load_all() if record.email == normalized), None)
+
+    async def get_or_create_by_email(self, email: str) -> PrincipalRecord:
+        normalized = email.strip().lower()
+        existing = await self.get_by_email(normalized)
+        if existing is not None:
+            return existing
+        now = utc_now()
+        record = PrincipalRecord(
+            principal_id=f"principal_{uuid.uuid4().hex[:12]}",
+            email=normalized,
+            created_at=now,
+            updated_at=now,
+        )
+        records = self._load_all()
+        records.append(record)
+        self._save_all(records)
+        return record
+
+
+class VaultRegistry(_JsonRegistry[VaultRecord]):
+    """Filesystem-backed vault registry."""
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(path, VaultRecord)
+
+    async def get(self, vault_id: str) -> VaultRecord | None:
+        return next((record for record in self._load_all() if record.vault_id == vault_id), None)
+
+    async def list_all(self) -> list[VaultRecord]:
+        return self._load_all()
+
+    async def create_default(self) -> VaultRecord:
+        now = utc_now()
+        record = VaultRecord(vault_id=f"vault_{uuid.uuid4().hex[:12]}", slug="default", created_at=now, updated_at=now)
+        records = self._load_all()
+        records.append(record)
+        self._save_all(records)
+        return record
+
+
+class IdentityClaimRegistry(_JsonRegistry[IdentityClaimRecord]):
+    """Filesystem-backed identity-claim registry."""
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(path, IdentityClaimRecord)
+
+    async def resolve(self, identity_handle: str) -> IdentityClaimRecord | None:
+        return next((record for record in self._load_all() if record.identity_handle == identity_handle), None)
+
+    async def require_claim(self, identity_handle: str) -> IdentityClaimRecord:
+        claim = await self.resolve(identity_handle)
+        if claim is None:
+            raise ValueError(f"Identity '{identity_handle}' is not claimed")
+        return claim
+
+    async def claim_identity(self, identity_handle: str, principal_id: str) -> IdentityClaimRecord:
+        existing = await self.resolve(identity_handle)
+        if existing is not None:
+            if existing.principal_id != principal_id:
+                raise ValueError(f"Identity '{identity_handle}' is already claimed")
+            return existing
+        record = IdentityClaimRecord(identity_handle=identity_handle, principal_id=principal_id)
+        records = self._load_all()
+        records.append(record)
+        self._save_all(records)
+        return record
+
+
+class PrincipalVaultBindingRegistry(_JsonRegistry[PrincipalVaultBindingRecord]):
+    """Filesystem-backed principal-vault binding registry."""
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(path, PrincipalVaultBindingRecord)
+
+    async def list_for_principal(self, principal_id: str) -> list[PrincipalVaultBindingRecord]:
+        return [record for record in self._load_all() if record.principal_id == principal_id]
+
+    async def get_default_vault(self, principal_id: str) -> PrincipalVaultBindingRecord | None:
+        return next(
+            (record for record in self._load_all() if record.principal_id == principal_id and record.is_default),
+            None,
+        )
+
+    async def require_default_vault(self, principal_id: str) -> PrincipalVaultBindingRecord:
+        binding = await self.get_default_vault(principal_id)
+        if binding is None:
+            raise ValueError(f"Principal '{principal_id}' has no default vault")
+        return binding
+
+    async def bind_default(self, principal_id: str, vault_id: str) -> PrincipalVaultBindingRecord:
+        existing = await self.get_default_vault(principal_id)
+        if existing is not None:
+            if existing.vault_id == vault_id:
+                return existing
+            raise ValueError(f"Principal '{principal_id}' already has a default vault")
+        now = utc_now()
+        record = PrincipalVaultBindingRecord(
+            principal_id=principal_id,
+            vault_id=vault_id,
+            is_default=True,
+            created_at=now,
+            updated_at=now,
+        )
+        records = self._load_all()
+        records.append(record)
+        self._save_all(records)
+        return record

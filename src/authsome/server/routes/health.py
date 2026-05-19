@@ -104,6 +104,8 @@ async def whoami(
         "home": str(auth.vault.home),
         "identity": auth.identity,
         "active_identity": auth.identity,
+        "principal_id": getattr(request.state, "principal_id", ""),
+        "vault_id": getattr(request.state, "vault_id", ""),
         "did": getattr(request.state, "did", ""),
         "registration_status": getattr(request.state, "registration_status", "registered"),
         "daemon_url": server_base_url,

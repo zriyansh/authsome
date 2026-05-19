@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from authsome.identity.keys import create_identity, load_private_key
-from authsome.identity.proof import ReplayCache, create_proof_jwt, validate_proof_jwt
+from authsome.actors import create_identity, load_private_key
+from authsome.actors.proof import ReplayCache, create_proof_jwt, validate_proof_jwt
 
 
 def _token(tmp_path: Path, *, method: str = "POST", path: str = "/connections", body: bytes = b"{}") -> str:

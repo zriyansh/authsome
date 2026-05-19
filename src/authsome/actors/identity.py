@@ -1,4 +1,4 @@
-"""Local identity files and did:key helpers."""
+"""Actor identity files and did:key helpers."""
 
 from __future__ import annotations
 
@@ -57,6 +57,7 @@ class IdentityMetadata(BaseModel):
     handle: str
     did: str
     registered: bool = False
+    claimed: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
@@ -200,18 +201,16 @@ def mark_registered(home: Path, handle: str) -> IdentityMetadata:
     return updated
 
 
+def mark_claimed(home: Path, handle: str) -> IdentityMetadata:
+    """Persist claimed=True for a local identity after ownership resolution."""
+    metadata = load_identity(home, handle)
+    updated = metadata.model_copy(update={"claimed": True, "updated_at": datetime.now(UTC)})
+    identity_metadata_path(home, handle).write_text(updated.model_dump_json(indent=2), encoding="utf-8")
+    return updated
+
+
 def ensure_local_identity(home: Path, active_handle: str | None = None) -> IdentityMetadata:
-    """Return the active local identity, creating one if none exists.
-
-    If *active_handle* is not provided, the caller-local config is consulted.
-    If the resolved active handle exists, it is loaded. Otherwise a new
-    identity is created.
-
-    If *active_handle* is provided explicitly, it must
-    exist on disk — a missing key file is a hard error rather than a silent
-    re-creation, because the old profile's credentials would become inaccessible
-    with no explanation.
-    """
+    """Return the active local identity, creating one if none exists."""
     from authsome.cli.client_config import load_client_config
 
     remove_legacy_default_identity(home)
@@ -225,6 +224,11 @@ def ensure_local_identity(home: Path, active_handle: str | None = None) -> Ident
             )
         return load_identity(home, active_handle)
     return create_identity(home)
+
+
+async def current_from_home(home: Path) -> IdentityMetadata:
+    """Return the configured local identity, bootstrapping it if needed."""
+    return ensure_local_identity(home)
 
 
 def _unique_handle(home: Path) -> str:

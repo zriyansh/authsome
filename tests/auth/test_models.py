@@ -1,5 +1,6 @@
 """Tests for authsome data models."""
 
+from authsome.actors.identity import IdentityMetadata
 from authsome.auth.models.config import current_spec_version
 from authsome.auth.models.connection import (
     ConnectionRecord,
@@ -11,7 +12,6 @@ from authsome.auth.models.connection import (
 from authsome.auth.models.enums import AuthType, ConnectionStatus, ExportFormat, FlowType
 from authsome.auth.models.provider import ApiKeyConfig, OAuthConfig, ProviderDefinition
 from authsome.errors import OperationNotAllowedError
-from authsome.identity.keys import IdentityMetadata
 
 
 class TestEnums:
@@ -50,6 +50,7 @@ class TestIdentityMetadata:
         assert meta.handle == "steady-wisely-boldly-0042"
         assert meta.did == "did:key:z6MkTest"
         assert meta.registered is False
+        assert meta.claimed is False
         assert meta.created_at is not None
         assert meta.updated_at is not None
 
@@ -58,12 +59,14 @@ class TestIdentityMetadata:
             handle="steady-wisely-boldly-0042",
             did="did:key:z6MkTest",
             registered=True,
+            claimed=True,
         )
         json_str = meta.model_dump_json()
         restored = IdentityMetadata.model_validate_json(json_str)
         assert restored.handle == "steady-wisely-boldly-0042"
         assert restored.did == "did:key:z6MkTest"
         assert restored.registered is True
+        assert restored.claimed is True
 
 
 class TestProviderDefinition:

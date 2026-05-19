@@ -10,14 +10,17 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from authsome import audit
+from authsome.actors.identity_registry import IdentityRegistrationError, IdentityRegistry
+from authsome.actors.proof import ReplayCache
 from authsome.auth import AuthService
 from authsome.auth.sessions import AuthSessionStore
 from authsome.errors import AuthsomeError
-from authsome.identity.proof import ReplayCache
-from authsome.identity.registry import IdentityRegistrationError, IdentityRegistry
 from authsome.paths import get_server_log_path
 from authsome.server.dependencies import (
     create_app_store,
+    create_identity_bootstrap_service,
+    create_identity_claim_registry,
+    create_ownership_resolver,
     create_vault,
     get_deployment_mode,
     get_identity_registry_path,
@@ -51,7 +54,16 @@ async def lifespan(app: FastAPI):
     app.state.ui_sessions = UiSessionStore(load_ui_session_signing_secret(app.state.vault.home))
     app.state.proof_replay_cache = ReplayCache()
     app.state.identity_registry = IdentityRegistry(get_identity_registry_path(app.state.store.home))
+    app.state.identity_claim_registry = create_identity_claim_registry(app.state.store.home)
     app.state.server_base_url = get_server_base_url()
+    app.state.identity_bootstrap = create_identity_bootstrap_service(
+        app.state.identity_registry,
+        app.state.ui_sessions,
+        home=app.state.store.home,
+        server_base_url=app.state.server_base_url,
+    )
+    app.state.ownership_resolver = create_ownership_resolver(app.state.store.home)
+    app.state.ownership_cache = {}
     yield
     audit.clear()
     await app.state.store.close()
