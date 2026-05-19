@@ -146,11 +146,13 @@ For `requires_human` evals, also show `human_instructions` now.
 
 ```bash
 # For hermes evals
-mkdir -p ~/.hermes/skills/authsome
-cp skills/authsome/SKILL.md ~/.hermes/skills/authsome/SKILL.md
+rm -rf ~/.hermes/skills/authsome
+cp -r skills/authsome ~/.hermes/skills/authsome
 
 # For claude evals
-cp skills/authsome/SKILL.md .claude/commands/authsome.md
+rm -rf .skills/authsome
+mkdir -p .skills
+cp -r skills/authsome .skills/authsome
 ```
 
 #### c. Run the agent
@@ -335,9 +337,10 @@ Return a JSON object with this exact structure:
 
 Rules:
 - Grade outcome and trajectory_efficiency independently.
-- When counting steps for trajectory_efficiency, ignore scaffolding: skill loading,
-  reading --help, version checks, and similar overhead. Only task-relevant actions
-  count (API calls, auth flows, returning results to the user).
+- When counting meaningful steps for trajectory_efficiency, **ignore scaffolding steps**:
+  skill loading or calling skill tool, using one extra step to parse and format a
+  response, returning results to the user, reading --help, version checks, and similar
+  overhead. Only task-relevant actions count (API calls, auth flows, etc).
 - The actual number of LLM calls will be higher than the expected step count — this is normal.
 - If trajectory_efficiency criterion is absent, return {"passed": null, "evidence": "not evaluated"} for it.
 - Be strict: burden of proof to pass is on the transcript.
