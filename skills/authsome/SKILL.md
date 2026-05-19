@@ -33,10 +33,6 @@ Standard HTTP clients (curl, fetch, requests, axios, Go net/http, git) all
 honor the `HTTPS_PROXY` environment variable automatically. You do not need
 to set any auth headers.
 
-
-- `authsome` not found? → [Installation](#installation)
-- Unsure about commands? → [Troubleshooting & Help](#troubleshooting--help)
-
 ---
 
 ## Login Flow
@@ -52,6 +48,12 @@ to set any auth headers.
 
 ## When a Request Fails
 
+### If authsome is not installed on the agent's machine:
+
+Install authsome using `uv tool install authsome`
+
+Only when uv tool install fails, use fallback: `pipx install authsome` or `uvx authsome@latest <command>` for one-off use (say when running inside sandboxed environments).
+
 ### If you get an authentication error (401, 403) follow this decision tree:
 
 **1. Run `authsome list` to see all providers and their connections**
@@ -60,29 +62,24 @@ to set any auth headers.
 
 If there is a login error due to wrong client id/client secret you can delete the provider via `authsome remove <provider>` and start the [login flow](#login-flow)
 
-**3. If relevant provider exists and it is connected → you need to re-login, creds have expired**
+**3. If relevant provider exists and it is connected**
 
+For 401 error → you need to re-login, creds have expired
 - revoke the creds using `authsome revoke <provider>`
 - then start the [login flow](#login-flow)
+
+For 403 error → you need to re-login, with the correct scopes, or missing permissions
+**CRITICAL:** Do NOT register a new provider just to add scopes; always use `--scopes` with the existing provider:
+
+```bash
+authsome login <provider> --scopes repo,user,gist
+```
 
 **4. If relevant provider does not exist, then → add it first and then start the [login flow](#login-flow)**
 
 ## Adding a new provider
 
 See [references/adding-provider.md](references/adding-provider.md).
-
-
----
-
-## Installation
-
-To install authsome globally on behalf of the user run:
-
-```bash
-uv tool install authsome
-```
-
-Fallback: `pipx install authsome` or `uvx authsome@latest <command>` for one-off use.
 
 ---
 
