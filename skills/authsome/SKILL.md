@@ -37,6 +37,18 @@ to set any auth headers.
 - `authsome` not found? → [Installation](#installation)
 - Unsure about commands? → [Troubleshooting & Help](#troubleshooting--help)
 
+---
+
+## Login Flow
+
+- Run `authsome login <provider>` via Bash yourself — do NOT ask the user to
+  run this. The browser opens on their machine; they complete OAuth without touching
+  the terminal.
+- Poll the status of the login using `authsome list` after a few seconds
+  - **If connected** — proceed normally.
+  - **If not yet connected** — display the authentication URL to the user, ask them to complete the login in their browser, and report back once done. Once the user confirms, run `authsome list` again to verify the connection before continuing.
+
+---
 
 ## When a Request Fails
 
@@ -44,16 +56,16 @@ to set any auth headers.
 
 **1. Run `authsome list` to see all providers and their connections**
 
-**2. If relevant provider exists but it has no connections → try [Login](#login)**
+**2. If relevant provider exists but it has no connections → start the [login flow](#login-flow)**
 
-If there is a login error due to wrong client id/client secret you can delete the provider via `authsome remove <provider>` and try [Login](#login)
+If there is a login error due to wrong client id/client secret you can delete the provider via `authsome remove <provider>` and start the [login flow](#login-flow)
 
 **3. If relevant provider exists and it is connected → you need to re-login, creds have expired**
 
 - revoke the creds using `authsome revoke <provider>`
-- then try [Login](#login)
+- then start the [login flow](#login-flow)
 
-**4. If relevant provider does not exist, then → add it first and then try [Login](#login)**
+**4. If relevant provider does not exist, then → add it first and then start the [login flow](#login-flow)**
 
 ## Adding a new provider
 
@@ -64,20 +76,13 @@ See [references/adding-provider.md](references/adding-provider.md).
 
 ## Installation
 
+To install authsome globally on behalf of the user run:
+
 ```bash
 uv tool install authsome
 ```
 
 Fallback: `pipx install authsome` or `uvx authsome@latest <command>` for one-off use.
-
----
-
-## Login
-
-```bash
-authsome login <provider>   # opens browser, captures credentials securely
-authsome list               # verify the provider shows as connected
-```
 
 ---
 

@@ -150,9 +150,9 @@ rm -rf ~/.hermes/skills/authsome
 cp -r skills/authsome ~/.hermes/skills/authsome
 
 # For claude evals
-rm -rf .skills/authsome
-mkdir -p .skills
-cp -r skills/authsome .skills/authsome
+rm -rf .claude/skills/authsome
+mkdir -p .claude/skills
+cp -r skills/authsome .claude/skills/authsome
 ```
 
 #### c. Run the agent

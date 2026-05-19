@@ -244,11 +244,12 @@ __marimo__/
 # Git worktrees
 .worktrees/
 .claude/worktrees/
+
 # Local authsome home directory
 .authsome/
 
 # Superpowers agent docs (local planning artifacts)
 docs/superpowers/
 
-# Claude skill command (generated at eval time)
-.claude/commands/authsome.md
+# Authsome skill (generated at eval time)
+.skills/authsome/
