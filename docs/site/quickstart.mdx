@@ -48,6 +48,49 @@ The agent runs `authsome login <provider>` itself when it hits a missing credent
 
 If you're scripting against authsome directly or you want to manually pre-seed a credential before launching anything, drive the CLI yourself.
 
+### Register the GitHub OAuth app (first-time setup)
+
+GitHub doesn't support Dynamic Client Registration, so before your first `authsome login github` you need to register an OAuth app once. This is a one-time setup.
+
+<Steps>
+  <Step title="Open GitHub developer settings">
+    Visit [github.com/settings/developers](https://github.com/settings/developers).
+  </Step>
+
+  <Step title="Click 'New OAuth App'">
+    The button sits at the top right of the OAuth Apps list.
+  </Step>
+
+  <Step title="Fill the registration form">
+    | Field | Value |
+    |---|---|
+    | Application name | Anything memorable, e.g. `authsome (local)` |
+    | Homepage URL | `http://localhost:3000` (any URL works; GitHub doesn't validate it for OAuth functionality) |
+    | Application description | Optional |
+    | Authorization callback URL | `http://127.0.0.1:7998/auth/callback/oauth` |
+    | Enable Device Flow | ☑ check it on |
+
+    <Warning>
+      The **Authorization callback URL** must be exactly `http://127.0.0.1:7998/auth/callback/oauth`. Authsome's PKCE flow listens only on this address; any other value will fail with `redirect_uri_mismatch` at login time.
+    </Warning>
+
+    Click **Register application**.
+  </Step>
+
+  <Step title="Copy the Client ID and generate a Client Secret">
+    GitHub now shows your new app's settings.
+
+    1. Copy the **Client ID**.
+    2. Click **Generate a new client secret** and copy the secret immediately.
+
+    <Warning>
+      Save the **Client Secret** somewhere safe (a password manager) before navigating away. GitHub shows the secret only once. If you lose it, you'll need to generate another one and update your authsome connection.
+    </Warning>
+  </Step>
+</Steps>
+
+You'll paste both values into authsome's local browser bridge on the next step. They're stored encrypted under your profile and reused on every subsequent login. They are never accepted as command-line arguments.
+
 ### Log in to a provider
 
 <Steps>
@@ -56,10 +99,17 @@ If you're scripting against authsome directly or you want to manually pre-seed a
     authsome login github
     ```
 
-    A browser window opens to GitHub's authorization page. Authsome runs the PKCE flow with a callback on `http://127.0.0.1:7998/auth/callback/oauth`.
+    Authsome opens a local form at `http://127.0.0.1:7998` asking for your GitHub OAuth credentials.
   </Step>
-  <Step title="Approve access">
-    Click **Authorize** in the browser. The terminal prints `Successfully logged in to github (default).`
+  <Step title="Paste the Client ID and Client Secret">
+    Paste the values you saved during the OAuth app registration. They're encrypted and stored locally; you won't be asked for them again unless you `authsome revoke github`.
+
+    <Frame caption="Authsome's local bridge form for GitHub OAuth credentials">
+      <img src="/images/login-github-authsome.png" alt="Authsome local browser form prompting for GitHub Client ID and Client Secret" />
+    </Frame>
+  </Step>
+  <Step title="Approve access on GitHub">
+    A second browser window opens to `https://github.com/login/oauth/authorize`. Click **Authorize** to grant the requested scopes. The callback lands on `http://127.0.0.1:7998/auth/callback/oauth` and the terminal prints `Successfully logged in to github (default).`
   </Step>
   <Step title="Confirm the connection">
     ```bash
@@ -70,9 +120,7 @@ If you're scripting against authsome directly or you want to manually pre-seed a
   </Step>
 </Steps>
 
-<Tip>
-  The first time you log in to an OAuth2 provider, authsome collects your `client_id` and `client_secret` through a secure local browser form. They are encrypted and stored under your profile, then reused on every subsequent login. They are never accepted as command-line arguments.
-</Tip>
+For other providers, see [Agent integrations](/integrations/agents/index) or the per-provider page under [OAuth providers](/integrations/oauth/index). API-key providers like OpenAI don't need an OAuth app — see the next section.
 
 ### Add an API-key provider
 
