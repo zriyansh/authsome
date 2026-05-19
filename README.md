@@ -69,7 +69,8 @@ Authenticate once:
 
 ```bash
 authsome login github
-# This opens a browser on user's machine; user completes login without sharing the creds with the agent.
+# This opens a browser on user's machine
+# user completes login without sharing the creds with the agent.
 ```
 
 Then agents get valid credentials on demand when they try to access external services.
@@ -111,8 +112,6 @@ uv tool install authsome
 
 ## Quick Start
 
-> If you find this useful, please [star the repo on GitHub](https://github.com/agentrhq/authsome) — it helps a lot!
-
 Add the authsome skill to your agent (claude, codex, cursor, hermes, etc.):
 
 ```bash
@@ -121,9 +120,17 @@ npx skills add agentrhq/authsome
 
 And try a sample task that requires access to external services:
 
-> Star the repo agentrhq/authsome
+```
+Star the repo agentrhq/authsome
+```
+```
+Get my last 5 emails from gmail
+```
+```
+Check my stripe balance
+```
 
-The agent will use authsome to star the repo on github.
+The agent will use authsome to login into external services and perform the task.
 
 ## Agent Integrations
 
