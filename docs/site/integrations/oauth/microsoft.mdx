@@ -44,7 +44,7 @@ Dashboard: [https://entra.microsoft.com/](https://entra.microsoft.com/).
 ## Log in
 
 ```bash
-uvx authsome login microsoft
+authsome login microsoft
 ```
 
 The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://login.microsoftonline.com/common/oauth2/v2.0/authorize` for the authorization step.
@@ -52,7 +52,7 @@ The first time, authsome opens a local form at `http://127.0.0.1:7998` to collec
 Verify:
 
 ```bash
-uvx authsome get microsoft --field status
+authsome get microsoft --field status
 # → connected
 ```
 
@@ -61,7 +61,7 @@ uvx authsome get microsoft --field status
 For SSH or CI environments, use the device code flow:
 
 ```bash
-uvx authsome login microsoft --flow device_code
+authsome login microsoft --flow device_code
 ```
 
 See [Headless setup](/guides/headless-device-code) for the full flow.
@@ -71,18 +71,18 @@ See [Headless setup](/guides/headless-device-code) for the full flow.
 The bundled definition requests `User.Read`, `offline_access`, `Mail.ReadWrite`, `Calendars.ReadWrite`, `Files.ReadWrite`, `Tasks.ReadWrite`. Override at login time:
 
 ```bash
-uvx authsome login microsoft --scopes "<comma-separated>"
+authsome login microsoft --scopes "<comma-separated>"
 ```
 
-The granted scopes are stored on the connection and visible in `uvx authsome get microsoft`.
+The granted scopes are stored on the connection and visible in `authsome get microsoft`.
 
 ## Multiple accounts
 
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login microsoft --connection personal
-uvx authsome login microsoft --connection work
+authsome login microsoft --connection personal
+authsome login microsoft --connection work
 ```
 
 ## Use the token
@@ -92,11 +92,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export microsoft --format env)"
+eval "$(authsome export microsoft --format env)"
 ```
 
 ```python Python library
@@ -113,9 +113,9 @@ Under the proxy, authsome sets `MICROSOFT_ACCESS_TOKEN=authsome-proxy-managed` i
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect microsoft > ~/.authsome/providers/microsoft.json
+authsome inspect microsoft > ~/.authsome/providers/microsoft.json
 # edit scopes, base_url, or anything else
-uvx authsome list   # source now shows "custom" for microsoft
+authsome list   # source now shows "custom" for microsoft
 ```
 
 User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).

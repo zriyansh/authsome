@@ -15,9 +15,9 @@ This is the right pattern when you want two accounts on the same provider both r
 Pass `--connection <name>` to `login`. The name is arbitrary; pick what reads well.
 
 ```bash
-uvx authsome login github                        # default connection
-uvx authsome login github --connection work
-uvx authsome login github --connection personal
+authsome login github                        # default connection
+authsome login github --connection work
+authsome login github --connection personal
 ```
 
 For an OAuth2 provider, each `login` runs its own browser flow. The connections share the OAuth `client_id`/`client_secret` you configured for the provider, but each receives an independent access token bound to its own scopes.
@@ -29,9 +29,9 @@ For an API-key provider, each `login` opens a fresh local form so you paste a di
 Every read command accepts `--connection`:
 
 ```bash
-uvx authsome get github --connection work
-uvx authsome get github --connection personal --field status
-uvx authsome export github --connection work --format env
+authsome get github --connection work
+authsome get github --connection personal --field status
+authsome export github --connection work --format env
 ```
 
 Without `--connection`, the command uses the default.
@@ -39,8 +39,8 @@ Without `--connection`, the command uses the default.
 ## List connections
 
 ```bash
-uvx authsome list
-uvx authsome inspect github       # shows every connection on the provider
+authsome list
+authsome inspect github       # shows every connection on the provider
 ```
 
 `inspect` includes per-connection status, expiry, and scopes.
@@ -50,20 +50,20 @@ uvx authsome inspect github       # shows every connection on the provider
 There is no `set-default` command in v1. To change which connection authsome treats as default, log in to it with `--force`:
 
 ```bash
-uvx authsome login github --connection work --force
+authsome login github --connection work --force
 ```
 
 The `--force` flag overwrites the existing `default` slot. Programmatic default switching is on the roadmap.
 
 ## In the proxy
 
-`uvx authsome run` injects credentials from each provider's **default** connection. Per-request connection selection is future work.
+`authsome run` injects credentials from each provider's **default** connection. Per-request connection selection is future work.
 
 To run an agent against a non-default connection, set the active default first:
 
 ```bash
-uvx authsome login github --connection work --force
-uvx authsome run -- python my_agent.py
+authsome login github --connection work --force
+authsome run -- python my_agent.py
 ```
 
 Or use the library, which accepts `connection=` directly:
@@ -78,7 +78,7 @@ token = auth.get_access_token("github", connection="work")
 ## Remove a connection
 
 ```bash
-uvx authsome logout github --connection work
+authsome logout github --connection work
 ```
 
 This removes the local credential record for that connection only. The other connections on the provider stay intact. The provider is not contacted.
@@ -86,7 +86,7 @@ This removes the local credential record for that connection only. The other con
 To call the provider's revocation endpoint (where supported) and clear local state:
 
 ```bash
-uvx authsome revoke github                       # all connections + client secrets
+authsome revoke github                       # all connections + client secrets
 ```
 
 `revoke` does not yet target a single connection; it clears the provider entirely. To revoke only one connection at the provider, use the provider's own UI and then `logout` locally.

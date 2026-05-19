@@ -44,7 +44,7 @@ Dashboard: [https://console.cloud.google.com/apis/credentials](https://console.c
 ## Log in
 
 ```bash
-uvx authsome login google
+authsome login google
 ```
 
 The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://accounts.google.com/o/oauth2/v2/auth` for the authorization step.
@@ -52,7 +52,7 @@ The first time, authsome opens a local form at `http://127.0.0.1:7998` to collec
 Verify:
 
 ```bash
-uvx authsome get google --field status
+authsome get google --field status
 # → connected
 ```
 
@@ -61,7 +61,7 @@ uvx authsome get google --field status
 For SSH or CI environments, use the device code flow:
 
 ```bash
-uvx authsome login google --flow device_code
+authsome login google --flow device_code
 ```
 
 See [Headless setup](/guides/headless-device-code) for the full flow.
@@ -71,18 +71,18 @@ See [Headless setup](/guides/headless-device-code) for the full flow.
 The bundled definition requests `openid`, `profile`. Override at login time:
 
 ```bash
-uvx authsome login google --scopes "<comma-separated>"
+authsome login google --scopes "<comma-separated>"
 ```
 
-The granted scopes are stored on the connection and visible in `uvx authsome get google`.
+The granted scopes are stored on the connection and visible in `authsome get google`.
 
 ## Multiple accounts
 
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login google --connection personal
-uvx authsome login google --connection work
+authsome login google --connection personal
+authsome login google --connection work
 ```
 
 ## Use the token
@@ -92,11 +92,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export google --format env)"
+eval "$(authsome export google --format env)"
 ```
 
 ```python Python library
@@ -113,9 +113,9 @@ Under the proxy, authsome sets `GOOGLE_ACCESS_TOKEN=authsome-proxy-managed` in t
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect google > ~/.authsome/providers/google.json
+authsome inspect google > ~/.authsome/providers/google.json
 # edit scopes, base_url, or anything else
-uvx authsome list   # source now shows "custom" for google
+authsome list   # source now shows "custom" for google
 ```
 
 User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).

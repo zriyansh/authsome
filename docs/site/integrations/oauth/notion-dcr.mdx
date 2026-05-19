@@ -34,7 +34,7 @@ Notion's MCP endpoint (`mcp.notion.com`) supports Dynamic Client Registration. Y
 ## Log in
 
 ```bash
-uvx authsome login notion_dcr
+authsome login notion_dcr
 ```
 
 The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://mcp.notion.com/authorize` for the authorization step.
@@ -42,7 +42,7 @@ The first time, authsome opens a local form at `http://127.0.0.1:7998` to collec
 Verify:
 
 ```bash
-uvx authsome get notion_dcr --field status
+authsome get notion_dcr --field status
 # → connected
 ```
 
@@ -51,8 +51,8 @@ uvx authsome get notion_dcr --field status
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login notion_dcr --connection personal
-uvx authsome login notion_dcr --connection work
+authsome login notion_dcr --connection personal
+authsome login notion_dcr --connection work
 ```
 
 ## Use the token
@@ -62,11 +62,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export notion_dcr --format env)"
+eval "$(authsome export notion_dcr --format env)"
 ```
 
 ```python Python library
@@ -83,9 +83,9 @@ Under the proxy, authsome sets `NOTION_ACCESS_TOKEN=authsome-proxy-managed` in t
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect notion_dcr > ~/.authsome/providers/notion_dcr.json
+authsome inspect notion_dcr > ~/.authsome/providers/notion_dcr.json
 # edit scopes, base_url, or anything else
-uvx authsome list   # source now shows "custom" for notion_dcr
+authsome list   # source now shows "custom" for notion_dcr
 ```
 
 User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).

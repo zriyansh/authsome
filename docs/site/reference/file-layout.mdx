@@ -86,9 +86,9 @@ Append-only newline-delimited log of significant actions: `login`, `logout`, `re
 Read recent entries:
 
 ```bash
-uvx authsome log
-uvx authsome log -n 200
-uvx authsome log --json
+authsome log
+authsome log -n 200
+authsome log --json
 ```
 
 The schema is intentionally readable. The file is not encrypted; it's meant to be auditable.
@@ -108,9 +108,9 @@ The default path is `~/.authsome/logs/authsome.log`. Override with `--log-file <
 User-registered or user-overridden provider definitions. A file at this path with the same name as a bundled provider wins over the bundled one.
 
 ```bash
-uvx authsome inspect github > ~/.authsome/providers/github.json
+authsome inspect github > ~/.authsome/providers/github.json
 # edit fields
-uvx authsome list   # github now shows source=custom
+authsome list   # github now shows source=custom
 ```
 
 See [Provider schema](/reference/provider-schema) for the full schema and [Provider registry](/concepts/provider-registry) for resolution rules.
@@ -168,13 +168,13 @@ The vault is not large unless you accumulate hundreds of connections.
 | `~/.authsome/audit.log` | `0600` | Same justification. |
 | `~/.authsome/providers/*.json` | `0644` | Not sensitive on its own. |
 
-`uvx authsome doctor` verifies the critical paths and their modes.
+`authsome doctor` verifies the critical paths and their modes.
 
 ## Override the location
 
 ```bash
 export AUTHSOME_HOME=/var/lib/authsome
-uvx authsome whoami
+authsome whoami
 ```
 
 Useful for:

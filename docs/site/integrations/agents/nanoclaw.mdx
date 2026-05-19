@@ -11,9 +11,9 @@ NanoClaw, OpenClaw, and HermesAgent are lightweight Python agent runners in the 
 ## Run under the proxy
 
 ```bash
-uvx authsome login github
-uvx authsome login openai
-uvx authsome run -- python -m <your_runner>
+authsome login github
+authsome login openai
+authsome run -- python -m <your_runner>
 ```
 
 The runner sees placeholder env vars. Outbound HTTPS to matched providers is authenticated at the proxy layer. This is the recommended path.

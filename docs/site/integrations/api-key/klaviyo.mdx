@@ -30,7 +30,7 @@ Create an API key in the Klaviyo dashboard at [https://www.klaviyo.com/account#a
 ## Log in
 
 ```bash
-uvx authsome login klaviyo
+authsome login klaviyo
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get klaviyo --field status
+authsome get klaviyo --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export klaviyo --format env)"
+eval "$(authsome export klaviyo --format env)"
 echo $KLAVIYO_API_KEY
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `KLAVIYO_API_KEY=authsome-proxy-managed` in the c
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login klaviyo --connection personal
-uvx authsome login klaviyo --connection team
+authsome login klaviyo --connection personal
+authsome login klaviyo --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login klaviyo --force          # rotate
-uvx authsome logout klaviyo                  # remove local credential
-uvx authsome remove klaviyo                  # remove all local state for the provider
+authsome login klaviyo --force          # rotate
+authsome logout klaviyo                  # remove local credential
+authsome remove klaviyo                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Klaviyo.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect klaviyo > ~/.authsome/providers/klaviyo.json
+authsome inspect klaviyo > ~/.authsome/providers/klaviyo.json
 # edit fields
-uvx authsome list   # source now shows "custom" for klaviyo
+authsome list   # source now shows "custom" for klaviyo
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

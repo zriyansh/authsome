@@ -52,7 +52,7 @@ GitHub does not support Dynamic Client Registration, so you need to register an 
 ## Log in
 
 ```bash
-uvx authsome login github
+authsome login github
 ```
 
 What happens:
@@ -75,7 +75,7 @@ What happens:
 Verify:
 
 ```bash
-uvx authsome get github --field status
+authsome get github --field status
 # → connected
 ```
 
@@ -84,7 +84,7 @@ uvx authsome get github --field status
 For machines without a local browser, use the device code flow:
 
 ```bash
-uvx authsome login github --flow device_code
+authsome login github --flow device_code
 ```
 
 Authsome prints a verification URL and a short user code. Open the URL on any device, enter the code, approve the app, and authsome's poll completes.
@@ -96,10 +96,10 @@ Device code uses GitHub's public OAuth client, so you can skip the OAuth app reg
 The bundled definition requests `repo` and `read:user`. Override at login time:
 
 ```bash
-uvx authsome login github --scopes "repo,read:user,workflow,gist"
+authsome login github --scopes "repo,read:user,workflow,gist"
 ```
 
-The granted scopes are stored on the connection and visible in `uvx authsome get github`.
+The granted scopes are stored on the connection and visible in `authsome get github`.
 
 For the full list of GitHub OAuth scopes, see GitHub's [scopes documentation](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps).
 
@@ -108,7 +108,7 @@ For the full list of GitHub OAuth scopes, see GitHub's [scopes documentation](ht
 For self-hosted GitHub Enterprise, pass the base URL of your instance:
 
 ```bash
-uvx authsome login github --base-url https://github.acme.com
+authsome login github --base-url https://github.acme.com
 ```
 
 The base URL is saved on the connection and reused for every token refresh. The bundled definition uses `{base_url}` placeholders for the authorization, token, and device code endpoints, so substitution is automatic.
@@ -118,15 +118,15 @@ The base URL is saved on the connection and reused for every token refresh. The 
 Personal and work GitHub on the same machine:
 
 ```bash
-uvx authsome login github --connection personal
-uvx authsome login github --connection work
+authsome login github --connection personal
+authsome login github --connection work
 ```
 
 Read either side:
 
 ```bash
-uvx authsome get github --connection work
-uvx authsome export github --connection personal --format env
+authsome get github --connection work
+authsome export github --connection personal --format env
 ```
 
 <MultiConnectionsCta />
@@ -138,11 +138,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export github --format env)"
+eval "$(authsome export github --format env)"
 echo $GITHUB_ACCESS_TOKEN
 ```
 
@@ -169,9 +169,9 @@ Under the proxy, authsome sets `GITHUB_ACCESS_TOKEN=authsome-proxy-managed` in t
 To change scopes or point at GitHub Enterprise by default, drop a custom JSON at `~/.authsome/providers/github.json`. The user-registered file always wins over the bundled one.
 
 ```bash
-uvx authsome inspect github > ~/.authsome/providers/github.json
+authsome inspect github > ~/.authsome/providers/github.json
 # edit scopes, base_url, or anything else
-uvx authsome list   # source now shows "custom" for github
+authsome list   # source now shows "custom" for github
 ```
 
 The schema is documented in [Provider schema](/reference/provider-schema).
@@ -181,9 +181,9 @@ The schema is documented in [Provider schema](/reference/provider-schema).
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | `redirect_uri_mismatch` at github.com | OAuth app callback URL is wrong | Set it to `http://127.0.0.1:7998/auth/callback/oauth` exactly. |
-| Browser opens but the form is blank | Daemon not running or port held | `uvx authsome doctor` and check that port 7998 is free. |
-| `Bad credentials` after a successful login | Token revoked at GitHub | `uvx authsome login github --force` to re-authenticate. |
-| Refresh fails after long idle | GitHub access tokens do not expire by default; refresh is rarely needed | If the connection shows `expired`, run `uvx authsome login github --force`. |
+| Browser opens but the form is blank | Daemon not running or port held | `authsome doctor` and check that port 7998 is free. |
+| `Bad credentials` after a successful login | Token revoked at GitHub | `authsome login github --force` to re-authenticate. |
+| Refresh fails after long idle | GitHub access tokens do not expire by default; refresh is rarely needed | If the connection shows `expired`, run `authsome login github --force`. |
 
 For deeper diagnostics, see [OAuth callbacks](/troubleshooting/oauth-callbacks) and [Token refresh](/troubleshooting/token-refresh).
 

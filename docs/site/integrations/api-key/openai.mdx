@@ -40,7 +40,7 @@ Hint: OpenAI API keys start with 'sk-' followed by at least 20 letters, digits, 
 ## Log in
 
 ```bash
-uvx authsome login openai
+authsome login openai
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit. The terminal prints `Successfully logged in to openai (default).`
@@ -50,7 +50,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get openai --field status
+authsome get openai --field status
 # → connected
 ```
 
@@ -61,11 +61,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export openai --format env)"
+eval "$(authsome export openai --format env)"
 echo $OPENAI_API_KEY     # sk-...
 ```
 
@@ -93,15 +93,15 @@ Under the proxy, authsome sets `OPENAI_API_KEY=authsome-proxy-managed` in the ch
 A personal key and a team key on the same machine:
 
 ```bash
-uvx authsome login openai --connection personal
-uvx authsome login openai --connection team
+authsome login openai --connection personal
+authsome login openai --connection team
 ```
 
 Read either side:
 
 ```bash
-uvx authsome get openai --connection team --field api_key --show-secret
-uvx authsome export openai --connection personal --format env
+authsome get openai --connection team --field api_key --show-secret
+authsome export openai --connection personal --format env
 ```
 
 <MultiConnectionsCta />
@@ -111,7 +111,7 @@ uvx authsome export openai --connection personal --format env
 To replace the stored key with a new one:
 
 ```bash
-uvx authsome login openai --force
+authsome login openai --force
 ```
 
 `--force` overwrites the existing connection without removing it first. Pass `--connection <name>` to target a non-default connection.
@@ -121,8 +121,8 @@ To invalidate the old key at OpenAI as well, delete it in the OpenAI dashboard b
 ## Remove the key
 
 ```bash
-uvx authsome logout openai             # remove local credential
-uvx authsome remove openai             # remove local provider state entirely
+authsome logout openai             # remove local credential
+authsome remove openai             # remove local provider state entirely
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for OpenAI.
@@ -132,9 +132,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 To change the header shape, the proxy host, or the validation regex, drop a custom JSON at `~/.authsome/providers/openai.json`:
 
 ```bash
-uvx authsome inspect openai > ~/.authsome/providers/openai.json
+authsome inspect openai > ~/.authsome/providers/openai.json
 # edit the file
-uvx authsome list   # openai now shows source=custom
+authsome list   # openai now shows source=custom
 ```
 
 User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema) for every field.
@@ -143,9 +143,9 @@ User-registered files always win over bundled definitions. See [Provider schema]
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `Incorrect API key provided` from OpenAI | Key was revoked at OpenAI | Generate a fresh key and run `uvx authsome login openai --force`. |
+| `Incorrect API key provided` from OpenAI | Key was revoked at OpenAI | Generate a fresh key and run `authsome login openai --force`. |
 | Key pattern rejected at login | Pasted something other than a key, or pasted with whitespace | Re-copy the key from the OpenAI dashboard. Authsome trims trailing whitespace but not embedded whitespace. |
-| SDK sees `authsome-proxy-managed` and fails | Running outside `uvx authsome run` | Use `authsome run` or fall back to `eval "$(uvx authsome export openai --format env)"`. |
+| SDK sees `authsome-proxy-managed` and fails | Running outside `authsome run` | Use `authsome run` or fall back to `eval "$(authsome export openai --format env)"`. |
 | TLS error against `api.openai.com` under the proxy | mitmproxy CA not trusted | See [Proxy networking](/troubleshooting/proxy-networking). |
 
 For deeper diagnostics, see [Token refresh](/troubleshooting/token-refresh) (API keys don't have refresh, but the page covers when a stored secret is rejected at runtime).

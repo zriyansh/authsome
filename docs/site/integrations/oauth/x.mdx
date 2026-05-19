@@ -44,7 +44,7 @@ Dashboard: [https://developer.twitter.com/en/portal/dashboard](https://developer
 ## Log in
 
 ```bash
-uvx authsome login x
+authsome login x
 ```
 
 The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://twitter.com/i/oauth2/authorize` for the authorization step.
@@ -52,7 +52,7 @@ The first time, authsome opens a local form at `http://127.0.0.1:7998` to collec
 Verify:
 
 ```bash
-uvx authsome get x --field status
+authsome get x --field status
 # → connected
 ```
 
@@ -61,18 +61,18 @@ uvx authsome get x --field status
 The bundled definition requests `tweet.read`, `tweet.write`, `users.read`, `offline.access`. Override at login time:
 
 ```bash
-uvx authsome login x --scopes "<comma-separated>"
+authsome login x --scopes "<comma-separated>"
 ```
 
-The granted scopes are stored on the connection and visible in `uvx authsome get x`.
+The granted scopes are stored on the connection and visible in `authsome get x`.
 
 ## Multiple accounts
 
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login x --connection personal
-uvx authsome login x --connection work
+authsome login x --connection personal
+authsome login x --connection work
 ```
 
 ## Use the token
@@ -82,11 +82,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export x --format env)"
+eval "$(authsome export x --format env)"
 ```
 
 ```python Python library
@@ -103,9 +103,9 @@ Under the proxy, authsome sets `X_ACCESS_TOKEN=authsome-proxy-managed` in the ch
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect x > ~/.authsome/providers/x.json
+authsome inspect x > ~/.authsome/providers/x.json
 # edit scopes, base_url, or anything else
-uvx authsome list   # source now shows "custom" for x
+authsome list   # source now shows "custom" for x
 ```
 
 User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).

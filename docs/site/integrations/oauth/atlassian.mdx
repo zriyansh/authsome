@@ -44,7 +44,7 @@ Dashboard: [https://developer.atlassian.com/console/myapps/](https://developer.a
 ## Log in
 
 ```bash
-uvx authsome login atlassian
+authsome login atlassian
 ```
 
 The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://auth.atlassian.com/authorize` for the authorization step.
@@ -52,7 +52,7 @@ The first time, authsome opens a local form at `http://127.0.0.1:7998` to collec
 Verify:
 
 ```bash
-uvx authsome get atlassian --field status
+authsome get atlassian --field status
 # → connected
 ```
 
@@ -61,18 +61,18 @@ uvx authsome get atlassian --field status
 The bundled definition requests `read:jira-work`, `write:jira-work`, `read:jira-user`, `manage:jira-project`, `manage:jira-configuration`. Override at login time:
 
 ```bash
-uvx authsome login atlassian --scopes "<comma-separated>"
+authsome login atlassian --scopes "<comma-separated>"
 ```
 
-The granted scopes are stored on the connection and visible in `uvx authsome get atlassian`.
+The granted scopes are stored on the connection and visible in `authsome get atlassian`.
 
 ## Multiple accounts
 
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login atlassian --connection personal
-uvx authsome login atlassian --connection work
+authsome login atlassian --connection personal
+authsome login atlassian --connection work
 ```
 
 ## Use the token
@@ -82,11 +82,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export atlassian --format env)"
+eval "$(authsome export atlassian --format env)"
 ```
 
 ```python Python library
@@ -103,9 +103,9 @@ Under the proxy, authsome sets `ATLASSIAN_ACCESS_TOKEN=authsome-proxy-managed` i
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect atlassian > ~/.authsome/providers/atlassian.json
+authsome inspect atlassian > ~/.authsome/providers/atlassian.json
 # edit scopes, base_url, or anything else
-uvx authsome list   # source now shows "custom" for atlassian
+authsome list   # source now shows "custom" for atlassian
 ```
 
 User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).

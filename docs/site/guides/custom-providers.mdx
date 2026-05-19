@@ -25,7 +25,7 @@ Then write the JSON file following the schema at https://authsome.ai/docs/refere
 Output:
 
 - The full provider JSON, ready to save to `~/.authsome/providers/<name>.json`.
-- The exact `uvx authsome register` command to install it.
+- The exact `authsome register` command to install it.
 - A one-line note about anything unusual (multi-tenant `{base_url}`, non-standard header prefix, missing PKCE support, etc.).
 
 Do NOT invent endpoint URLs. If you cannot find them in the official docs, stop and tell me what you need to look up.
@@ -144,20 +144,20 @@ For the full schema with every supported field, see the [Provider schema referen
 ## Step 4: Register the provider
 
 ```bash
-uvx authsome register ./acmecrm.json
+authsome register ./acmecrm.json
 ```
 
 Authsome validates required fields, checks `auth_type`/`flow` compatibility, and copies the file into `~/.authsome/providers/`. Pass `--yes` to skip the confirmation prompt in scripts, and `--force` to overwrite an existing provider with the same name.
 
 ```bash
-uvx authsome register ./acmecrm.json --force
+authsome register ./acmecrm.json --force
 ```
 
 Confirm it's registered:
 
 ```bash
-uvx authsome list                  # acmecrm should show up with source=custom
-uvx authsome inspect acmecrm       # full definition
+authsome list                  # acmecrm should show up with source=custom
+authsome inspect acmecrm       # full definition
 ```
 
 ## Step 5: Log in
@@ -165,8 +165,8 @@ uvx authsome inspect acmecrm       # full definition
 Same commands as for bundled providers:
 
 ```bash
-uvx authsome login acmecrm
-uvx authsome get acmecrm --field status   # → connected
+authsome login acmecrm
+authsome get acmecrm --field status   # → connected
 ```
 
 For OAuth2 providers without DCR, authsome opens a local browser form on first login to collect `client_id` and `client_secret`. They are stored encrypted under the active profile and reused on every subsequent login. They are never accepted as command-line arguments.
@@ -180,7 +180,7 @@ For services where each customer has their own subdomain (Okta, GitHub Enterpris
 3. Pass `--base-url` at login time:
 
 ```bash
-uvx authsome login acmecrm --base-url https://acme.tenant.com
+authsome login acmecrm --base-url https://acme.tenant.com
 ```
 
 The custom base URL is saved on the connection and reused for all token refreshes.
@@ -190,9 +190,9 @@ The custom base URL is saved on the connection and reused for all token refreshe
 Custom providers always win over bundled ones with the same name. To customize a bundled provider, for example, to add scopes or change the host URL:
 
 ```bash
-uvx authsome inspect github > ~/.authsome/providers/github.json
+authsome inspect github > ~/.authsome/providers/github.json
 # edit the file
-uvx authsome list   # github now shows source=custom
+authsome list   # github now shows source=custom
 ```
 
 ## What's next

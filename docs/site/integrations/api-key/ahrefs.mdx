@@ -30,7 +30,7 @@ Create an API key in the Ahrefs dashboard at [https://app.ahrefs.com/account/api
 ## Log in
 
 ```bash
-uvx authsome login ahrefs
+authsome login ahrefs
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get ahrefs --field status
+authsome get ahrefs --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export ahrefs --format env)"
+eval "$(authsome export ahrefs --format env)"
 echo $AHREFS_API_KEY
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `AHREFS_API_KEY=authsome-proxy-managed` in the ch
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login ahrefs --connection personal
-uvx authsome login ahrefs --connection team
+authsome login ahrefs --connection personal
+authsome login ahrefs --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login ahrefs --force          # rotate
-uvx authsome logout ahrefs                  # remove local credential
-uvx authsome remove ahrefs                  # remove all local state for the provider
+authsome login ahrefs --force          # rotate
+authsome logout ahrefs                  # remove local credential
+authsome remove ahrefs                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Ahrefs.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect ahrefs > ~/.authsome/providers/ahrefs.json
+authsome inspect ahrefs > ~/.authsome/providers/ahrefs.json
 # edit fields
-uvx authsome list   # source now shows "custom" for ahrefs
+authsome list   # source now shows "custom" for ahrefs
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

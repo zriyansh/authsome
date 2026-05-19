@@ -48,7 +48,7 @@ Use the same URL that the browser and OAuth providers will see. This is what aut
 
 ```bash
 export AUTHSOME_DAEMON_URL=https://authsome.internal.example.com
-uvx authsome list
+authsome list
 ```
 
 The CLI does not auto-start a local daemon when `AUTHSOME_DAEMON_URL` points at a non-local host. Client machines do **not** need `AUTHSOME_SERVER_BASE_URL`.
