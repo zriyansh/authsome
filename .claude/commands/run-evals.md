@@ -461,9 +461,10 @@ uv run authsome list > RUN_DIR/authsome_state_N.txt 2>&1
 After showing the verdict, immediately prepare for the next eval:
 
 1. Run `uv run authsome list` and compare against the next eval's `environment` field.
-2. Fix any mismatches inline (e.g. `uv run authsome logout github`). Re-check until state matches.
-3. Only pause and ask the user when:
-   - An OAuth login requires a browser flow (show the URL, wait for "done")
+2. Fix any mismatches inline (e.g. `uv run authsome revoke github`). Re-check until state matches.
+3. If you need to login (e.g. for provider X) and the environment says provider X is NOT connected, it is okay to use `uv run authsome login <provider>` and `uv run authsome list` to poll the status of the provider a few seconds later to see if the login was successful.
+4. Only pause and ask the user when:
+   - If polling fails during login (show the URL, wait for "done")
    - A `requires_human` eval where the user must act during the run
 
 ---

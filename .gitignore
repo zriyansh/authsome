@@ -252,4 +252,4 @@ __marimo__/
 docs/superpowers/
 
 # Authsome skill (generated at eval time)
-.skills/authsome/
+.claude/skills/authsome/
