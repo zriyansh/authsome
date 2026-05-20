@@ -25,7 +25,7 @@ class VaultRecord(BaseModel):
     """Vault record owned as a first-class resource."""
 
     vault_id: str
-    slug: str = "default"
+    handle: str = "default"
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
 
@@ -120,7 +120,12 @@ class VaultRegistry(_JsonRegistry[VaultRecord]):
 
     async def create_default(self) -> VaultRecord:
         now = utc_now()
-        record = VaultRecord(vault_id=f"vault_{uuid.uuid4().hex[:12]}", slug="default", created_at=now, updated_at=now)
+        record = VaultRecord(
+            vault_id=f"vault_{uuid.uuid4().hex[:12]}",
+            handle="default",
+            created_at=now,
+            updated_at=now,
+        )
         records = self._load_all()
         records.append(record)
         self._save_all(records)
