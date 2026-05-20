@@ -7,12 +7,20 @@ authsome is the local auth layer for AI agents — it answers which agent, actin
 ### Ownership & Identity
 
 **Principal**:
-A logical partition representing a human or team that owns a Vault namespace and performs OAuth authorization flows to acquire credentials. Identified by a human-readable **PrincipalHandle** (e.g., `manoj`); the sentinel `default` is used in local mode. Has no cryptographic key of its own.
+A logical partition representing a human or team that owns one or more Vaults and performs OAuth authorization flows to acquire credentials. Identified by a human-readable **PrincipalHandle** (e.g., `manoj`); the sentinel `default` is used in local mode. Has no cryptographic key of its own.
 _Avoid_: User, account, owner, human, Profile
 
 **PrincipalHandle**:
-The human-readable username for a Principal (e.g., `manoj`), used as the vault namespace key (`principal:<handle>:...`). In local mode the PrincipalHandle is always `default`. In hosted mode it is assigned at Principal creation and backed by a PrincipalRegistry entry.
+The human-readable name for a Principal (e.g., `manoj`). Stable storage key — uniqueness is global. In local mode the PrincipalHandle is always `default`. In hosted mode it is assigned at Principal creation and backed by a PrincipalRegistry entry.
 _Avoid_: principal_id, principal_name, username
+
+**Vault**:
+A credential store owned by exactly one Principal. Identified by a **VaultHandle**. Stores OAuth tokens and secrets encrypted at rest. A Principal may own multiple Vaults (e.g., `default`, `prod`, `dev`); every Principal has a designated **default Vault** used when no vault is specified. In local mode the default Vault is created automatically during `authsome init`.
+_Avoid_: credential store, token store, secret store
+
+**VaultHandle**:
+The human-readable name for a Vault (e.g., `default`, `prod`, `dev`). Stable storage key scoped to a Principal — uniqueness is `(PrincipalHandle, VaultHandle)`. In local mode the VaultHandle is always `default`.
+_Avoid_: vault_id, vault_name
 
 **Claim**:
 The act of an Identity asserting membership in a Principal, recorded as an `IdentityRegistration` with a `ClaimStatus`. In local mode all claims are auto-accepted. In hosted mode a Principal must explicitly accept a Claim before the agent may access the Principal's vault.
@@ -23,8 +31,12 @@ The lifecycle state of a Claim: `pending` (submitted, awaiting human review), `a
 _Avoid_: Registration status, identity state
 
 **PrincipalRegistry**:
-The daemon-owned authoritative mapping from PrincipalHandle → email (and any internal metadata including the cached `identity_handles` list). In local mode the `default` Principal is implicit and requires no registry entry. In hosted mode every Principal must have a registry entry before agents can register under it.
+The daemon-owned authoritative registry of Principals (PrincipalHandle → email). In local mode the `default` Principal is implicit and requires no registry entry. In hosted mode every Principal must have a registry entry before agents can register under it.
 _Avoid_: User table, account store
+
+**VaultRegistry**:
+The daemon-owned authoritative registry of Vaults (VaultHandle + owning PrincipalHandle). In local mode the `default` Vault is created implicitly during `authsome init`. Separate from PrincipalRegistry — three registries together form the complete domain model: Principals, Identities, Vaults.
+_Avoid_: vault table, vault store
 
 **Identity** (Agent):
 The cryptographic agent — an Ed25519 key pair, a `did:key` DID, and a Handle. Owned by a Principal. Authenticates to the daemon via PoP JWTs.
@@ -36,7 +48,7 @@ _Avoid_: Username, alias, profile name
 
 ## Initialization & Claim Flow
 
-**Local mode**: `authsome init` creates an Identity, registers it under the implicit `default` Principal with `claim_status = accepted`. No `--principal` or `--email` flags required or accepted.
+**Local mode**: `authsome init` creates an Identity, registers it under the implicit `default` Principal with `claim_status = accepted`, and creates the `default` Vault for that Principal. No `--principal` or `--email` flags required or accepted.
 
 **Hosted mode**: `authsome init --principal manoj --email manoj@agentrq.dev` creates the Principal in the PrincipalRegistry if absent, creates a new Identity, and registers a **Claim** — an `IdentityRegistration` with `claim_status = pending`. The agent cannot access the Principal's vault until the Principal accepts the claim. A human reviews pending claims in the UI and accepts or rejects each one.
 
@@ -51,14 +63,15 @@ A `pending` agent can authenticate to the daemon (PoP JWT validation succeeds) a
 ## Relationships
 
 - A **Principal** owns one or more **Identities** (agents).
-- A **Principal** owns the Vault namespace; all Vault keys are rooted at `principal:<PrincipalHandle>:...` (breaking change from `identity:<Handle>:...`).
-- **Identities** read credentials from their owning Principal's namespace.
+- A **Principal** owns one or more **Vaults**; every Principal has a designated default Vault.
+- An **Identity** belongs to exactly one Principal.
+- **Identities** access credentials from their owning Principal's default Vault (or an explicitly specified Vault).
 - `IdentityRegistration` carries a `principal_handle` field — the authoritative forward link (Identity → Principal).
-- `PrincipalRegistry` caches an `identity_handles` list per Principal — a denormalized reverse link for UI queries (Principal → Identities).
+- `VaultRegistration` carries a `principal_handle` field — the authoritative forward link (Vault → Principal).
 
 ## AuthService
 
-`AuthService` is constructed with three arguments: `vault`, `principal` (PrincipalHandle — drives vault namespace), and `identity` (agent Handle — used only for audit logging). `_coll = f"vault:{self._principal}"`. The `identity` field no longer influences which vault namespace is accessed.
+`AuthService` is constructed with four arguments: `vault`, `principal` (PrincipalHandle), `vault_handle` (VaultHandle — together they drive the vault namespace), and `identity` (agent Handle — used only for audit logging). `_coll = f"vault:{self._principal}:{self._vault_handle}"`. The `identity` field does not influence which vault namespace is accessed. The caller (daemon dependency injection) resolves the correct VaultHandle before constructing AuthService; AuthService is a pure credential-access layer.
 
 ## On-Behalf-Of Model
 
