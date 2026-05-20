@@ -2,6 +2,7 @@
 
 from authsome.actors.identity import (
     IdentityMetadata,
+    IdentityStatus,
     create_identity,
     current_from_home,
     ensure_local_identity,
@@ -46,6 +47,7 @@ __all__ = [
     "IdentityClaimRecord",
     "IdentityClaimRegistry",
     "IdentityMetadata",
+    "IdentityStatus",
     "IdentityRegistration",
     "IdentityRegistrationError",
     "IdentityRegistry",

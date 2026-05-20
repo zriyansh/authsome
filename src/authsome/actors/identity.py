@@ -6,6 +6,7 @@ import os
 import random
 import re
 from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
 
 import base58
@@ -51,15 +52,30 @@ _ADVERBS = (
 )
 
 
+class IdentityStatus(StrEnum):
+    """Progressive local lifecycle state for an identity."""
+
+    UNREGISTERED = "unregistered"
+    REGISTERED = "registered"
+    CLAIMED = "claimed"
+
+
 class IdentityMetadata(BaseModel):
     """Local identity metadata stored beside the caller private key."""
 
     handle: str
     did: str
-    registered: bool = False
-    claimed: bool = False
+    identity_status: IdentityStatus = IdentityStatus.UNREGISTERED
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @property
+    def registered(self) -> bool:
+        return self.identity_status in {IdentityStatus.REGISTERED, IdentityStatus.CLAIMED}
+
+    @property
+    def claimed(self) -> bool:
+        return self.identity_status == IdentityStatus.CLAIMED
 
 
 def identities_dir(home: Path) -> Path:
@@ -194,17 +210,21 @@ def remove_legacy_default_identity(home: Path) -> None:
 
 
 def mark_registered(home: Path, handle: str) -> IdentityMetadata:
-    """Persist registered=True for a local identity after daemon registration."""
+    """Persist a registered state for a local identity after daemon registration."""
     metadata = load_identity(home, handle)
-    updated = metadata.model_copy(update={"registered": True, "updated_at": datetime.now(UTC)})
+    if metadata.identity_status == IdentityStatus.CLAIMED:
+        return metadata
+    updated = metadata.model_copy(
+        update={"identity_status": IdentityStatus.REGISTERED, "updated_at": datetime.now(UTC)}
+    )
     identity_metadata_path(home, handle).write_text(updated.model_dump_json(indent=2), encoding="utf-8")
     return updated
 
 
 def mark_claimed(home: Path, handle: str) -> IdentityMetadata:
-    """Persist claimed=True for a local identity after ownership resolution."""
+    """Persist a claimed state for a local identity after ownership resolution."""
     metadata = load_identity(home, handle)
-    updated = metadata.model_copy(update={"claimed": True, "updated_at": datetime.now(UTC)})
+    updated = metadata.model_copy(update={"identity_status": IdentityStatus.CLAIMED, "updated_at": datetime.now(UTC)})
     identity_metadata_path(home, handle).write_text(updated.model_dump_json(indent=2), encoding="utf-8")
     return updated
 

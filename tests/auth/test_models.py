@@ -1,6 +1,6 @@
 """Tests for authsome data models."""
 
-from authsome.actors.identity import IdentityMetadata
+from authsome.actors.identity import IdentityMetadata, IdentityStatus
 from authsome.auth.models.config import current_spec_version
 from authsome.auth.models.connection import (
     ConnectionRecord,
@@ -49,6 +49,7 @@ class TestIdentityMetadata:
         meta = IdentityMetadata(handle="steady-wisely-boldly-0042", did="did:key:z6MkTest")
         assert meta.handle == "steady-wisely-boldly-0042"
         assert meta.did == "did:key:z6MkTest"
+        assert meta.identity_status == IdentityStatus.UNREGISTERED
         assert meta.registered is False
         assert meta.claimed is False
         assert meta.created_at is not None
@@ -58,13 +59,13 @@ class TestIdentityMetadata:
         meta = IdentityMetadata(
             handle="steady-wisely-boldly-0042",
             did="did:key:z6MkTest",
-            registered=True,
-            claimed=True,
+            identity_status=IdentityStatus.CLAIMED,
         )
         json_str = meta.model_dump_json()
         restored = IdentityMetadata.model_validate_json(json_str)
         assert restored.handle == "steady-wisely-boldly-0042"
         assert restored.did == "did:key:z6MkTest"
+        assert restored.identity_status == IdentityStatus.CLAIMED
         assert restored.registered is True
         assert restored.claimed is True
 

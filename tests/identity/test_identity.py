@@ -4,10 +4,12 @@ import pytest
 
 from authsome.actors import current_from_home
 from authsome.actors.identity import (
+    IdentityStatus,
     create_identity,
     ensure_local_identity,
     identity_key_path,
     mark_claimed,
+    mark_registered,
     public_key_from_did_key,
     public_key_to_did_key,
 )
@@ -30,7 +32,19 @@ def test_create_identity_writes_private_key_mode_0600(tmp_path: Path) -> None:
     assert key_path.exists()
     assert key_path.stat().st_mode & 0o777 == 0o600
     assert load_client_config(tmp_path).active_identity == identity.handle
+    assert identity.identity_status == IdentityStatus.UNREGISTERED
+    assert identity.registered is False
     assert identity.claimed is False
+
+
+def test_mark_registered_persists_identity_state(tmp_path: Path) -> None:
+    identity = create_identity(tmp_path, "steady-wisely-boldly-0042")
+
+    updated = mark_registered(tmp_path, identity.handle)
+
+    assert updated.identity_status == IdentityStatus.REGISTERED
+    assert updated.registered is True
+    assert updated.claimed is False
 
 
 def test_mark_claimed_persists_identity_state(tmp_path: Path) -> None:
@@ -38,6 +52,7 @@ def test_mark_claimed_persists_identity_state(tmp_path: Path) -> None:
 
     updated = mark_claimed(tmp_path, identity.handle)
 
+    assert updated.identity_status == IdentityStatus.CLAIMED
     assert updated.claimed is True
     assert ensure_local_identity(tmp_path, active_handle=identity.handle).claimed is True
 
