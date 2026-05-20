@@ -27,6 +27,8 @@ def generate_html(data: dict) -> str:
     skill_name = data.get("skill_name", "authsome")
     timestamp = data.get("timestamp", "")
 
+    font_url = "https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Lora:wght@400;500&display=swap"
+
     parts = [
         f"""<!DOCTYPE html>
 <html lang="en">
@@ -36,10 +38,7 @@ def generate_html(data: dict) -> str:
   <title>{html.escape(skill_name)} — Eval Report</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Lora:wght@400;500&display=swap"
-    rel="stylesheet"
-  >
+  <link href="{font_url}" rel="stylesheet">
   <style>
     :root {{
       --bg: #faf9f5;
@@ -133,7 +132,13 @@ def generate_html(data: dict) -> str:
     .pass {{ color: var(--green); }}
     .fail {{ color: var(--red); }}
     .skip {{ color: var(--text-muted); }}
-    .card-body {{ padding: 0.75rem 1rem; font-size: 0.875rem; display: flex; flex-direction: column; gap: 0.5rem; }}
+    .card-body {{
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }}
     .field-row {{ display: flex; gap: 0.75rem; }}
     .field-label {{
       color: var(--text-muted);
@@ -183,8 +188,11 @@ def generate_html(data: dict) -> str:
 
         if is_skipped:
             body_rows = (
-                "<div class='field-row'><span class='field-label'>skipped</span>"
-                "<span class='field-value evidence'>Rate limit hit — switch model and retry</span></div>"
+                "<div class='field-row'>"
+                "<span class='field-label'>skipped</span>"
+                "<span class='field-value evidence'>"
+                "Rate limit hit — switch model and retry"
+                "</span></div>"
             )
         else:
             o_evidence = html.escape(outcome.get("evidence", ""))
