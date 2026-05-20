@@ -14,6 +14,7 @@ from authsome.auth.models.enums import AuthType, ConnectionStatus
 from authsome.proxy.router import RouteMatch, RouteResolution
 from authsome.proxy.server import AuthProxyAddon, ProxyRouter, _build_proxy_options, _route
 from authsome.server.dependencies import create_auth_service
+from authsome.server.urls import DEFAULT_SERVER_BASE_URL
 
 
 async def _make_auth(tmp_path: Path) -> AuthLayer:
@@ -461,17 +462,16 @@ class TestAuthProxyAddon:
         flow.request.headers = headers if headers is not None else {}
         return flow
 
-    def _make_addon(self, auth, match, *, miss_reason=None):
+    def _make_addon(self, auth, match, *, miss_reason=None, mode="connected_allow"):
         router = mock.Mock()
         router.resolve.return_value = RouteResolution(match=match, miss_reason=miss_reason)
 
-        # Mock the async factory method
         mock_create = mock.AsyncMock(return_value=router)
 
         patcher = patch("authsome.proxy.server.ProxyRouter.create", mock_create)
         patcher.start()
 
-        addon = AuthProxyAddon(client=auth)
+        addon = AuthProxyAddon(client=auth, mode=mode)
         return addon, router, patcher
 
     @pytest.mark.asyncio
@@ -514,6 +514,68 @@ class TestAuthProxyAddon:
             patcher.stop()
 
         auth.resolve_credentials.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_addon_denies_no_match_with_generic_body_in_connected_deny(self) -> None:
+        auth = mock.AsyncMock()
+        flow = self._make_flow(host="example.com", path="/")
+
+        with patch("authsome.proxy.server.audit.log") as log_mock:
+            addon, _router, patcher = self._make_addon(auth, None, miss_reason="no_match", mode="connected_deny")
+            try:
+                await addon.request(flow)
+            finally:
+                patcher.stop()
+
+        assert flow.response.status_code == 403
+        assert flow.response.content == b"Forbidden by Authsome proxy policy"
+        log_mock.assert_called_once_with("proxy_deny", host="example.com", reason="no_match")
+        auth.resolve_credentials.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_addon_denies_no_credentials_with_provider_hint_in_configured_deny(self) -> None:
+        auth = mock.AsyncMock()
+        auth.resolve_credentials.side_effect = RuntimeError("no connection for openai")
+        flow = self._make_flow()
+
+        with patch("authsome.proxy.server.audit.log") as log_mock:
+            addon, _router, patcher = self._make_addon(
+                auth,
+                RouteMatch(provider="openai", connection="default"),
+                mode="configured_deny",
+            )
+            try:
+                await addon.request(flow)
+            finally:
+                patcher.stop()
+
+        assert flow.response.status_code == 403
+        body = flow.response.content.decode("utf-8")
+        assert "openai" in body
+        assert "authsome login openai" in body
+        assert f"{DEFAULT_SERVER_BASE_URL}/ui/apps/openai" in body
+        log_mock.assert_any_call(
+            "proxy_no_credentials",
+            host="api.openai.com",
+            provider="openai",
+            connection="default",
+        )
+        log_mock.assert_any_call("proxy_deny", host="api.openai.com", reason="no_credentials")
+
+    @pytest.mark.asyncio
+    async def test_addon_kills_connect_tunnel_on_deny(self) -> None:
+        auth = mock.AsyncMock()
+        flow = self._make_flow(host="example.com", path="/")
+        flow.request.method = "CONNECT"
+
+        with patch("authsome.proxy.server.audit.log"):
+            addon, _router, patcher = self._make_addon(auth, None, miss_reason="no_match", mode="connected_deny")
+            try:
+                await addon.request(flow)
+            finally:
+                patcher.stop()
+
+        flow.kill.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_addon_continues_on_header_retrieval_failure(self) -> None:
@@ -621,9 +683,23 @@ class TestProxyRunner:
                 proxy_url, returned_server = runner._start_proxy()
 
         ensure_ca_mock.assert_called_once_with(tmp_path)
-        start_mock.assert_called_once_with(runner._client)
+        start_mock.assert_called_once_with(runner._client, mode="connected_allow")
         assert proxy_url == "http://127.0.0.1:8899"
         assert returned_server is server
+
+    def test_start_proxy_passes_client_config_mode(self, tmp_path: Path) -> None:
+        from authsome.cli.client_config import ClientConfig, save_client_config
+        from authsome.proxy.runner import ProxyRunner
+
+        save_client_config(tmp_path, ClientConfig(proxy_mode="configured_deny"))
+        runner = ProxyRunner(mock.Mock(), home=tmp_path)
+        server = mock.Mock(url="http://127.0.0.1:8899")
+
+        with patch("authsome.proxy.runner.ensure_local_proxy_ca"):
+            with patch("authsome.proxy.runner.start_proxy_server", return_value=server) as start_mock:
+                runner._start_proxy()
+
+        start_mock.assert_called_once_with(runner._client, mode="configured_deny")
 
     def test_ensure_local_proxy_ca_sets_flag_after_success(self, tmp_path: Path) -> None:
         from authsome.cli.client_config import load_client_config

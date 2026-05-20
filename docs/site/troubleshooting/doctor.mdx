@@ -3,10 +3,10 @@ title: "Diagnose with `doctor`"
 description: "Run health checks on directory layout, encryption, and provider parsing, and read the output."
 ---
 
-`uvx authsome doctor` is the first command to run when something looks wrong. It walks the home directory layout, verifies encryption is available, and parses every provider definition.
+`authsome doctor` is the first command to run when something looks wrong. It walks the home directory layout, verifies encryption is available, and parses every provider definition.
 
 ```bash
-uvx authsome doctor
+authsome doctor
 ```
 
 A healthy machine prints `OK` for each check and exits with code `0`.
@@ -32,7 +32,7 @@ A healthy machine prints `OK` for each check and exits with code `0`.
 
     Causes:
 
-    - You haven't initialized authsome on this machine. Run `uvx authsome init` to provision the home directory, identity, and master key.
+    - You haven't initialized authsome on this machine. Run `authsome init` to provision the home directory, identity, and master key.
     - You moved or deleted `~/.authsome`. If you have a backup, restore it. Without the master key, encrypted records cannot be decrypted.
   </Accordion>
 
@@ -92,7 +92,7 @@ A healthy machine prints `OK` for each check and exits with code `0`.
 For deeper inspection of any command, enable verbose logging:
 
 ```bash
-uvx authsome --verbose login github
+authsome --verbose login github
 ```
 
 DEBUG logs go to stderr and to the rotating log file at `~/.authsome/logs/authsome.log`. Inspect the log:
@@ -107,7 +107,7 @@ If your install is irrecoverably broken and you don't have any credentials to pr
 
 ```bash
 rm -rf ~/.authsome
-uvx authsome whoami     # triggers re-initialization
+authsome whoami     # triggers re-initialization
 ```
 
 This destroys every stored credential. You will need to log in to every provider again.

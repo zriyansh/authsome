@@ -30,7 +30,7 @@ Create an API key in the Livestorm dashboard at [https://app.livestorm.co/#/sett
 ## Log in
 
 ```bash
-uvx authsome login livestorm
+authsome login livestorm
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get livestorm --field status
+authsome get livestorm --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export livestorm --format env)"
+eval "$(authsome export livestorm --format env)"
 echo $LIVESTORM_API_TOKEN
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `LIVESTORM_API_TOKEN=authsome-proxy-managed` in t
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login livestorm --connection personal
-uvx authsome login livestorm --connection team
+authsome login livestorm --connection personal
+authsome login livestorm --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login livestorm --force          # rotate
-uvx authsome logout livestorm                  # remove local credential
-uvx authsome remove livestorm                  # remove all local state for the provider
+authsome login livestorm --force          # rotate
+authsome logout livestorm                  # remove local credential
+authsome remove livestorm                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Livestorm.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect livestorm > ~/.authsome/providers/livestorm.json
+authsome inspect livestorm > ~/.authsome/providers/livestorm.json
 # edit fields
-uvx authsome list   # source now shows "custom" for livestorm
+authsome list   # source now shows "custom" for livestorm
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

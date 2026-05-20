@@ -12,7 +12,7 @@ Authsome interacts with environment variables in three roles: **inputs** that ch
 | `AUTHSOME_DAEMON_URL` | Client-side daemon URL used by the CLI and proxy helpers. Set this on machines that should talk to a hosted authsome daemon instead of auto-starting a local one. Defaults to `http://127.0.0.1:7998`. |
 | `AUTHSOME_HOME` | Override the default `~/.authsome` directory. Useful for tests, ephemeral environments, and per-project profiles. |
 | `AUTHSOME_SERVER_BASE_URL` | Canonical external base URL for hosted daemon deployments. Authsome uses it to build browser-facing URLs and OAuth callback URLs such as `/auth/callback/oauth`. Set this when the daemon is reached through a private VM, reverse proxy, or internal DNS name instead of localhost. |
-| `HTTP_PROXY` / `HTTPS_PROXY` | Honored by authsome's own outbound HTTP requests (token endpoints, device flow polling). The proxy started by `uvx authsome run` is **set** as these variables in the child process; it does not chain through them. |
+| `HTTP_PROXY` / `HTTPS_PROXY` | Honored by authsome's own outbound HTTP requests (token endpoints, device flow polling). The proxy started by `authsome run` is **set** as these variables in the child process; it does not chain through them. |
 
 ### `AUTHSOME_DAEMON_URL` expectations
 
@@ -54,25 +54,25 @@ Some bundled provider definitions declare `api_key.env_var` so the API-key flow 
 |----------|------------------|
 | `openai` | `OPENAI_API_KEY` |
 | `anthropic` | `ANTHROPIC_API_KEY` |
-| ... | See each provider's `api_key.env_var` field via `uvx authsome inspect <provider>`. |
+| ... | See each provider's `api_key.env_var` field via `authsome inspect <provider>`. |
 
-If the variable is set and non-empty, `uvx authsome login <provider>` uses its value with no prompt. If unset, the secure browser bridge takes over.
+If the variable is set and non-empty, `authsome login <provider>` uses its value with no prompt. If unset, the secure browser bridge takes over.
 
 The OAuth2 client config block can declare `client.client_id_env` and `client.client_secret_env` for similar automated collection. Bundled providers do not currently declare these, they rely on the browser bridge, but custom provider definitions can.
 
-## Outputs from `uvx authsome export`
+## Outputs from `authsome export`
 
-`uvx authsome export <provider> --format env` prints `KEY=value` lines on stdout. The `KEY` names come from the provider's `export.env` map.
+`authsome export <provider> --format env` prints `KEY=value` lines on stdout. The `KEY` names come from the provider's `export.env` map.
 
 ```bash
-$ uvx authsome export github --format env
+$ authsome export github --format env
 GITHUB_ACCESS_TOKEN=ghu_...
 ```
 
 Source the output to load the variables into your shell:
 
 ```bash
-eval "$(uvx authsome export github --format env)"
+eval "$(authsome export github --format env)"
 ```
 
 Only `access_token` (OAuth2) and `api_key` (API-key) are exported. Refresh tokens are never exposed.
@@ -80,7 +80,7 @@ Only `access_token` (OAuth2) and `api_key` (API-key) are exported. Refresh token
 For JSON output:
 
 ```bash
-uvx authsome export github --format json
+authsome export github --format json
 ```
 
 ```json
@@ -89,9 +89,9 @@ uvx authsome export github --format json
 }
 ```
 
-## Variables injected by `uvx authsome run`
+## Variables injected by `authsome run`
 
-When you use `uvx authsome run -- <cmd>`, authsome sets several variables inside the child process.
+When you use `authsome run -- <cmd>`, authsome sets several variables inside the child process.
 
 ### Always set
 
@@ -126,11 +126,11 @@ A typical agent run that pulls credentials from authsome:
 
 ```bash
 # One-time setup
-uvx authsome login github
-uvx authsome login openai
+authsome login github
+authsome login openai
 
 # Run the agent through the proxy, secrets stay in the vault
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 The agent reads `OPENAI_API_KEY` and `GITHUB_ACCESS_TOKEN` as it normally would. They are placeholders. The proxy injects the real values into outbound requests to `api.openai.com` and `api.github.com`.
@@ -138,7 +138,7 @@ The agent reads `OPENAI_API_KEY` and `GITHUB_ACCESS_TOKEN` as it normally would.
 If the agent needs to run a tool that doesn't honor `HTTP_PROXY`, fall back to `export`:
 
 ```bash
-eval "$(uvx authsome export github --format env)"
+eval "$(authsome export github --format env)"
 my-cli-tool
 ```
 

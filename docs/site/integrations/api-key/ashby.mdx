@@ -30,7 +30,7 @@ Create an API key in the Ashby dashboard at [https://app.ashbyhq.com/admin/api-k
 ## Log in
 
 ```bash
-uvx authsome login ashby
+authsome login ashby
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get ashby --field status
+authsome get ashby --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export ashby --format env)"
+eval "$(authsome export ashby --format env)"
 echo $ASHBY_API_KEY
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `ASHBY_API_KEY=authsome-proxy-managed` in the chi
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login ashby --connection personal
-uvx authsome login ashby --connection team
+authsome login ashby --connection personal
+authsome login ashby --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login ashby --force          # rotate
-uvx authsome logout ashby                  # remove local credential
-uvx authsome remove ashby                  # remove all local state for the provider
+authsome login ashby --force          # rotate
+authsome logout ashby                  # remove local credential
+authsome remove ashby                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Ashby.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect ashby > ~/.authsome/providers/ashby.json
+authsome inspect ashby > ~/.authsome/providers/ashby.json
 # edit fields
-uvx authsome list   # source now shows "custom" for ashby
+authsome list   # source now shows "custom" for ashby
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

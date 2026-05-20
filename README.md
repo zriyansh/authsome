@@ -68,19 +68,16 @@ The CLI is the agent's interface: setup once, then inject fresh credentials when
 Authenticate once:
 
 ```bash
-uvx authsome login github
+authsome login github
+# This opens a browser on user's machine
+# user completes login without sharing the creds with the agent.
 ```
 
-Then agents get valid credentials on demand:
+Then agents get valid credentials on demand when they try to access external services.
+All they need to do is use `authsome run --` before the command they want to run:
 
 ```bash
-uvx authsome get github --field access_token --show-secret
-# → ghu_...
-
-export $(uvx authsome export github)
-# → sets GITHUB_ACCESS_TOKEN in current shell
-
-uvx authsome run -- python my_agent.py
+authsome run -- curl -s "https://api.github.com/user/repos?per_page=10"
 # runs behind a local auth proxy that injects headers at request time
 # without exposing secrets in the child process environment.
 # matched automatically via provider api_url (e.g. api.openai.com)
@@ -110,23 +107,30 @@ Authsome gives agents one command for a valid token, without scattering long-liv
 Requires Python 3.13+.
 
 ```bash
-pip install authsome
-```
-
-Or run without installing:
-
-```bash
-uvx authsome@latest --help
+uv tool install authsome
 ```
 
 ## Quick Start
 
+Add the authsome skill to your agent (claude, codex, cursor, hermes, etc.):
+
 ```bash
-uvx authsome login github                     # opens browser, completes PKCE flow
-uvx authsome login github --flow device_code  # headless: Device Code, works over SSH and CI
-uvx authsome login openai                     # secure API key entry via browser bridge
-uvx authsome list                             # all connections + token status
+npx skills add agentrhq/authsome
 ```
+
+And try a sample task that requires access to external services:
+
+```
+Star the repo agentrhq/authsome
+```
+```
+Get my last 5 emails from gmail
+```
+```
+Check my stripe balance
+```
+
+The agent will use authsome to login into external services and perform the task.
 
 ## Agent Integrations
 

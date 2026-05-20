@@ -43,7 +43,7 @@ Dashboard: [https://linear.app/settings/api/applications/new](https://linear.app
 ## Log in
 
 ```bash
-uvx authsome login linear
+authsome login linear
 ```
 
 The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://linear.app/oauth/authorize` for the authorization step.
@@ -51,7 +51,7 @@ The first time, authsome opens a local form at `http://127.0.0.1:7998` to collec
 Verify:
 
 ```bash
-uvx authsome get linear --field status
+authsome get linear --field status
 # → connected
 ```
 
@@ -60,18 +60,18 @@ uvx authsome get linear --field status
 The bundled definition requests `read`, `write`. Override at login time:
 
 ```bash
-uvx authsome login linear --scopes "<comma-separated>"
+authsome login linear --scopes "<comma-separated>"
 ```
 
-The granted scopes are stored on the connection and visible in `uvx authsome get linear`.
+The granted scopes are stored on the connection and visible in `authsome get linear`.
 
 ## Multiple accounts
 
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login linear --connection personal
-uvx authsome login linear --connection work
+authsome login linear --connection personal
+authsome login linear --connection work
 ```
 
 ## Use the token
@@ -81,11 +81,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export linear --format env)"
+eval "$(authsome export linear --format env)"
 ```
 
 ```python Python library
@@ -102,9 +102,9 @@ Under the proxy, authsome sets `LINEAR_ACCESS_TOKEN=authsome-proxy-managed` in t
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect linear > ~/.authsome/providers/linear.json
+authsome inspect linear > ~/.authsome/providers/linear.json
 # edit scopes, base_url, or anything else
-uvx authsome list   # source now shows "custom" for linear
+authsome list   # source now shows "custom" for linear
 ```
 
 User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).

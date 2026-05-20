@@ -1,0 +1,91 @@
+---
+title: "Authentication errors"
+sidebarTitle: "Auth errors (401, 403)"
+description: "Decision tree for 401, 403, and stored client credential errors when calling a provider through authsome."
+icon: "shield-exclamation"
+keywords: ["authsome 401", "authsome 403", "authsome token expired", "authsome scopes", "authsome revoke", "authsome remove", "authsome auth error"]
+---
+
+A request through the proxy or via an exported token came back with an auth error. Walk this decision tree to recover.
+
+## First, check provider state
+
+```bash
+authsome list
+```
+
+This shows every provider, every named connection, and the current state (`available`, `configured`, `connected`).
+
+## 401 Unauthorized
+
+The stored credential is no longer valid. The access token expired and no usable refresh token remains, or the provider revoked the session server-side.
+
+1. Revoke the current connection so authsome drops the broken record:
+
+   ```bash
+   authsome revoke <provider>
+   ```
+
+2. Log in again:
+
+   ```bash
+   authsome login <provider>
+   ```
+
+If you're running an agent and the request 401s mid-flight, re-run the same agent command after re-login. The proxy picks up the fresh token automatically.
+
+## 403 Forbidden (missing scopes)
+
+The stored credential is valid, but the request requires permissions the original login did not grant.
+
+<Warning>
+  Do not register a new provider definition just to add scopes. The existing provider already supports `--scopes` at login time. Re-registering creates a duplicate definition and an inconsistent state.
+</Warning>
+
+Use `--scopes` on the existing provider:
+
+```bash
+authsome login github --scopes repo,user,gist
+```
+
+The list of valid scopes is service-specific. See the provider's developer docs for the canonical list, or `authsome inspect <provider>` to see which scopes are declared in the provider definition.
+
+## Wrong stored `client_id` / `client_secret`
+
+If login itself fails immediately with a credential mismatch error and you suspect the wrong OAuth app credentials were stored, remove the provider state and re-log in. The browser bridge will collect fresh `client_id` and `client_secret` values.
+
+```bash
+authsome remove <provider>
+authsome login <provider>
+```
+
+`remove` deletes provider state for the current profile, including any stored OAuth client credentials. The provider definition (bundled or custom) is unaffected. The next `login` triggers the browser form to collect fresh values.
+
+## Provider not connected at all
+
+If `authsome list` shows the provider as `available` (not `configured`, not `connected`), there's no credential to fail on. Run:
+
+```bash
+authsome login <provider>
+```
+
+If the provider isn't in the bundled set, register a custom definition first. See [Custom providers](/guides/custom-providers).
+
+## Still failing
+
+- Run `authsome --verbose login <provider>` to surface the full daemon round-trip and the exact provider response.
+- Check `~/.authsome/audit.log` for the most recent action and outcome.
+- See [Diagnose with doctor](/troubleshooting/doctor) for installation-level checks.
+- For HTTPS / TLS errors specifically, see [Proxy networking](/troubleshooting/proxy-networking).
+- For token-refresh internals, see [Token refresh](/troubleshooting/token-refresh).
+
+## What's next
+
+<Columns cols={2}>
+  <Card title="OAuth callbacks" icon="right-to-bracket" href="/troubleshooting/oauth-callbacks">
+    Diagnose callbacks that don't land.
+  </Card>
+  <Card title="Token refresh" icon="rotate" href="/troubleshooting/token-refresh">
+    How automatic refresh works and when it doesn't.
+  </Card>
+</Columns>

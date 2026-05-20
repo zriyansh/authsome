@@ -112,6 +112,7 @@
             "icon": "stethoscope",
             "pages": [
               "troubleshooting/doctor",
+              "troubleshooting/auth-errors",
               "troubleshooting/oauth-callbacks",
               "troubleshooting/token-refresh",
               "troubleshooting/proxy-networking",

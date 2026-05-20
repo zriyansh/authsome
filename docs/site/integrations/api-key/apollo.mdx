@@ -30,7 +30,7 @@ Create an API key in the Apollo dashboard at [https://app.apollo.io/#/settings/a
 ## Log in
 
 ```bash
-uvx authsome login apollo
+authsome login apollo
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get apollo --field status
+authsome get apollo --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export apollo --format env)"
+eval "$(authsome export apollo --format env)"
 echo $APOLLO_API_KEY
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `APOLLO_API_KEY=authsome-proxy-managed` in the ch
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login apollo --connection personal
-uvx authsome login apollo --connection team
+authsome login apollo --connection personal
+authsome login apollo --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login apollo --force          # rotate
-uvx authsome logout apollo                  # remove local credential
-uvx authsome remove apollo                  # remove all local state for the provider
+authsome login apollo --force          # rotate
+authsome logout apollo                  # remove local credential
+authsome remove apollo                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Apollo.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect apollo > ~/.authsome/providers/apollo.json
+authsome inspect apollo > ~/.authsome/providers/apollo.json
 # edit fields
-uvx authsome list   # source now shows "custom" for apollo
+authsome list   # source now shows "custom" for apollo
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

@@ -3,19 +3,35 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel
 
 from authsome import __version__
 from authsome.paths import get_client_home
 
+ProxyMode = Literal[
+    "connected_allow",
+    "connected_deny",
+    "configured_allow",
+    "configured_deny",
+]
+
 
 class ClientConfig(BaseModel):
-    """Caller-local config that should not live in daemon-owned storage."""
+    """Caller-local config that should not live in daemon-owned storage.
+
+    The proxy_mode field lives here (not in ServerConfig) because the
+    mitmproxy addon runs inside the CLI process per `authsome run`
+    invocation. The daemon never acts on the mode itself; only the
+    caller-local proxy does. Users can change the mode by editing this
+    file directly — there is no CLI command for it today (YAGNI).
+    """
 
     version: str = __version__
     active_identity: str | None = None
     proxy_ca_installed: bool = False
+    proxy_mode: ProxyMode = "connected_allow"
 
 
 def client_config_path(home: Path) -> Path:

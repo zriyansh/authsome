@@ -16,6 +16,7 @@ from authsome.auth import AuthService
 from authsome.auth.sessions import AuthSessionStore
 from authsome.errors import AuthsomeError
 from authsome.paths import get_server_log_path
+from authsome.server.analytics import init_posthog, shutdown_posthog
 from authsome.server.dependencies import (
     create_app_store,
     create_identity_bootstrap_service,
@@ -56,6 +57,7 @@ async def lifespan(app: FastAPI):
     app.state.identity_registry = IdentityRegistry(get_identity_registry_path(app.state.store.home))
     app.state.identity_claim_registry = create_identity_claim_registry(app.state.store.home)
     app.state.server_base_url = get_server_base_url()
+    init_posthog()
     app.state.identity_bootstrap = create_identity_bootstrap_service(
         app.state.identity_registry,
         app.state.ui_sessions,
@@ -65,6 +67,7 @@ async def lifespan(app: FastAPI):
     app.state.ownership_resolver = create_ownership_resolver(app.state.store.home)
     app.state.ownership_cache = {}
     yield
+    shutdown_posthog()
     audit.clear()
     await app.state.store.close()
 

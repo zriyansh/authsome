@@ -32,7 +32,7 @@ G2 API access is negotiated with G2's team; there is no self-serve key dashboard
 ## Log in
 
 ```bash
-uvx authsome login g2
+authsome login g2
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -42,7 +42,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get g2 --field status
+authsome get g2 --field status
 # → connected
 ```
 
@@ -53,11 +53,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export g2 --format env)"
+eval "$(authsome export g2 --format env)"
 echo $G2_API_TOKEN
 ```
 
@@ -77,16 +77,16 @@ Under the proxy, authsome sets `G2_API_TOKEN=authsome-proxy-managed` in the chil
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login g2 --connection personal
-uvx authsome login g2 --connection team
+authsome login g2 --connection personal
+authsome login g2 --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login g2 --force          # rotate
-uvx authsome logout g2                  # remove local credential
-uvx authsome remove g2                  # remove all local state for the provider
+authsome login g2 --force          # rotate
+authsome logout g2                  # remove local credential
+authsome remove g2                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for G2.
@@ -94,9 +94,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect g2 > ~/.authsome/providers/g2.json
+authsome inspect g2 > ~/.authsome/providers/g2.json
 # edit fields
-uvx authsome list   # source now shows "custom" for g2
+authsome list   # source now shows "custom" for g2
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

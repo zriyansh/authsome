@@ -13,8 +13,8 @@ Cowork is a multi-agent runtime that supervises several agents running concurren
 ```bash
 # create profiles for each agent role (programmatic; see below)
 # then login with the right home dir for each
-AUTHSOME_HOME=~/.authsome-pr-bot   uvx authsome login github
-AUTHSOME_HOME=~/.authsome-reviewer uvx authsome login github --connection read
+AUTHSOME_HOME=~/.authsome-pr-bot   authsome login github
+AUTHSOME_HOME=~/.authsome-reviewer authsome login github --connection read
 ```
 
 Each profile has its own vault file, own audit log, own master-key access. An agent running with `AUTHSOME_HOME=~/.authsome-pr-bot` cannot reach credentials in `~/.authsome-reviewer`.
@@ -35,10 +35,10 @@ See [Profiles](/guides/profiles) and [Profiles vs connections](/concepts/profile
 
 ```bash
 AUTHSOME_HOME=~/.authsome-pr-bot \
-  uvx authsome run -- python pr_bot.py
+  authsome run -- python pr_bot.py
 
 AUTHSOME_HOME=~/.authsome-reviewer \
-  uvx authsome run -- python reviewer.py
+  authsome run -- python reviewer.py
 ```
 
 Each agent's HTTP_PROXY points at a different daemon instance, each backed by a different vault. The agents cannot read each other's credentials even if one is compromised.

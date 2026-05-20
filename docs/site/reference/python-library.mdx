@@ -9,7 +9,7 @@ keywords: ["authsome python", "AuthService", "authsome library", "auth.get_acces
 Authsome is a Python library as well as a CLI. The public surface lives in the top-level `authsome` package.
 
 <Note>
-  The supported integration surface for almost every workflow is the **CLI plus the proxy** (`uvx authsome run -- <your agent>`). The library exists for embedding authsome inside a larger Python orchestrator with custom storage, custom subprocess management, or per-call connection selection that the proxy can't yet do. If you're not in that case, the CLI is the right tool. See [Run agents with the proxy](/guides/run-agents-with-proxy).
+  The supported integration surface for almost every workflow is the **CLI plus the proxy** (`authsome run -- <your agent>`). The library exists for embedding authsome inside a larger Python orchestrator with custom storage, custom subprocess management, or per-call connection selection that the proxy can't yet do. If you're not in that case, the CLI is the right tool. See [Run agents with the proxy](/guides/run-agents-with-proxy).
 </Note>
 
 ## Install
@@ -158,7 +158,7 @@ session = auth.begin_login_flow(
 auth.resume_login_flow(session)
 ```
 
-The exact session shape depends on the flow type. For automation, prefer driving `uvx authsome login` and reading its `--json` output.
+The exact session shape depends on the flow type. For automation, prefer driving `authsome login` and reading its `--json` output.
 
 ### Profiles
 
@@ -180,7 +180,7 @@ definition = ProviderDefinition.model_validate_json(open("acmecrm.json").read())
 auth.register_provider(definition, force=False)
 ```
 
-Equivalent to `uvx authsome register ./acmecrm.json`. The schema is documented in [Provider schema](/reference/provider-schema).
+Equivalent to `authsome register ./acmecrm.json`. The schema is documented in [Provider schema](/reference/provider-schema).
 
 ## AuthLayer
 
@@ -247,7 +247,7 @@ Exit codes in [CLI reference](/reference/cli) map one-to-one to these classes.
 | Reading connection metadata without parsing CLI output. | `--json` output is enough. |
 | Stubbing the vault or auth layer in tests. | You're a human running commands. |
 
-For most agent workflows, `uvx authsome run -- <agent>` is simpler than embedding the library directly. The library exists for cases where the CLI shape doesn't fit.
+For most agent workflows, `authsome run -- <agent>` is simpler than embedding the library directly. The library exists for cases where the CLI shape doesn't fit.
 
 ## What's next
 

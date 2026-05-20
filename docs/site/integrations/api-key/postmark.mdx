@@ -30,7 +30,7 @@ Create an API key in the Postmark dashboard at [https://account.postmarkapp.com/
 ## Log in
 
 ```bash
-uvx authsome login postmark
+authsome login postmark
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get postmark --field status
+authsome get postmark --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export postmark --format env)"
+eval "$(authsome export postmark --format env)"
 echo $POSTMARK_API_KEY
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `POSTMARK_API_KEY=authsome-proxy-managed` in the 
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login postmark --connection personal
-uvx authsome login postmark --connection team
+authsome login postmark --connection personal
+authsome login postmark --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login postmark --force          # rotate
-uvx authsome logout postmark                  # remove local credential
-uvx authsome remove postmark                  # remove all local state for the provider
+authsome login postmark --force          # rotate
+authsome logout postmark                  # remove local credential
+authsome remove postmark                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Postmark.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect postmark > ~/.authsome/providers/postmark.json
+authsome inspect postmark > ~/.authsome/providers/postmark.json
 # edit fields
-uvx authsome list   # source now shows "custom" for postmark
+authsome list   # source now shows "custom" for postmark
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

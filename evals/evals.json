@@ -16,9 +16,9 @@
       "name": "Scenario 2 - OAuth (github not connected)",
       "prompt": "List all my GitHub repos",
       "agent": "claude",
-      "environment": "github is NOT connected via authsome (authsome list shows github as not_connected). gh CLI is not authenticated.",
-      "outcome": "The agent successfully fetches and displays the user's GitHub repositories after the user completes the OAuth flow.",
-      "trajectory_efficiency": "3 meaningful steps: (1) attempts the GitHub API via authsome run and receives a not-connected error, (2) runs authsome login github and presents the browser auth flow to the user, (3) after OAuth completes, retries the API call and returns results.",
+      "environment": "github is NOT connected via authsome (authsome list shows github as not_connected).",
+      "outcome": "The agent successfully fetches and displays the user's GitHub repositories after the user completes the OAuth flow via authsome (not via gh CLI or direct API calls)",
+      "trajectory_efficiency": "4 meaningful steps: (1) attempts the GitHub API via authsome run and receives a not-connected error, (2) uses `authsome list` to check the status of github provider, (3) runs authsome login github and presents the browser auth flow to the user, (4) after OAuth completes, retries the API call and returns results.",
       "requires_human": true,
       "human_instructions": "When the browser opens for GitHub OAuth authorization, complete the flow and return to the terminal. The agent will retry the API call automatically."
     },
@@ -28,13 +28,14 @@
       "prompt": "List all my GitHub repos",
       "agent": "claude",
       "environment": "github is connected via authsome (authsome list shows github as connected — state carried over from test 2).",
-      "outcome": "The agent successfully fetches and displays the user's GitHub repositories.",
-      "trajectory_efficiency": "1 meaningful step: calls the GitHub repos API directly via authsome run -- curl https://api.github.com/user/repos without first running authsome list or authsome login.",
+      "outcome": "The agent successfully fetches and displays the user's GitHub repositories using authsome (not via gh CLI or direct API calls)",
+      "trajectory_efficiency": "2 meaningful steps: (1) calls the GitHub repos API directly via authsome run -- curl https://api.github.com/user/repos without first running authsome list or authsome login. (2) to format the output",
       "requires_human": false
     },
     {
       "id": 4,
       "name": "Scenario 1 - CLI (gh locally configured)",
+      "optional": true,
       "prompt": "List all my GitHub repos",
       "agent": "claude",
       "environment": "gh CLI is locally authenticated (gh auth status shows logged in). authsome is available but GitHub is NOT connected via authsome (run `authsome logout github` first).",
@@ -45,6 +46,7 @@
     {
       "id": 5,
       "name": "Scenario 3 - API Key (firecrawl not configured)",
+      "optional": true,
       "prompt": "Scrape the content of https://firecrawl.dev using Firecrawl",
       "agent": "claude",
       "environment": "firecrawl is NOT connected via authsome (authsome list shows firecrawl as not_connected or absent). No FIRECRAWL_API_KEY environment variable is set.",
@@ -56,6 +58,7 @@
     {
       "id": 6,
       "name": "Scenario 3 - OAuth (ClickUp not connected, provider may need registration)",
+      "optional": true,
       "prompt": "Get my assigned tasks from ClickUp",
       "agent": "claude",
       "environment": "ClickUp is NOT connected via authsome. ClickUp may not be in the bundled provider list — the agent may need to register it as a custom OAuth provider first.",

@@ -17,7 +17,10 @@ from mitmproxy import http
 from mitmproxy.options import Options
 from mitmproxy.tools.dump import DumpMaster
 
+from authsome import audit
+from authsome.cli.client_config import ProxyMode
 from authsome.proxy.router import RouteMatch, RouteResolution
+from authsome.server.urls import DEFAULT_SERVER_BASE_URL
 from authsome.utils import utc_now
 
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
@@ -34,7 +37,7 @@ class ProxyClient(Protocol):
 
     async def resolve_credentials(self, **kwargs: Any) -> Any: ...
 
-    async def proxy_routes(self) -> Any: ...
+    async def proxy_routes(self, scope: str = "connected") -> Any: ...
 
 
 @dataclass(frozen=True)
@@ -69,9 +72,9 @@ class ProxyRouter:
         self._regex_routes = regex_routes
 
     @classmethod
-    async def create(cls, client: ProxyClient) -> ProxyRouter:
+    async def create(cls, client: ProxyClient, scope: str = "connected") -> ProxyRouter:
         """Async factory for ProxyRouter."""
-        routes_by_host, regex_routes = await cls._build_routes(client)
+        routes_by_host, regex_routes = await cls._build_routes(client, scope)
         return cls(routes_by_host, regex_routes)
 
     def resolve(self, scheme: str, host: str, port: int, path: str) -> RouteResolution:
@@ -119,6 +122,7 @@ class ProxyRouter:
     @staticmethod
     async def _build_routes(
         client: ProxyClient,
+        scope: str = "connected",
     ) -> tuple[dict[str, tuple[_RouteTarget, ...]], tuple[_RegexRouteTarget, ...]]:
         routes_by_host: dict[str, list[_RouteTarget]] = {}
         regex_routes: list[_RegexRouteTarget] = []
@@ -126,7 +130,7 @@ class ProxyRouter:
 
         if hasattr(client, "proxy_routes"):
             try:
-                route_data = await client.proxy_routes()
+                route_data = await client.proxy_routes(scope=scope)
                 if not isinstance(route_data, dict):
                     raise TypeError("proxy_routes() must return a dict payload")
                 for route in route_data.get("routes", []):
@@ -328,25 +332,34 @@ def _auth_endpoint_paths_for_regex(provider, host_pattern: re.Pattern[str]) -> f
 class AuthProxyAddon:
     """Mitmproxy addon that injects auth headers for matched requests.
 
-    Credential resolution goes through the runtime client.
+    The proxy mode is caller-local config (`ClientConfig.proxy_mode`),
+    read once by the runner and injected here at construction time —
+    the daemon never sees or persists a proxy mode of its own.
     """
 
-    def __init__(self, client: ProxyClient) -> None:
+    def __init__(self, client: ProxyClient, mode: ProxyMode = "connected_allow") -> None:
         self._client = client
+        self._mode = mode
+        self._scope, self._policy = mode.split("_", 1)
         self._router: ProxyRouter | None = None
         self._header_cache: dict[tuple[str, str], _HeaderCacheEntry] = {}
         self._header_locks: dict[tuple[str, str], asyncio.Lock] = {}
 
-    async def _get_router(self) -> ProxyRouter:
+    async def _ensure_initialized(self) -> ProxyRouter:
+        """Build the router once on the first request."""
         if self._router is None:
-            self._router = await ProxyRouter.create(self._client)
+            self._router = await ProxyRouter.create(self._client, scope=self._scope)
         return self._router
 
     async def request(self, flow: http.HTTPFlow) -> None:
-        router = await self._get_router()
+        router = await self._ensure_initialized()
+        policy = self._policy
+
         resolution = router.resolve(flow.request.scheme, flow.request.host, flow.request.port, flow.request.path)
         if resolution.match is None:
-            if resolution.miss_reason is not None:
+            if resolution.miss_reason == "no_match" and policy == "deny":
+                self._deny_request(flow, "no_match")
+            elif resolution.miss_reason is not None:
                 normalized_host = _normalize_host(flow.request.host)
                 logger.info(
                     "client_event event=proxy_miss host={} reason={} method={} path={}",
@@ -355,7 +368,7 @@ class AuthProxyAddon:
                     flow.request.method,
                     flow.request.path,
                 )
-                logger.error(
+                logger.debug(
                     "Proxy miss: host={} reason={} {} {}",
                     normalized_host,
                     resolution.miss_reason,
@@ -367,12 +380,23 @@ class AuthProxyAddon:
         match = resolution.match
         try:
             headers = await self._get_auth_headers(match)
-        except Exception:
+        except Exception as exc:
+            normalized_host = _normalize_host(flow.request.host)
+            audit.log(
+                "proxy_no_credentials",
+                host=normalized_host,
+                provider=match.provider,
+                connection=match.connection,
+            )
             logger.warning(
-                "Failed to retrieve auth headers for provider={} connection={}. Forwarding unchanged.",
+                "No credentials for provider={} connection={} host={}: {}",
                 match.provider,
                 match.connection,
+                normalized_host,
+                exc,
             )
+            if policy == "deny":
+                self._deny_request(flow, "no_credentials", match=match)
             return
 
         for key, value in headers.items():
@@ -386,6 +410,21 @@ class AuthProxyAddon:
             flow.request.method,
             flow.request.path,
         )
+
+    def _deny_request(
+        self,
+        flow: http.HTTPFlow,
+        reason: str,
+        *,
+        match: RouteMatch | None = None,
+    ) -> None:
+        host = _normalize_host(flow.request.host)
+        audit.log("proxy_deny", host=host, reason=reason)
+        logger.warning("Proxy deny: host={} reason={}", host, reason)
+        if flow.request.method.upper() == "CONNECT":
+            flow.kill()
+            return
+        flow.response = http.Response.make(403, _deny_body(reason, match).encode("utf-8"))
 
     async def _get_auth_headers(self, match: RouteMatch) -> dict[str, str]:
         cache_key = (match.provider, match.connection or "")
@@ -423,6 +462,26 @@ class AuthProxyAddon:
                 expires_at=expires_at,
             )
             return headers
+
+
+def _deny_body(reason: str, match: RouteMatch | None) -> str:
+    """Build a human-readable 403 body for a denied proxy request.
+
+    For `no_credentials` we surface the provider name plus a CLI command
+    and a dashboard URL so the agent (or human) can recover; other
+    reasons fall back to a generic message.
+
+    The dashboard URL uses ``DEFAULT_SERVER_BASE_URL``. It still requires an active dashboard session
+    (`authsome ui`) to land on the connect screen directly.
+    """
+    if reason == "no_credentials" and match is not None:
+        provider = match.provider
+        return (
+            f"Forbidden: provider '{provider}' is configured but has no "
+            f"active connection. Run `authsome login {provider}` to connect, "
+            f"or visit {DEFAULT_SERVER_BASE_URL}/ui/apps/{provider}."
+        )
+    return "Forbidden by Authsome proxy policy"
 
 
 def _header_cache_valid(entry: _HeaderCacheEntry, now: datetime) -> bool:
@@ -493,11 +552,17 @@ def start_proxy_server(
     client: ProxyClient,
     host: str = "127.0.0.1",
     port: int = 0,
+    *,
+    mode: ProxyMode = "connected_allow",
 ) -> RunningProxy:
     """Start a mitmproxy DumpMaster in a background thread."""
+    from typing import get_args
+
+    if mode not in get_args(ProxyMode):
+        raise ValueError(f"Invalid proxy mode {mode!r}, expected one of {get_args(ProxyMode)}")
 
     confdir = Path.home() / ".mitmproxy"
-    auth_addon = AuthProxyAddon(client=client)
+    auth_addon = AuthProxyAddon(client=client, mode=mode)
 
     ready = threading.Event()
     state: dict = {}

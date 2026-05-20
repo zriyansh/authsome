@@ -30,7 +30,7 @@ Create an API key in the Keywords Everywhere dashboard at [https://keywordsevery
 ## Log in
 
 ```bash
-uvx authsome login keywords-everywhere
+authsome login keywords-everywhere
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get keywords-everywhere --field status
+authsome get keywords-everywhere --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export keywords-everywhere --format env)"
+eval "$(authsome export keywords-everywhere --format env)"
 echo $KEYWORDS_EVERYWHERE_API_KEY
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `KEYWORDS_EVERYWHERE_API_KEY=authsome-proxy-manag
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login keywords-everywhere --connection personal
-uvx authsome login keywords-everywhere --connection team
+authsome login keywords-everywhere --connection personal
+authsome login keywords-everywhere --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login keywords-everywhere --force          # rotate
-uvx authsome logout keywords-everywhere                  # remove local credential
-uvx authsome remove keywords-everywhere                  # remove all local state for the provider
+authsome login keywords-everywhere --force          # rotate
+authsome logout keywords-everywhere                  # remove local credential
+authsome remove keywords-everywhere                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Keywords Everywhere.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect keywords-everywhere > ~/.authsome/providers/keywords-everywhere.json
+authsome inspect keywords-everywhere > ~/.authsome/providers/keywords-everywhere.json
 # edit fields
-uvx authsome list   # source now shows "custom" for keywords-everywhere
+authsome list   # source now shows "custom" for keywords-everywhere
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

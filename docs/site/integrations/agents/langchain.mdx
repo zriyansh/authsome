@@ -11,9 +11,9 @@ keywords: ["langchain authsome", "langchain credentials", "langchain oauth", "la
 ## Run the whole chain under the proxy
 
 ```bash
-uvx authsome login openai
-uvx authsome login github
-uvx authsome run -- python my_chain.py
+authsome login openai
+authsome login github
+authsome run -- python my_chain.py
 ```
 
 LangChain SDKs read placeholder env vars (`OPENAI_API_KEY=authsome-proxy-managed`) and initialize. The proxy substitutes the real key for outbound HTTPS to `api.openai.com`, `api.github.com`, and other matched hosts. No code changes to your chain.

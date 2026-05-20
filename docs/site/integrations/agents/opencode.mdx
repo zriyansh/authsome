@@ -8,12 +8,16 @@ keywords: ["opencode authsome", "opencode credentials", "opencode github", "open
 
 [OpenCode](https://opencode.ai) is an open-source AI coding agent. It runs as a CLI, calls LLMs over HTTPS, and shells out to local tools. Authsome plugs in via the same two patterns we use everywhere: wrap the agent under `authsome run --`, or call the library from inside.
 
+<Note>
+  **The agent drives login.** When OpenCode hits a missing credential it can run `authsome login <provider>` itself, opening a browser on your machine for OAuth consent. Don't paste keys into prompts; pre-seed a credential only when an agent can't reach a browser (CI, SSH).
+</Note>
+
 ## Recommended pattern: wrap the agent
 
 ```bash
-uvx authsome login github
-uvx authsome login openai
-uvx authsome run -- opencode
+authsome login github
+authsome login openai
+authsome run -- opencode
 ```
 
 OpenCode sees placeholder env vars (`OPENAI_API_KEY=authsome-proxy-managed`) but never the real key. Outbound HTTPS to matched provider hosts is authenticated by the proxy.
@@ -34,10 +38,10 @@ See [Python library](/reference/python-library).
 ## Multi-account
 
 ```bash
-uvx authsome login github --connection personal
-uvx authsome login github --connection work
-uvx authsome login github --connection work --force
-uvx authsome run -- opencode
+authsome login github --connection personal
+authsome login github --connection work
+authsome login github --connection work --force
+authsome run -- opencode
 ```
 
 The proxy uses each provider's default connection. To switch which connection the proxy uses, set it as default with `--force`. See [Multiple connections per provider](/guides/multiple-connections).

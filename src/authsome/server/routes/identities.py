@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from authsome.actors.identity_registry import IdentityRegistrationError
+from authsome.server.analytics import get_posthog
 
 router = APIRouter(prefix="/identities", tags=["identities"])
 
@@ -23,6 +24,20 @@ async def register_identity(body: RegisterIdentityRequest, request: Request) -> 
         raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    ph = get_posthog()
+    if ph is not None:
+        from posthog import identify_context, new_context
+
+        with new_context():
+            identify_context(status.identity)
+            ph.capture(
+                "identity registered",
+                distinct_id=status.identity,
+                properties={
+                    "registration_status": status.registration_status,
+                    "principal_id": status.principal_id or None,
+                },
+            )
     return status.to_payload()
 
 
