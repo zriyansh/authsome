@@ -117,22 +117,54 @@ async def build_proxy_routes(auth: AuthService, scope: str) -> dict: ...
 
 ---
 
-## E — Remove global `AuthService(identity="server")` from `server/app.py`
+## E — Move `AuthService` from `auth/` to `server/` to make `auth/` a leaf
 
-`server/app.py` lifespan creates `app.state.auth_service = AuthService(vault=..., identity="server")` — a single, identity-less AuthService used by routes that do not require PoP authentication (health, proxy route catalog, UI).
+`AuthService` is not a flow implementation — it is a stateful coordinator that wires `auth/` flows with `vault/` storage and `audit/` logging. Its current home in `auth/` forces `auth/` to import `vault/` and `audit/`, making it non-leaf.
 
-### E1. Identify all callers of `app.state.auth_service`
+Moving it to `server/` makes all four domain modules (`identity/`, `auth/`, `vault/`, `audit/`) pure leaves with no intra-codebase imports.
 
-Audit which routes call `get_auth_service(request)` (the function that returns this global instance) rather than `get_protected_auth_service`.
+### E1. Create `server/credential_service.py`
 
-### E2. Replace each caller
+Move `AuthService` from `auth/service.py` to `server/credential_service.py`. Keep the class name `AuthService` for now to minimize diff noise; rename to `CredentialService` in a follow-up.
 
-- Routes that need an identity → use `get_protected_auth_service` (PoP-validated)
-- Routes that only need provider catalog or proxy routes → use a server-level function that does not need an AuthService (e.g., load bundled providers directly)
+The moved class imports:
+- `auth/` — flows, models, enums, sessions, provider resolution
+- `vault/` — `Vault`
+- `audit/` — `audit.alog()`
 
-### E3. Remove `app.state.auth_service` from lifespan
+None of these are circular; all are lower-level leaves.
 
-After E2 there are no callers. Delete the global instance.
+### E2. Update all import sites
+
+Files that import `from authsome.auth import AuthService` or `from authsome.auth.service import AuthService` must be updated:
+
+- `server/app.py`
+- `server/routes/_deps.py`
+- `server/routes/auth.py`
+- `server/routes/connections.py`
+- `server/routes/providers.py`
+- `server/routes/proxy.py`
+- `server/routes/ui.py`
+- Any test fixtures that construct `AuthService`
+
+Change all to `from authsome.server.credential_service import AuthService`.
+
+### E3. Delete `auth/service.py`
+
+After E2 there are no remaining imports. Delete the file.
+
+### E4. Clean up `auth/__init__.py`
+
+Remove the `AuthService` re-export if present. `auth/` now exports only flow classes and models.
+
+### E5. Remove global `AuthService(identity="server")` from `server/app.py`
+
+`server/app.py` lifespan creates `app.state.auth_service = AuthService(vault=..., identity="server")` — a single, identity-less instance used by routes that bypass PoP auth.
+
+- Audit which routes call `get_auth_service(request)` instead of `get_protected_auth_service`
+- Routes that need an identity → switch to `get_protected_auth_service`
+- Routes that only need provider catalog → load bundled providers directly without an `AuthService`
+- Delete `app.state.auth_service` from lifespan once no callers remain
 
 ---
 
@@ -224,10 +256,19 @@ No new test failures. No new type errors.
 
 ## Dependency order
 
-Phases must be executed in this order (each unlocks the next):
-
 ```
-A (move registries) → B (fix identity/cli coupling) → C (clean auth/service) → D (move proxy_routes) → E (remove identity="server") → F (clean vault.home) → G (optional audit) → H (terminology) → I (docs)
+A (move registries to server/)
+B (fix identity/ → cli/ coupling)
+    ↓
+C (clean auth/service.py server imports)
+D (move proxy_routes out of AuthService)
+    ↓
+E (move AuthService to server/credential_service.py — makes auth/ a leaf)
+    ↓
+F (remove vault.home)
+G (optional: injectable audit)
+H (terminology sweep)
+I (docs pass)
 ```
 
-A and B are independent and can be done in parallel. C depends on A (registry classes must be in server/ before we change auth/service imports). D depends on C. E depends on D. F depends on C.
+A and B are independent and can run in parallel. C depends on A. D depends on C. E depends on C and D — auth/service.py must be clean before it moves. F depends on C. H and I depend on everything else completing.

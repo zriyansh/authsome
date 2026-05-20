@@ -4,17 +4,14 @@ authsome is the local auth layer for AI agents — it answers which agent, actin
 
 ## Module Responsibilities
 
-Each module has one job. The dependency graph flows strictly from right to left below — no cycles, no upward imports.
+Each module has one job. `identity/`, `auth/`, `vault/`, and `audit/` are **leaf modules** — they import nothing from this codebase and can be used and tested in isolation. `server/` is the only composition root.
 
 ```
-identity/  ←── server/
-vault/     ←── auth/ ←── server/
-audit/     ←── auth/ ←── server/
-                          server/ ←── cli/ (via HTTP, not import)
-                          server/ ←── proxy/ (via HTTP, not import)
+identity/  ←─┐
+auth/      ←─┤
+vault/     ←─┤  server/  ←── cli/   (via HTTP, not Python import)
+audit/     ←─┘            ←── proxy/ (via HTTP, not Python import)
 ```
-
-`identity/`, `vault/`, and `audit/` are leaf modules — they import nothing from this codebase. `auth/` imports only `vault/` and `audit/`. `server/` is the only module that imports from all four. `cli/` and `proxy/` talk to `server/` over HTTP, not Python imports.
 
 ---
 
@@ -35,29 +32,39 @@ Think of this as the OpenID Connect layer. Handles key material, DIDs, and proof
 - Client config management (that is `cli/` territory)
 - Principal/vault lifecycle decisions (that is `server/` territory)
 
-**Imports nothing from this codebase.** Imported by: `server/`, `cli/`
-
-> Note: `auth/` currently imports `VaultRegistry` from `identity/` — that is a known violation being fixed in TODOS phase A+C. After the fix, `auth/` has no dependency on `identity/`.
+**Imports nothing from this codebase.** Used by: `server/`, `cli/`
 
 ---
 
-### `auth/` — OAuth and API key authentication flows
+### `auth/` — OAuth and API key flow implementations
 
-Think of this as the OAuth 2.0 client layer. Runs flows, manages token lifecycle, stores results.
+Think of this as the OAuth 2.0 protocol library. Each flow takes provider config and credentials in, returns tokens out. No storage, no audit, no identity imports.
 
 **Owns:**
 - OAuth 2.0 flows: PKCE, Device Code, DCR+PKCE (`flows/`)
 - API key collection flow (`flows/api_key.py`)
-- Token refresh, login, logout, revoke
-- Provider definitions and provider resolution (`ProviderDefinition`, bundled providers)
-- `AuthService` — the credential lifecycle service; constructed per-request by the server with `(vault, identity, principal_id, vault_id)`
+- Flow base class and token refresh logic
+- Provider models: `ProviderDefinition`, `OAuthConfig`, `ApiKeyConfig`, bundled provider JSON
+- Credential models: `ConnectionRecord`, `ProviderClientRecord`, `ProviderMetadataRecord`, `ProviderStateRecord`
+- `AuthSession` — transient flow session state
 
 **Does not own:**
-- Proxy route catalog building (server concern)
-- Server registry reads (vault iteration for multi-vault revoke belongs in `server/`)
-- Server filesystem paths
+- Credential persistence (that is `vault/` + `server/` territory)
+- Audit logging (that is `audit/` + `server/` territory)
+- Proxy route catalog building
+- Server registry reads
 
-**Imports:** `vault/` (to store credentials), `audit/` (to log refresh failures). Imported by: `server/`
+**Imports nothing from this codebase.** Used by: `server/`
+
+---
+
+### `server/` — CredentialService and application orchestration
+
+`server/` owns `CredentialService` (currently called `AuthService`) — the stateful coordinator that wires `auth/` flows with `vault/` storage and `audit/` logging. It is the only place where flows, storage, and audit are combined.
+
+`CredentialService` is constructed per-request by the server with `(vault, identity, principal_id, vault_id)` and calls `auth/` flows to execute protocols, `vault/` to persist results, and `audit/` to record events.
+
+> Current state: `AuthService` lives in `auth/` and imports `vault/` and `audit/` directly. Moving it to `server/` (TODOS phase E) makes `auth/` a true leaf.
 
 ---
 
