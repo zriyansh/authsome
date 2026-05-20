@@ -10,6 +10,7 @@ from authsome import __version__
 from authsome.auth import AuthService
 from authsome.identity import current_from_home
 from authsome.server.dependencies import get_deployment_mode
+from authsome.server.ownership import OwnershipResolver
 from authsome.server.routes._deps import get_auth_service, get_protected_auth_service, get_server_base_url
 from authsome.server.schemas import HealthResponse, ReadyResponse
 from authsome.utils import connection_is_active
@@ -25,7 +26,7 @@ def health() -> HealthResponse:
 
 
 @router.get("/ready", response_model=ReadyResponse)
-async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
+async def ready(request: Request, auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
     checks: dict[str, str] = {}
     issues: list[str] = []
     warnings: list[str] = []
@@ -51,9 +52,13 @@ async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
     # 3. Connected Providers Check
     try:
         active_identity = await current_from_home(auth.vault.home)
+        ownership_resolver: OwnershipResolver = request.app.state.ownership_resolver
+        resolved = await ownership_resolver.resolve(identity=active_identity.handle)
         identity_auth = AuthService(
             vault=auth.vault,
             identity=active_identity.handle,
+            principal_id=resolved.principal_id,
+            vault_id=resolved.vault_id,
             deployment_mode=get_deployment_mode(),
         )
         conn_list = await identity_auth.list_connections()
@@ -112,6 +117,8 @@ async def whoami(
         "home": str(auth.vault.home),
         "identity": auth.identity,
         "active_identity": auth.identity,
+        "principal_id": getattr(request.state, "principal_id", ""),
+        "vault_id": getattr(request.state, "vault_id", ""),
         "did": getattr(request.state, "did", ""),
         "registration_status": getattr(request.state, "registration_status", "registered"),
         "daemon_url": server_base_url,
