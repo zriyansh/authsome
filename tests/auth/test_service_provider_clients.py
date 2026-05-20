@@ -6,8 +6,6 @@ from unittest import mock
 
 import pytest
 
-from authsome.actors import create_identity
-from authsome.actors.identity_registry import IdentityRegistry
 from authsome.auth.flows.base import FlowResult
 from authsome.auth.models.connection import ConnectionRecord, ProviderClientRecord, ProviderMetadataRecord
 from authsome.auth.models.enums import AuthType, ConnectionStatus, FlowType
@@ -15,6 +13,8 @@ from authsome.auth.models.provider import OAuthConfig, ProviderDefinition
 from authsome.auth.service import AuthService
 from authsome.auth.sessions import AuthSession
 from authsome.errors import OperationNotAllowedError
+from authsome.identity import create_identity
+from authsome.identity.registry import IdentityRegistry
 from authsome.server.dependencies import (
     create_app_store,
     create_vault,

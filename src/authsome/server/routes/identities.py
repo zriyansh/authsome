@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from authsome.actors.identity_registry import IdentityRegistrationError
+from authsome.identity.registry import IdentityRegistrationError
 from authsome.server.analytics import get_posthog
 
 router = APIRouter(prefix="/identities", tags=["identities"])

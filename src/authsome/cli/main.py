@@ -840,7 +840,7 @@ async def register(ctx_obj: ContextObj, path: str, force: bool, yes: bool) -> No
 @auth_command
 async def init(ctx_obj: ContextObj) -> None:
     """Initialize local storage and register a fresh profile."""
-    from authsome.actors import ensure_local_identity
+    from authsome.identity import ensure_local_identity
 
     home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
     identity = ensure_local_identity(home)
@@ -873,7 +873,7 @@ def profile() -> None:
 @auth_command
 async def profile_create(ctx_obj: ContextObj, handle: str | None) -> None:
     """Create a local profile keypair."""
-    from authsome.actors import create_identity
+    from authsome.identity import create_identity
 
     home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
     identity_meta = create_identity(home, handle)
@@ -899,8 +899,8 @@ async def profile_create(ctx_obj: ContextObj, handle: str | None) -> None:
 @auth_command
 async def profile_use(ctx_obj: ContextObj, handle: str) -> None:
     """Select the active local profile."""
-    from authsome.actors import load_identity
     from authsome.cli.client_config import load_client_config, save_client_config
+    from authsome.identity import load_identity
 
     home = Path(os.environ.get("AUTHSOME_HOME", str(Path.home() / ".authsome")))
     identity_meta = load_identity(home, handle)

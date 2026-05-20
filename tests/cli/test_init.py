@@ -10,9 +10,9 @@ from unittest.mock import MagicMock
 from click.testing import CliRunner
 
 from authsome import __version__
-from authsome.actors import create_identity, mark_registered
 from authsome.cli.client_config import ClientConfig, load_client_config, save_client_config
 from authsome.cli.main import cli
+from authsome.identity import create_identity, mark_registered
 from authsome.store.local import LocalAppStore
 
 

@@ -5,11 +5,20 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel, Field
 
 from authsome.utils import utc_now
+
+
+class ClaimStatus(StrEnum):
+    """Lifecycle state of an Identity's claim to a Principal."""
+
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
 
 
 class PrincipalRecord(BaseModel):
@@ -31,11 +40,13 @@ class VaultRecord(BaseModel):
 
 
 class IdentityClaimRecord(BaseModel):
-    """Immutable binding from identity to principal."""
+    """Binding from identity to principal with lifecycle state."""
 
     identity_handle: str
     principal_id: str
+    claim_status: ClaimStatus = ClaimStatus.PENDING
     created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
 
 
 class PrincipalVaultBindingRecord(BaseModel):
@@ -153,11 +164,33 @@ class IdentityClaimRegistry(_JsonRegistry[IdentityClaimRecord]):
             if existing.principal_id != principal_id:
                 raise ValueError(f"Identity '{identity_handle}' is already claimed")
             return existing
-        record = IdentityClaimRecord(identity_handle=identity_handle, principal_id=principal_id)
+        now = utc_now()
+        record = IdentityClaimRecord(
+            identity_handle=identity_handle,
+            principal_id=principal_id,
+            claim_status=ClaimStatus.PENDING,
+            created_at=now,
+            updated_at=now,
+        )
         records = self._load_all()
         records.append(record)
         self._save_all(records)
         return record
+
+    async def accept_claim(self, identity_handle: str) -> IdentityClaimRecord:
+        return await self._set_status(identity_handle, ClaimStatus.ACCEPTED)
+
+    async def reject_claim(self, identity_handle: str) -> IdentityClaimRecord:
+        return await self._set_status(identity_handle, ClaimStatus.REJECTED)
+
+    async def _set_status(self, identity_handle: str, status: ClaimStatus) -> IdentityClaimRecord:
+        records = self._load_all()
+        for i, record in enumerate(records):
+            if record.identity_handle == identity_handle:
+                records[i] = record.model_copy(update={"claim_status": status, "updated_at": utc_now()})
+                self._save_all(records)
+                return records[i]
+        raise ValueError(f"No claim found for identity '{identity_handle}'")
 
 
 class PrincipalVaultBindingRegistry(_JsonRegistry[PrincipalVaultBindingRecord]):

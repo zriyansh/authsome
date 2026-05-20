@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from authsome.actors.registry import (
+from authsome.identity.principal import (
+    ClaimStatus,
     IdentityClaimRegistry,
     PrincipalRegistry,
     PrincipalVaultBindingRegistry,
@@ -28,6 +29,7 @@ async def test_claim_creates_principal_and_default_vault(tmp_path: Path) -> None
     assert vault.handle == "default"
     assert binding.is_default is True
     assert claim.identity_handle == "steady-wisely-boldly-0042"
+    assert claim.claim_status == ClaimStatus.PENDING
 
 
 @pytest.mark.asyncio

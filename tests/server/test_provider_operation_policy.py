@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 from fastapi.testclient import TestClient
 
-from authsome.actors import create_identity
+from authsome.identity import create_identity
 from authsome.server.app import create_app
 from tests.server.test_pop_auth import _auth_header
 

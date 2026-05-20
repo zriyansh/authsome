@@ -10,11 +10,11 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from authsome import audit
-from authsome.actors.identity_registry import IdentityRegistrationError, IdentityRegistry
-from authsome.actors.proof import ReplayCache
 from authsome.auth import AuthService
 from authsome.auth.sessions import AuthSessionStore
 from authsome.errors import AuthsomeError
+from authsome.identity.proof import ReplayCache
+from authsome.identity.registry import IdentityRegistrationError, IdentityRegistry
 from authsome.paths import get_server_log_path
 from authsome.server.analytics import init_posthog, shutdown_posthog
 from authsome.server.dependencies import (

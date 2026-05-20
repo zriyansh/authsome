@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from authsome.actors import create_identity, mark_claimed, mark_registered
 from authsome.cli.client import AuthsomeApiClient
 from authsome.cli.client_config import ClientConfig, load_client_config, save_client_config
+from authsome.identity import create_identity, mark_claimed, mark_registered
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,5 @@
 """Tests for authsome data models."""
 
-from authsome.actors.identity import IdentityMetadata, IdentityStatus
 from authsome.auth.models.config import current_spec_version
 from authsome.auth.models.connection import (
     ConnectionRecord,
@@ -12,6 +11,7 @@ from authsome.auth.models.connection import (
 from authsome.auth.models.enums import AuthType, ConnectionStatus, ExportFormat, FlowType
 from authsome.auth.models.provider import ApiKeyConfig, OAuthConfig, ProviderDefinition
 from authsome.errors import OperationNotAllowedError
+from authsome.identity.local import IdentityMetadata, IdentityStatus
 
 
 class TestEnums:

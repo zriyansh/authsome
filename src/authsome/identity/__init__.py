@@ -1,6 +1,6 @@
-"""Actor-domain exports."""
+"""Identity-domain exports."""
 
-from authsome.actors.identity import (
+from authsome.identity.local import (
     IdentityMetadata,
     IdentityStatus,
     create_identity,
@@ -19,20 +19,8 @@ from authsome.actors.identity import (
     remove_legacy_default_identity,
     validate_handle,
 )
-from authsome.actors.identity_registry import (
-    IdentityRegistration,
-    IdentityRegistrationError,
-    IdentityRegistry,
-)
-from authsome.actors.proof import (
-    POP_AUTH_SCHEME,
-    ProofClaims,
-    ProofValidationError,
-    ReplayCache,
-    create_proof_jwt,
-    validate_proof_jwt,
-)
-from authsome.actors.registry import (
+from authsome.identity.principal import (
+    ClaimStatus,
     IdentityClaimRecord,
     IdentityClaimRegistry,
     PrincipalRecord,
@@ -42,8 +30,22 @@ from authsome.actors.registry import (
     VaultRecord,
     VaultRegistry,
 )
+from authsome.identity.proof import (
+    POP_AUTH_SCHEME,
+    ProofClaims,
+    ProofValidationError,
+    ReplayCache,
+    create_proof_jwt,
+    validate_proof_jwt,
+)
+from authsome.identity.registry import (
+    IdentityRegistration,
+    IdentityRegistrationError,
+    IdentityRegistry,
+)
 
 __all__ = [
+    "ClaimStatus",
     "IdentityClaimRecord",
     "IdentityClaimRegistry",
     "IdentityMetadata",
