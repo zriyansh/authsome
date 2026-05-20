@@ -61,6 +61,8 @@ The applications page remains visually close to the current provider catalog. It
 
 Each provider card links to a provider setup page. This is true even if the provider has zero or one connection. The provider page is the deployment-scoped view for that app.
 
+For ease of use, the applications page retains a provider-level `Login` action in the provider list view. This allows the user to begin a new connection flow directly from the catalog without first opening the provider setup page.
+
 The applications page answers:
 
 - What providers are available?
@@ -88,6 +90,8 @@ This page answers:
 
 The page should include an `Add connection` action. That action starts a new connection flow by choosing a provider, but the page itself should still read as a list of connections rather than a provider gallery.
 
+The page should also include an `Add new connection` button that routes the user to `Applications`. From there, the user chooses a provider and clicks that provider's `Login` action.
+
 ### Identity
 
 The identity page is informational only in this version. It lists the identities working for the current principal and explains their role in the system.
@@ -111,6 +115,8 @@ In self-hosted mode, the page shows deployment-level provider configuration such
 - provider documentation link
 
 The main deployment action is `Configure` or `Replace`, not unrestricted inline editing.
+
+For ease of use, the provider setup page also retains a `Login` action so a user can create a new connection directly from that provider page.
 
 This page also shows existing connections for that provider as a secondary section. Those existing connections are read-oriented on this page and are grouped with scope context. The grouping should show vault and identity as subheaders so the user can understand where the provider is already in use.
 
@@ -152,6 +158,14 @@ The warning must explicitly state that replacing provider credentials revokes ex
 
 The UI must not hide or soften this consequence. The warning is a required confirmation step because the action has cross-connection impact.
 
+The provider-level `Login` action on both the applications page and the provider setup page should behave as follows:
+
+1. if no `default` connection exists for that provider in the current vault context, start the login flow using `default`
+2. if `default` already exists, open a modal prompting the user for a connection name
+3. after the user provides a valid connection name, start the login flow for that named connection
+
+This keeps the common path fast while still supporting multiple named connections without forcing the user through a heavier workflow.
+
 ## Connections Page Behavior
 
 The connections page becomes a list of actual connections rather than a list of providers.
@@ -190,11 +204,15 @@ Clicking a provider on `Applications` always opens the provider setup page.
 
 This is true regardless of how many connections exist for that provider because the purpose of the page is deployment setup, not connection selection.
 
+The separate `Login` action on each provider card starts connection creation and does not replace the main card click target.
+
 ### Connections to Connection Detail
 
 The connections page is connection-first.
 
 Each row links directly to the connection detail page for that named connection. Because the page already lists individual connections, there is no need for provider-level expansion behavior on this page.
+
+The `Add new connection` action on this page redirects to `Applications`, where the user can choose a provider and use that provider's `Login` action.
 
 ### Existing Connections on Provider Setup
 
@@ -243,6 +261,8 @@ Likely areas:
 - convert the current provider catalog page into `Applications`
 - refactor the current `Connections` page into a connection inventory layout
 - adapt provider detail templates to behave as provider setup pages
+- retain and adapt provider-level `Login` actions on both provider catalog and provider setup views
+- add a connection-name modal for provider login when `default` already exists
 - add hosted-mode conditional rendering that hides provider credentials and provider connection listings
 - add or adapt identity page templates for informational display
 
@@ -259,6 +279,9 @@ Add or update coverage for:
 - hosted-mode hiding of provider connection inventory
 - connection inventory rendering on the `Connections` page
 - connection detail navigation from a connection row
+- provider-level `Login` behavior when `default` does not exist
+- provider-level `Login` modal behavior when `default` already exists
+- `Add new connection` redirect from `Connections` to `Applications`
 - destructive warning flow for provider credential replacement
 
 UI tests should focus on the new page responsibilities and visibility rules rather than purely visual assertions.
