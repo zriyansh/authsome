@@ -4,7 +4,19 @@ authsome is the local auth layer for AI agents — it answers which agent, actin
 
 ## Module Responsibilities
 
-Each module has one job. Cross-module imports are allowed only in the direction listed below; circular dependencies are forbidden.
+Each module has one job. The dependency graph flows strictly from right to left below — no cycles, no upward imports.
+
+```
+identity/  ←── server/
+vault/     ←── auth/ ←── server/
+audit/     ←── auth/ ←── server/
+                          server/ ←── cli/ (via HTTP, not import)
+                          server/ ←── proxy/ (via HTTP, not import)
+```
+
+`identity/`, `vault/`, and `audit/` are leaf modules — they import nothing from this codebase. `auth/` imports only `vault/` and `audit/`. `server/` is the only module that imports from all four. `cli/` and `proxy/` talk to `server/` over HTTP, not Python imports.
+
+---
 
 ### `identity/` — Cryptographic identity primitives
 
@@ -23,7 +35,9 @@ Think of this as the OpenID Connect layer. Handles key material, DIDs, and proof
 - Client config management (that is `cli/` territory)
 - Principal/vault lifecycle decisions (that is `server/` territory)
 
-**Imported by:** `auth/`, `server/`, `cli/`
+**Imports nothing from this codebase.** Imported by: `server/`, `cli/`
+
+> Note: `auth/` currently imports `VaultRegistry` from `identity/` — that is a known violation being fixed in TODOS phase A+C. After the fix, `auth/` has no dependency on `identity/`.
 
 ---
 
@@ -43,7 +57,7 @@ Think of this as the OAuth 2.0 client layer. Runs flows, manages token lifecycle
 - Server registry reads (vault iteration for multi-vault revoke belongs in `server/`)
 - Server filesystem paths
 
-**Imported by:** `server/`
+**Imports:** `vault/` (to store credentials), `audit/` (to log refresh failures). Imported by: `server/`
 
 ---
 
@@ -61,7 +75,7 @@ Think of this as the secrets layer. Encrypts and decrypts credential blobs trans
 - Registry lookups
 - Business logic about which vault belongs to which principal
 
-**Imported by:** `auth/`, `server/`
+**Imports nothing from this codebase.** Imported by: `auth/`, `server/`
 
 ---
 
@@ -78,7 +92,7 @@ Think of this as the append-only ledger. Records who did what and when.
 - Business logic
 - Any storage beyond the append-only log file
 
-**Imported by:** `auth/` (for refresh_failed events), `server/`
+**Imports nothing from this codebase.** Imported by: `auth/`, `server/`
 
 ---
 
