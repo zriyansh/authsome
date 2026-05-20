@@ -1,4 +1,5 @@
 import asyncio
+import base64
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -44,6 +45,7 @@ def test_whoami_requires_pop(monkeypatch, tmp_path: Path) -> None:
 
 def test_whoami_accepts_valid_pop_and_scopes_identity(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
+    monkeypatch.setenv("AUTHSOME_MASTER_KEY", base64.b64encode(b"\x01" * 32).decode("ascii"))
     identity = create_identity(tmp_path, "steady-wisely-boldly-0042")
 
     with TestClient(create_app()) as client:
@@ -59,6 +61,27 @@ def test_whoami_accepts_valid_pop_and_scopes_identity(monkeypatch, tmp_path: Pat
     assert response.json()["principal_id"].startswith("principal_")
     assert response.json()["vault_id"].startswith("vault_")
     assert response.json()["did"].startswith("did:key:z6Mk")
+    assert response.json()["configured_encryption_mode"] == "auto"
+    assert response.json()["effective_encryption_source"] == "env"
+    assert "AUTHSOME_MASTER_KEY" in response.json()["encryption_backend"]
+
+
+def test_health_and_ready_report_encryption_details(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
+    monkeypatch.setenv("AUTHSOME_MASTER_KEY", base64.b64encode(b"\x02" * 32).decode("ascii"))
+
+    with TestClient(create_app()) as client:
+        health_response = client.get("/health")
+        ready_response = client.get("/ready")
+
+    assert health_response.status_code == 200
+    assert health_response.json()["configured_encryption_mode"] == "auto"
+    assert health_response.json()["effective_encryption_source"] == "env"
+    assert "AUTHSOME_MASTER_KEY" in health_response.json()["encryption_backend"]
+    assert ready_response.status_code == 200
+    assert ready_response.json()["configured_encryption_mode"] == "auto"
+    assert ready_response.json()["effective_encryption_source"] == "env"
+    assert "AUTHSOME_MASTER_KEY" in ready_response.json()["encryption_backend"]
 
 
 def test_hosted_registration_requires_claim(monkeypatch, tmp_path: Path) -> None:

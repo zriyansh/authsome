@@ -24,7 +24,7 @@ class Vault:
         self,
         app_store: AppStore,
         crypto: VaultCrypto | None = None,
-        crypto_mode: str = "local_key",
+        crypto_mode: str = "auto",
         master_key_path: Path | None = None,
     ) -> None:
         self._app_store = app_store
@@ -39,6 +39,21 @@ class Vault:
 
             self._crypto = create_crypto(self._master_key_path, self._crypto_mode)
         return self._crypto
+
+    @property
+    def crypto_mode(self) -> str:
+        """Configured crypto resolution mode."""
+        return self._crypto_mode
+
+    @property
+    def crypto_source(self) -> str:
+        """Effective crypto source identifier."""
+        return self.crypto.source_id
+
+    @property
+    def crypto_source_description(self) -> str:
+        """Human-readable description of the effective crypto source."""
+        return self.crypto.source_description
 
     # ── Index helpers ─────────────────────────────────────────────────────
 
