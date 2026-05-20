@@ -241,6 +241,19 @@ async def overview(request: Request) -> HTMLResponse:
     )
 
 
+@router.get("/applications", response_class=HTMLResponse)
+async def applications(request: Request) -> HTMLResponse:
+    auth = await _resolve_ui_auth(request)
+    if auth is None:
+        return _ui_session_expired_response()
+    providers = await _all_provider_views(auth)
+    return templates.TemplateResponse(
+        request,
+        "applications.html",
+        _page_context(request, "applications", providers=providers),
+    )
+
+
 @router.get("/connections", response_class=HTMLResponse)
 async def connections(request: Request) -> HTMLResponse:
     auth = await _resolve_ui_auth(request)
@@ -260,6 +273,23 @@ async def connections(request: Request) -> HTMLResponse:
                 "connected": connected_count,
                 "available": len(providers) - connected_count,
             },
+        ),
+    )
+
+
+@router.get("/identity", response_class=HTMLResponse)
+async def identity_page(request: Request) -> HTMLResponse:
+    auth = await _resolve_ui_auth(request)
+    if auth is None:
+        return _ui_session_expired_response()
+    return templates.TemplateResponse(
+        request,
+        "identity.html",
+        _page_context(
+            request,
+            "identity",
+            identities=[{"handle": auth.identity, "is_active": True}],
+            principal_id=auth.principal_id,
         ),
     )
 
