@@ -7,8 +7,8 @@ from typing import Literal, cast
 from fastapi import APIRouter, Depends, Request
 
 from authsome import __version__
+from authsome.actors import current_from_home
 from authsome.auth import AuthService
-from authsome.identity import current_from_home
 from authsome.server.dependencies import get_deployment_mode
 from authsome.server.routes._deps import get_auth_service, get_protected_auth_service, get_server_base_url
 from authsome.server.schemas import HealthResponse, ReadyResponse

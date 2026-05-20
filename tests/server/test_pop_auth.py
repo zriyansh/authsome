@@ -6,6 +6,8 @@ from fastapi.testclient import TestClient
 
 from authsome.actors import create_identity, load_private_key
 from authsome.actors.proof import create_proof_jwt
+from authsome.auth.models.connection import ConnectionRecord
+from authsome.auth.models.enums import AuthType, ConnectionStatus
 from authsome.server.app import create_app
 from authsome.utils import build_store_key
 
@@ -149,7 +151,7 @@ def test_ready_uses_active_identity_connections_for_warning_check(monkeypatch, t
 
     with TestClient(create_app()) as client:
         key = build_store_key(
-            identity=identity.handle,
+            vault=identity.handle,
             provider="github",
             record_type="connection",
             connection="default",
