@@ -69,7 +69,7 @@ class AuthService:
     Authentication and credential lifecycle service.
 
     All reads and writes go through self._vault.
-    Key construction (scope:<vault_id>:<provider>:...) lives here.
+    Key construction (vault:<vault_id>:<provider>:...) lives here.
     """
 
     def __init__(
@@ -316,7 +316,7 @@ class AuthService:
     # ── Connection operations ─────────────────────────────────────────────
 
     async def list_connections(self) -> list[dict[str, Any]]:
-        prefix = f"scope:{self._vault_id}:"
+        prefix = f"vault:{self._vault_id}:"
         keys = await self._vault.list(prefix, collection=self._coll)
 
         providers: dict[str, list[dict[str, Any]]] = {}
@@ -327,7 +327,7 @@ class AuthService:
                 provider_name = parts.provider
                 connection_name = parts.connection
                 if provider_name not in defaults:
-                    meta_key = build_store_key(scope=self._vault_id, provider=provider_name, record_type="metadata")
+                    meta_key = build_store_key(vault=self._vault_id, provider=provider_name, record_type="metadata")
                     meta_json = await self._vault.get(meta_key, collection=self._coll)
                     if meta_json:
                         defaults[provider_name] = ProviderMetadataRecord.model_validate_json(
@@ -366,7 +366,7 @@ class AuthService:
         connection: str = "default",
     ) -> ConnectionRecord:
         connection = await self.resolve_connection_name(provider, connection)
-        key = build_store_key(scope=self._vault_id, provider=provider, record_type="connection", connection=connection)
+        key = build_store_key(vault=self._vault_id, provider=provider, record_type="connection", connection=connection)
         record_json = await self._vault.get(key, collection=self._coll)
         if not record_json:
             raise ConnectionNotFoundError(provider=provider, connection=connection, identity=self._identity)
@@ -382,7 +382,7 @@ class AuthService:
         """Resolve an optional connection name to the provider default."""
         if connection:
             return connection
-        meta_key = build_store_key(scope=self._vault_id, provider=provider, record_type="metadata")
+        meta_key = build_store_key(vault=self._vault_id, provider=provider, record_type="metadata")
         existing_json = await self._vault.get(meta_key, collection=self._coll)
         if existing_json:
             metadata = ProviderMetadataRecord.model_validate_json(existing_json)
@@ -400,7 +400,7 @@ class AuthService:
     async def set_default_connection(self, provider: str, connection: str) -> None:
         """Set the default connection for a provider."""
         await self.get_connection(provider, connection)
-        meta_key = build_store_key(scope=self._vault_id, provider=provider, record_type="metadata")
+        meta_key = build_store_key(vault=self._vault_id, provider=provider, record_type="metadata")
         existing_json = await self._vault.get(meta_key, collection=self._coll)
         if existing_json:
             metadata = ProviderMetadataRecord.model_validate_json(existing_json)
@@ -718,7 +718,7 @@ class AuthService:
                     client_secret=client_secret,
                 )
 
-        key = build_store_key(scope=self._vault_id, provider=provider, record_type="connection", connection=connection)
+        key = build_store_key(vault=self._vault_id, provider=provider, record_type="connection", connection=connection)
         await self._vault.delete(key, collection=self._coll)
         await self._remove_from_provider_metadata(provider, connection)
 
@@ -733,7 +733,7 @@ class AuthService:
                 vault_id=vault_id,
                 deployment_mode=self._deployment_mode,
             )
-            meta_key = build_store_key(scope=vault_id, provider=provider, record_type="metadata")
+            meta_key = build_store_key(vault=vault_id, provider=provider, record_type="metadata")
             existing_json = await self._vault.get(meta_key, collection=vault_service._coll)
             if not existing_json:
                 continue
@@ -872,7 +872,7 @@ class AuthService:
         record.principal_id = self._principal_id
         record.vault_id = self._vault_id
         key = build_store_key(
-            scope=self._vault_id,
+            vault=self._vault_id,
             provider=record.provider,
             record_type="connection",
             connection=record.connection_name,
@@ -891,7 +891,7 @@ class AuthService:
         await self._vault.put(key, record.model_dump_json(), collection=self._server_coll)
 
     async def _update_provider_metadata(self, provider: str, connection_name: str) -> None:
-        meta_key = build_store_key(scope=self._vault_id, provider=provider, record_type="metadata")
+        meta_key = build_store_key(vault=self._vault_id, provider=provider, record_type="metadata")
         existing_json = await self._vault.get(meta_key, collection=self._coll)
         if existing_json:
             metadata = ProviderMetadataRecord.model_validate_json(existing_json)
@@ -908,7 +908,7 @@ class AuthService:
         await self._vault.put(meta_key, metadata.model_dump_json(), collection=self._coll)
 
     async def _remove_from_provider_metadata(self, provider: str, connection_name: str) -> None:
-        meta_key = build_store_key(scope=self._vault_id, provider=provider, record_type="metadata")
+        meta_key = build_store_key(vault=self._vault_id, provider=provider, record_type="metadata")
         existing_json = await self._vault.get(meta_key, collection=self._coll)
         if existing_json:
             metadata = ProviderMetadataRecord.model_validate_json(existing_json)
@@ -1024,7 +1024,7 @@ class AuthService:
         return record
 
     async def _get_or_create_provider_state(self, provider: str) -> ProviderStateRecord:
-        key = build_store_key(scope=self._vault_id, provider=provider, record_type="state")
+        key = build_store_key(vault=self._vault_id, provider=provider, record_type="state")
         existing = await self._vault.get(key, collection=self._coll)
         if existing:
             return ProviderStateRecord.model_validate_json(existing)
@@ -1039,7 +1039,7 @@ class AuthService:
         state.identity = self._identity
         state.principal_id = self._principal_id
         state.vault_id = self._vault_id
-        key = build_store_key(scope=self._vault_id, provider=state.provider, record_type="state")
+        key = build_store_key(vault=self._vault_id, provider=state.provider, record_type="state")
         await self._vault.put(key, state.model_dump_json(), collection=self._coll)
 
     async def _iter_registered_vault_ids(self) -> list[str]:

@@ -31,7 +31,7 @@ class ConnectionRecord(BaseModel):
     """
     Credential record for a named connection (schema v2).
 
-    Stored at key: scope:<vault_id>:<provider>:connection:<name>
+    Stored at key: vault:<vault_id>:<provider>:connection:<name>
     All sensitive fields are plaintext — encryption is at vault level.
     """
 
@@ -70,7 +70,7 @@ class ProviderMetadataRecord(BaseModel):
     """
     Non-secret metadata about a provider within an identity.
 
-    Stored at key: scope:<vault_id>:<provider>:metadata
+    Stored at key: vault:<vault_id>:<provider>:metadata
     """
 
     schema_version: int = 2
@@ -90,7 +90,7 @@ class ProviderStateRecord(BaseModel):
     """
     Transient, non-secret provider state within an identity.
 
-    Stored at key: scope:<vault_id>:<provider>:state
+    Stored at key: vault:<vault_id>:<provider>:state
     """
 
     schema_version: int = 2

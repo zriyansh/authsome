@@ -54,8 +54,8 @@ def test_is_filesystem_safe():
 def test_build_store_key():
     # Test definition key
     assert build_store_key(record_type="definition", provider="github") == "provider:github:definition"
-    assert build_store_key(scope="vault_default", provider="github", record_type="metadata") == (
-        "scope:vault_default:github:metadata"
+    assert build_store_key(vault="vault_default", provider="github", record_type="metadata") == (
+        "vault:vault_default:github:metadata"
     )
     # Test metadata key
     assert (
@@ -93,7 +93,7 @@ def test_build_store_key():
 
 def test_parse_store_key_server() -> None:
     assert parse_store_key("server:provider:github:client") == StoreKeyParts(
-        scope=None,
+        vault=None,
         identity=None,
         provider="github",
         record_type="server",

@@ -296,7 +296,7 @@ async def test_revoke_local_deletes_shared_client_and_all_identity_connections(t
             collection="server",
         )
         await vault.put(
-            build_store_key(scope=primary_vault.vault_id, provider="github", record_type="metadata"),
+            build_store_key(vault=primary_vault.vault_id, provider="github", record_type="metadata"),
             ProviderMetadataRecord(
                 identity=primary_connection.identity,
                 principal_id="principal_1",
@@ -309,7 +309,7 @@ async def test_revoke_local_deletes_shared_client_and_all_identity_connections(t
         )
         await vault.put(
             build_store_key(
-                scope=primary_vault.vault_id,
+                vault=primary_vault.vault_id,
                 provider="github",
                 record_type="connection",
                 connection=primary_connection.connection_name,
@@ -318,7 +318,7 @@ async def test_revoke_local_deletes_shared_client_and_all_identity_connections(t
             collection=f"vault:{primary_vault.vault_id}",
         )
         await vault.put(
-            build_store_key(scope=secondary_vault.vault_id, provider="github", record_type="metadata"),
+            build_store_key(vault=secondary_vault.vault_id, provider="github", record_type="metadata"),
             ProviderMetadataRecord(
                 identity=secondary_connection.identity,
                 principal_id="principal_2",
@@ -331,7 +331,7 @@ async def test_revoke_local_deletes_shared_client_and_all_identity_connections(t
         )
         await vault.put(
             build_store_key(
-                scope=secondary_vault.vault_id,
+                vault=secondary_vault.vault_id,
                 provider="github",
                 record_type="connection",
                 connection=secondary_connection.connection_name,
@@ -351,7 +351,7 @@ async def test_revoke_local_deletes_shared_client_and_all_identity_connections(t
         )
         assert (
             await vault.get(
-                build_store_key(scope=primary_vault.vault_id, provider="github", record_type="metadata"),
+                build_store_key(vault=primary_vault.vault_id, provider="github", record_type="metadata"),
                 collection=f"vault:{primary_vault.vault_id}",
             )
             is None
@@ -359,7 +359,7 @@ async def test_revoke_local_deletes_shared_client_and_all_identity_connections(t
         assert (
             await vault.get(
                 build_store_key(
-                    scope=primary_vault.vault_id,
+                    vault=primary_vault.vault_id,
                     provider="github",
                     record_type="connection",
                     connection=primary_connection.connection_name,
@@ -370,7 +370,7 @@ async def test_revoke_local_deletes_shared_client_and_all_identity_connections(t
         )
         assert (
             await vault.get(
-                build_store_key(scope=secondary_vault.vault_id, provider="github", record_type="metadata"),
+                build_store_key(vault=secondary_vault.vault_id, provider="github", record_type="metadata"),
                 collection=f"vault:{secondary_vault.vault_id}",
             )
             is None
@@ -378,7 +378,7 @@ async def test_revoke_local_deletes_shared_client_and_all_identity_connections(t
         assert (
             await vault.get(
                 build_store_key(
-                    scope=secondary_vault.vault_id,
+                    vault=secondary_vault.vault_id,
                     provider="github",
                     record_type="connection",
                     connection=secondary_connection.connection_name,
