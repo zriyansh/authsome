@@ -9,36 +9,38 @@ uv pip install -e ".[dev]"
 uv run authsome --version
 ```
 
+> **Note on reset:** `rm -rf ~/.authsome` clears local state but does **not** stop a running daemon. If you reset while the daemon is running, `daemon stop` will say "No managed daemon record was found" and leave the process alive. Kill it manually first: `kill $(lsof -ti :7998)`, then reset.
+
 ---
 
 ## 1. Initialization
 
 ```bash
-# Start fresh (optional — skip to keep existing config)
-rm -rf ~/.authsome
+# Kill daemon and start fresh (optional — skip to keep existing config)
+kill $(lsof -ti :7998) 2>/dev/null; rm -rf ~/.authsome
 
 uv run authsome whoami
 ```
 
-**Expected:** Home directory, registered non-default identity handle, DID, encryption mode, and connected provider count.
+**Expected:** Home directory, registered non-default identity handle, principal ID, vault ID, DID, encryption mode, daemon URL, and connected provider count (0).
 
 ```bash
 uv run authsome whoami --json
 ```
 
-**Expected:** Same data as structured JSON.
+**Expected:** Same data as structured JSON. Key fields: `home_directory`, `profile`, `principal_id`, `vault_id`, `did`, `registration_status`, `daemon_url`, `encryption_backend`, `connected_providers_count`.
 
 ```bash
 uv run authsome doctor
 ```
 
-**Expected:** Exit code `0`; `OK` printed for `spec_version`, `identity`, `providers`, `connections`, `vault`, `integrity`.
+**Expected:** Exit code `0`; `OK` printed for `spec_version`, `identity`, `providers`, `connections`, `vault`, `integrity`. A `Warnings:` block may appear (e.g. "no active provider connections found") — that is normal on a fresh install.
 
 ```bash
 uv run authsome doctor --json
 ```
 
-**Expected:** `{"status": "ready", "checks": {"spec_version": "ok", "identity": "ok", "providers": "ok", "connections": "ok", "vault": "ok", "integrity": "ok"}}`.
+**Expected:** `{"status": "ready", "checks": {"spec_version": "ok", ...}, "issues": [], "warnings": [...]}`. The `warnings` array is non-empty on a fresh install with no connections.
 
 ---
 
@@ -51,8 +53,10 @@ uv run authsome login resend
 ```
 
 **Expected:**
-- Browser opens a local form at `http://127.0.0.1:7999`
-- After submitting a valid API key, terminal prints success
+- Terminal prints a session URL: `Visit: http://127.0.0.1:7998/auth/sessions/<id>/input`
+- Browser opens a secure local bridge page served by the daemon — credentials are submitted directly to the local daemon, never to a third-party server
+- Terminal immediately returns: "Login process started. The connection will be updated automatically once complete."
+- Run `authsome list` to confirm completion
 
 ```bash
 uv run authsome list
@@ -69,8 +73,10 @@ uv run authsome login github
 ```
 
 **Expected:**
-- Browser opens `https://github.com/login/oauth/authorize?...`
-- After authorizing, terminal prints success
+- Terminal prints a session URL: `Visit: http://127.0.0.1:7998/auth/sessions/<id>/input`
+- Browser opens a secure local bridge page served by the daemon; the page initiates the OAuth redirect to `https://github.com/login/oauth/authorize?...` and captures the callback — credentials never leave localhost
+- Terminal immediately returns: "Login process started. The connection will be updated automatically once complete."
+- Run `authsome list` to confirm completion
 
 ```bash
 uv run authsome list
@@ -87,8 +93,10 @@ uv run authsome login github --flow device_code
 ```
 
 **Expected:**
-- Terminal prints a URL and a user code (no browser opens)
-- After authorizing on GitHub, terminal prints success
+- Terminal prints a session URL: `Visit: http://127.0.0.1:7998/auth/sessions/<id>/input`
+- Browser opens a secure local bridge page — leave Client ID blank to use GitHub's public device code flow; the device code URL and user code are shown in the browser
+- Terminal immediately returns: "Login process started."
+- Run `authsome list` to confirm completion
 
 ---
 
@@ -98,7 +106,7 @@ uv run authsome login github --flow device_code
 uv run authsome list
 ```
 
-**Expected:** Table of all providers; connected ones show connection name and status.
+**Expected:** Table of all providers with columns `Provider`, `Source`, `Auth`, `Connection`, `Status`, `Expires`. Connected ones show connection name and status. Header line shows total and connected counts.
 
 ```bash
 uv run authsome list --json
@@ -148,13 +156,13 @@ uv run authsome get github --json
 uv run authsome inspect github
 ```
 
-**Expected:** Full provider definition (URLs, flow config, scopes) plus connection summary as JSON.
+**Expected:** Full provider definition (URLs, flow config, scopes) as JSON; `connections` array shows active connections.
 
 ```bash
 uv run authsome inspect resend
 ```
 
-**Expected:** Provider definition with `api_key` config block and connection summary.
+**Expected:** Provider definition with `api_key` config block and `connections` array.
 
 ---
 
@@ -232,7 +240,7 @@ uv run authsome log -n 5
 uv run authsome log -n 5 --json
 ```
 
-**Expected:** JSON object with `log_file` path and `entries` array of parsed audit event objects, each with `timestamp`, `event`, `provider`, `status`.
+**Expected:** JSON object with `v`, `log_file` path, and `entries` array of parsed audit event objects, each with `timestamp`, `event`, `provider`, `status`.
 
 ```bash
 uv run authsome log --raw -n 10
@@ -328,21 +336,23 @@ uv run authsome list  # github → not_connected
 uv run authsome daemon status
 ```
 
-**Expected:** JSON showing `running: true`, health checks all `ok`, PID, and log file path.
+**Expected:** JSON showing `running: true`, health checks all `ok`, PID, and log file path. The `health` block includes `version`, `mode`, `encryption_backend`.
 
 ```bash
 uv run authsome daemon stop
 uv run authsome daemon status
 ```
 
-**Expected:** `running: false` after stop.
+**Expected:** "Daemon stopped successfully"; `running: false` after stop.
+
+> **Note:** `daemon stop` only works when the daemon was started by `daemon start` (a managed daemon with a PID record). If the daemon is running without a PID record (e.g. after `rm -rf ~/.authsome`), stop is a no-op. Kill the process manually: `kill $(lsof -ti :7998)`.
 
 ```bash
 uv run authsome daemon start
 uv run authsome daemon status
 ```
 
-**Expected:** `running: true` after start.
+**Expected:** "Daemon started successfully"; `running: true` after start.
 
 ---
 
@@ -353,7 +363,7 @@ uv run authsome daemon status
 uv run authsome --quiet list
 ```
 
-**Expected:** Provider table only; no banners or notes.
+**Expected:** Provider table only; no "Providers: N total" banner.
 
 ```bash
 # No color: plain text output
@@ -412,5 +422,6 @@ uv run authsome get resend 2>&1; echo "exit: $?"
 ## Cleanup
 
 ```bash
+uv run authsome daemon stop
 rm -rf ~/.authsome
 ```

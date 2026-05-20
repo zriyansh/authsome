@@ -84,7 +84,7 @@ def create_app() -> FastAPI:
             status_code=status_code,
             content={
                 "error": exc_name,
-                "message": str(exc),
+                "message": Exception.__str__(exc),
                 "provider": exc.provider,
                 "operation": exc.operation,
             },
