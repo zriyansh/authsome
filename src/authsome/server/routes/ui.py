@@ -17,11 +17,15 @@ from fastapi.templating import Jinja2Templates
 
 from authsome import __version__
 from authsome.auth import AuthService
+from authsome.auth.models.connection import ConnectionRecord, ProviderClientRecord
 from authsome.auth.models.enums import AuthType, FlowType
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.auth.sessions import AuthSession, AuthSessionStore
-from authsome.errors import ConnectionNotFoundError
-from authsome.server.dependencies import get_deployment_mode
+from authsome.server.dependencies import (
+    create_principal_vault_binding_registry,
+    create_vault_registry,
+    get_deployment_mode,
+)
 from authsome.server.routes._deps import (
     UI_SESSION_COOKIE_NAME,
     get_auth_service_for_identity,
@@ -184,6 +188,113 @@ def _build_provider_view(
     }
 
 
+async def _provider_connection_groups(
+    request: Request,
+    *,
+    identity: str,
+    principal_id: str | None,
+    provider_name: str,
+) -> list[dict[str, Any]]:
+    if not principal_id:
+        return []
+
+    bindings = create_principal_vault_binding_registry(request.app.state.vault.home)
+    vaults = create_vault_registry(request.app.state.vault.home)
+    groups: list[dict[str, Any]] = []
+
+    for binding in await bindings.list_for_principal(principal_id):
+        scoped_auth = AuthService(
+            vault=request.app.state.vault,
+            identity=identity,
+            principal_id=principal_id,
+            vault_id=binding.vault_id,
+            deployment_mode=get_deployment_mode(),
+        )
+        provider_connections = next(
+            (group["connections"] for group in await scoped_auth.list_connections() if group["name"] == provider_name),
+            [],
+        )
+        if not provider_connections:
+            continue
+
+        vault_record = await vaults.get(binding.vault_id)
+        group_items: list[dict[str, Any]] = []
+        for connection in provider_connections:
+            record = await scoped_auth.get_connection(provider_name, connection["connection_name"])
+            group_items.append(
+                {
+                    "connection_name": connection["connection_name"],
+                    "identity": record.identity,
+                    "status": connection["status"],
+                    "href": f"/ui/apps/{provider_name}/connections/{connection['connection_name']}",
+                }
+            )
+
+        groups.append(
+            {
+                "vault_label": (vault_record.handle if vault_record else "default").replace("-", " ").title(),
+                "connections": group_items,
+            }
+        )
+
+    return groups
+
+
+def _provider_page_context(
+    request: Request,
+    provider: ProviderDefinition,
+    api_url: str,
+    *,
+    grouped_connections: list[dict[str, Any]],
+    provider_client: ProviderClientRecord | None,
+    redirect_uri: str,
+    auth_url: str | None,
+    token_url: str | None,
+) -> dict[str, Any]:
+    policy = _ui_policy()
+    return _page_context(
+        request,
+        "applications",
+        provider=provider,
+        connection=None,
+        grouped_connections=grouped_connections,
+        logo_initial=_logo_initial(provider.display_name or provider.name),
+        api_url=api_url,
+        auth_type_label="OAuth 2.0" if provider.auth_type == AuthType.OAUTH2 else "API Key",
+        client_id=provider_client.client_id if provider_client and policy["show_provider_client_details"] else None,
+        has_client_secret=bool(
+            provider_client and provider_client.client_secret and policy["show_provider_client_details"]
+        ),
+        redirect_uri=redirect_uri,
+        auth_url=auth_url,
+        token_url=token_url,
+        requires_named_login=any(
+            connection["connection_name"] == "default"
+            for group in grouped_connections
+            for connection in group["connections"]
+        ),
+    )
+
+
+def _connection_detail_context(
+    request: Request,
+    provider: ProviderDefinition,
+    connection_record: ConnectionRecord,
+    api_url: str,
+) -> dict[str, Any]:
+    return _page_context(
+        request,
+        "connections",
+        provider=provider,
+        connection=connection_record,
+        logo_initial=_logo_initial(provider.display_name or provider.name),
+        api_url=api_url,
+        expires_label=_format_relative(connection_record.expires_at),
+        obtained_label=_format_relative(connection_record.obtained_at),
+        scopes=connection_record.scopes or [],
+    )
+
+
 async def _all_provider_views(auth: AuthService) -> list[dict[str, Any]]:
     by_source = await auth.list_providers_by_source()
     connections_by_provider = {group["name"]: group["connections"] for group in await auth.list_connections()}
@@ -192,6 +303,23 @@ async def _all_provider_views(auth: AuthService) -> list[dict[str, Any]]:
         for provider in by_source.get(source, []):
             views.append(_build_provider_view(provider, source, connections_by_provider.get(provider.name, [])))
     return views
+
+
+def _build_connection_rows(providers: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for provider in providers:
+        for connection in provider["connections"]:
+            rows.append(
+                {
+                    "provider_name": provider["name"],
+                    "provider_display_name": provider["display_name"],
+                    "connection_name": connection["connection_name"],
+                    "status": connection["status"],
+                    "auth_type_label": provider["auth_type_label"],
+                    "href": f"/ui/apps/{provider['name']}/connections/{connection['connection_name']}",
+                }
+            )
+    return sorted(rows, key=lambda row: (row["provider_display_name"].lower(), row["connection_name"].lower()))
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -246,7 +374,15 @@ async def applications(request: Request) -> HTMLResponse:
     auth = await _resolve_ui_auth(request)
     if auth is None:
         return _ui_session_expired_response()
-    providers = await _all_provider_views(auth)
+    providers = [
+        {
+            **provider,
+            "requires_named_login": any(
+                connection["connection_name"] == "default" for connection in provider["connections"]
+            ),
+        }
+        for provider in await _all_provider_views(auth)
+    ]
     return templates.TemplateResponse(
         request,
         "applications.html",
@@ -260,19 +396,15 @@ async def connections(request: Request) -> HTMLResponse:
     if auth is None:
         return _ui_session_expired_response()
     providers = await _all_provider_views(auth)
-    connected_count = sum(1 for p in providers if p["status"] != "available")
+    rows = _build_connection_rows(providers)
     return templates.TemplateResponse(
         request,
         "connections.html",
         _page_context(
             request,
             "connections",
-            providers=providers,
-            totals={
-                "all": len(providers),
-                "connected": connected_count,
-                "available": len(providers) - connected_count,
-            },
+            connection_rows=rows,
+            total_connections=len(rows),
         ),
     )
 
@@ -304,53 +436,59 @@ async def app_detail(
     if auth is None:
         return _ui_session_expired_response()
     provider = await auth.get_provider(provider_name)
-
-    connection_record = None
-    try:
-        connection_record = await auth.get_connection(provider_name)
-    except ConnectionNotFoundError:
-        pass
-
-    client_record = await auth.get_provider_client(provider_name)
     redirect_uri = build_callback_url(server_base_url)
     api_url = provider.api_url or (provider.oauth.base_url if provider.oauth else None) or provider.name
-    policy = _ui_policy()
-
-    if connection_record is None:
+    if _is_hosted_ui():
         return templates.TemplateResponse(
             request,
-            "app_detail_disconnected.html",
+            "app_detail_managed.html",
             _page_context(
                 request,
-                "connections",
+                "applications",
                 provider=provider,
-                connection=None,
                 logo_initial=_logo_initial(provider.display_name or provider.name),
-                api_url=api_url,
-                obtained_label=None,
-                auth_type_label="OAuth 2.0" if provider.auth_type == AuthType.OAUTH2 else "API Key",
-                client_id=client_record.client_id if client_record and policy["show_provider_client_details"] else None,
-                has_client_secret=bool(
-                    client_record and client_record.client_secret and policy["show_provider_client_details"]
-                ),
-                redirect_uri=redirect_uri,
-                auth_url=provider.oauth.authorization_url if provider.oauth else None,
-                token_url=provider.oauth.token_url if provider.oauth else None,
-                base_url=(provider.oauth.base_url if provider.oauth else None) or provider.api_url,
             ),
         )
 
-    common = _page_context(
+    client_record = await auth.get_provider_client(provider_name)
+    grouped_connections = await _provider_connection_groups(
         request,
-        "connections",
-        provider=provider,
-        connection=connection_record,
-        logo_initial=_logo_initial(provider.display_name or provider.name),
-        api_url=api_url,
-        expires_label=_format_relative(connection_record.expires_at),
-        obtained_label=_format_relative(connection_record.obtained_at),
-        scopes=connection_record.scopes or [],
+        identity=auth.identity,
+        principal_id=auth.principal_id,
+        provider_name=provider_name,
     )
+    return templates.TemplateResponse(
+        request,
+        "app_provider.html",
+        _provider_page_context(
+            request,
+            provider,
+            api_url,
+            grouped_connections=grouped_connections,
+            provider_client=client_record,
+            redirect_uri=redirect_uri,
+            auth_url=provider.oauth.authorization_url if provider.oauth else None,
+            token_url=provider.oauth.token_url if provider.oauth else None,
+        ),
+    )
+
+
+@router.get("/apps/{provider_name}/connections/{connection_name}", response_class=HTMLResponse)
+async def connection_detail(
+    provider_name: str,
+    connection_name: str,
+    request: Request,
+    server_base_url: str = Depends(get_server_base_url),
+) -> Response:
+    auth = await _resolve_ui_auth(request)
+    if auth is None:
+        return _ui_session_expired_response()
+    provider = await auth.get_provider(provider_name)
+    connection_record = await auth.get_connection(provider_name, connection_name)
+    client_record = await auth.get_provider_client(provider_name)
+    api_url = provider.api_url or (provider.oauth.base_url if provider.oauth else None) or provider.name
+    common = _connection_detail_context(request, provider, connection_record, api_url)
+    policy = _ui_policy()
 
     if provider.auth_type == AuthType.OAUTH2:
         return templates.TemplateResponse(
@@ -364,7 +502,7 @@ async def app_detail(
                 "has_client_secret": bool(
                     client_record and client_record.client_secret and policy["show_provider_client_details"]
                 ),
-                "redirect_uri": redirect_uri,
+                "redirect_uri": build_callback_url(server_base_url),
                 "auth_url": provider.oauth.authorization_url if provider.oauth else "",
                 "token_url": provider.oauth.token_url if provider.oauth else "",
                 "access_token": connection_record.access_token,

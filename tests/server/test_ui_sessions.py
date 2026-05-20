@@ -95,6 +95,7 @@ def test_hosted_ui_hides_server_managed_oauth_client_details(monkeypatch, tmp_pa
     assert response.status_code == 200
     assert "cid-123" not in response.text
     assert "manages the OAuth application" in response.text
+    assert "Existing connections" not in response.text
 
 
 def test_hosted_ui_auth_input_requires_matching_browser_session(monkeypatch, tmp_path: Path) -> None:
