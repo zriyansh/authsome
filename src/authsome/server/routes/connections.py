@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from authsome.auth.models.enums import ExportFormat
-from authsome.server.analytics import get_posthog
+from authsome.server.analytics import capture_event
 from authsome.server.credential_service import AuthService
 from authsome.server.registries import VaultRegistry
 from authsome.server.routes._deps import get_protected_auth_service, get_vault_registry
@@ -33,13 +33,15 @@ async def get_connection(provider: str, connection: str, auth: AuthService = Dep
 @router.post("/connections/{provider}/{connection}/logout")
 async def logout(provider: str, connection: str, auth: AuthService = Depends(get_protected_auth_service)):
     await auth.logout(provider, connection)
-    ph = get_posthog()
-    if ph is not None:
-        ph.capture(
-            "connection logout",
-            distinct_id=auth.identity,
-            properties={"provider": provider, "connection": connection, "principal_id": auth.principal_id},
-        )
+    capture_event(
+        auth.identity,
+        "connection logout",
+        {
+            "provider": provider,
+            "connection": connection,
+            "principal_id": auth.principal_id,
+        },
+    )
     return {"status": "ok"}
 
 
@@ -52,13 +54,14 @@ async def revoke(
     all_vaults = await vault_registry.list_all()
     vault_ids: list[str] = [v.vault_id for v in all_vaults] or ([auth.vault_id] if auth.vault_id else [])
     await auth.revoke(provider, vault_ids=vault_ids)
-    ph = get_posthog()
-    if ph is not None:
-        ph.capture(
-            "connection revoked",
-            distinct_id=auth.identity,
-            properties={"provider": provider, "principal_id": auth.principal_id},
-        )
+    capture_event(
+        auth.identity,
+        "connection revoked",
+        {
+            "provider": provider,
+            "principal_id": auth.principal_id,
+        },
+    )
     return {"status": "ok"}
 
 
@@ -78,15 +81,13 @@ async def export_credentials(body: dict, auth: AuthService = Depends(get_protect
     connection = body.get("connection", "default")
     export_format = ExportFormat(body.get("format", "env"))
     result = await auth.export(provider, connection, format=export_format)
-    ph = get_posthog()
-    if ph is not None:
-        ph.capture(
-            "credentials exported",
-            distinct_id=auth.identity,
-            properties={
-                "provider": provider,
-                "format": export_format.value,
-                "principal_id": auth.principal_id,
-            },
-        )
+    capture_event(
+        auth.identity,
+        "credentials exported",
+        {
+            "provider": provider,
+            "format": export_format.value,
+            "principal_id": auth.principal_id,
+        },
+    )
     return {"output": result}
