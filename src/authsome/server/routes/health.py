@@ -8,9 +8,11 @@ from fastapi import APIRouter, Depends, Request
 
 from authsome import __version__
 from authsome.auth import AuthService
+from authsome.identity import current_from_home
 from authsome.server.dependencies import get_deployment_mode
 from authsome.server.routes._deps import get_auth_service, get_protected_auth_service, get_server_base_url
 from authsome.server.schemas import HealthResponse, ReadyResponse
+from authsome.utils import connection_is_active
 
 router = APIRouter()
 
@@ -48,9 +50,15 @@ async def ready(auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
 
     # 3. Connected Providers Check
     try:
-        conn_list = await auth.list_connections()
+        active_identity = await current_from_home(auth.vault.home)
+        identity_auth = AuthService(
+            vault=auth.vault,
+            identity=active_identity.handle,
+            deployment_mode=get_deployment_mode(),
+        )
+        conn_list = await identity_auth.list_connections()
         checks["connections"] = "ok"
-        connected_count = sum(1 for p in conn_list for c in p.get("connections", []) if c.get("status") == "connected")
+        connected_count = sum(1 for p in conn_list for c in p.get("connections", []) if connection_is_active(c))
         if connected_count == 0:
             warnings.append("no active provider connections found")
     except Exception as exc:

@@ -1,10 +1,15 @@
+import asyncio
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from authsome.auth.models.connection import ConnectionRecord
+from authsome.auth.models.enums import AuthType, ConnectionStatus
 from authsome.identity.keys import create_identity, load_private_key
 from authsome.identity.proof import create_proof_jwt
 from authsome.server.app import create_app
+from authsome.utils import build_store_key
 
 
 def _auth_header(
@@ -123,3 +128,31 @@ def test_identity_registration_rejects_duplicate_did_different_handle(monkeypatc
         )
 
     assert response.status_code == 409
+
+
+def test_ready_uses_active_identity_connections_for_warning_check(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
+    identity = create_identity(tmp_path, "steady-wisely-boldly-0042")
+
+    with TestClient(create_app()) as client:
+        key = build_store_key(
+            identity=identity.handle,
+            provider="github",
+            record_type="connection",
+            connection="default",
+        )
+        record = ConnectionRecord(
+            provider="github",
+            identity=identity.handle,
+            connection_name="default",
+            auth_type=AuthType.OAUTH2,
+            status=ConnectionStatus.CONNECTED,
+            expires_at=datetime.now(UTC) + timedelta(hours=1),
+        )
+        asyncio.run(client.app.state.vault.put(key, record.model_dump_json(), collection=f"vault:{identity.handle}"))
+
+        response = client.get("/ready")
+
+    assert response.status_code == 200
+    assert response.json()["checks"]["connections"] == "ok"
+    assert "no active provider connections found" not in response.json()["warnings"]
