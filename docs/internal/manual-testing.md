@@ -46,17 +46,22 @@ uv run authsome doctor --json
 
 ## 2. Login — API Key
 
-Uses Resend (or any `api_key` provider):
+**Prerequisite (human):** Have a [Resend API key](https://resend.com/api-keys) ready.
 
 ```bash
 uv run authsome login resend
 ```
 
-**Expected:**
-- Terminal prints a session URL: `Visit: http://127.0.0.1:7998/auth/sessions/<id>/input`
-- Browser opens a secure local bridge page served by the daemon — credentials are submitted directly to the local daemon, never to a third-party server
-- Terminal immediately returns: "Login process started. The connection will be updated automatically once complete."
-- Run `authsome list` to confirm completion
+**Expected:** Terminal prints a session URL and returns immediately:
+```
+Visit: http://127.0.0.1:7998/auth/sessions/<id>/input
+Login process started. The connection will be updated automatically once complete.
+```
+
+**Human action:**
+1. Open the printed URL in a browser (it opens automatically if a browser is available)
+2. Paste your Resend API key into the field and click **Submit**
+3. The browser confirms success
 
 ```bash
 uv run authsome list
@@ -68,15 +73,23 @@ uv run authsome list
 
 ## 3. Login — OAuth2 PKCE
 
+**Prerequisite (human):** A GitHub account. Optionally, a [GitHub OAuth App](https://github.com/settings/developers) with Client ID and Secret — leave both blank to use the public PKCE flow.
+
 ```bash
 uv run authsome login github
 ```
 
-**Expected:**
-- Terminal prints a session URL: `Visit: http://127.0.0.1:7998/auth/sessions/<id>/input`
-- Browser opens a secure local bridge page served by the daemon; the page initiates the OAuth redirect to `https://github.com/login/oauth/authorize?...` and captures the callback — credentials never leave localhost
-- Terminal immediately returns: "Login process started. The connection will be updated automatically once complete."
-- Run `authsome list` to confirm completion
+**Expected:** Terminal prints a session URL and returns immediately:
+```
+Visit: http://127.0.0.1:7998/auth/sessions/<id>/input
+Login process started. The connection will be updated automatically once complete.
+```
+
+**Human action:**
+1. Open the printed URL in a browser
+2. Optionally enter your GitHub OAuth App Client ID and Secret (leave blank for the public flow)
+3. Click **Continue** — the browser redirects to `https://github.com/login/oauth/authorize?...`
+4. Click **Authorize** on GitHub; the daemon captures the callback
 
 ```bash
 uv run authsome list
@@ -88,15 +101,25 @@ uv run authsome list
 
 ## 4. Login — Device Code (headless)
 
+**Prerequisite (human):** A GitHub account. No OAuth App needed — uses GitHub's public device code flow.
+
 ```bash
 uv run authsome login github --flow device_code
 ```
 
-**Expected:**
-- Terminal prints a session URL: `Visit: http://127.0.0.1:7998/auth/sessions/<id>/input`
-- Browser opens a secure local bridge page — leave Client ID blank to use GitHub's public device code flow; the device code URL and user code are shown in the browser
-- Terminal immediately returns: "Login process started."
-- Run `authsome list` to confirm completion
+**Expected:** Terminal prints a session URL and returns immediately.
+
+**Human action:**
+1. Open the printed URL in a browser
+2. Leave **Client ID** blank; click **Continue**
+3. The page shows a verification URL and a user code
+4. Open the verification URL, enter the user code, and authorize on GitHub
+
+```bash
+uv run authsome list
+```
+
+**Expected:** `github` listed with status `connected`.
 
 ---
 
@@ -190,35 +213,14 @@ uv run authsome export github --format json
 
 ## 9. Proxy Run
 
-```bash
-# Verify proxy env vars are injected
-uv run authsome run -- env | grep -E 'HTTP_PROXY|HTTPS_PROXY|AUTHSOME_PROXY_MODE'
-```
-
-**Expected:**
-- `HTTP_PROXY` and `HTTPS_PROXY` set to the local proxy address
-- `AUTHSOME_PROXY_MODE=true`
+**Prerequisite:** `github` must be connected (complete §3 first).
 
 ```bash
-# Verify dummy credential placeholders are set
-uv run authsome run -- env | grep -E 'GITHUB_ACCESS_TOKEN|RESEND_API_KEY'
-```
-
-**Expected:** Both set to `authsome-proxy-managed` (real credentials are never in the child environment).
-
-```bash
-# Make a real API call through the proxy
+# Verify the GitHub whoami call succeeds through the proxy
 uv run authsome run --quiet curl -s https://api.github.com/user
 ```
 
-**Expected:** JSON response from GitHub with `login` field; no proxy log noise (suppressed by `--quiet`).
-
-```bash
-# Multi-provider: both providers injected in one session
-uv run authsome run --quiet curl -s https://api.resend.com/domains
-```
-
-**Expected:** Valid JSON response from Resend.
+**Expected:** JSON response from GitHub containing a `login` field with your GitHub username. No proxy log noise (suppressed by `--quiet`).
 
 ---
 
@@ -345,7 +347,7 @@ uv run authsome daemon status
 
 **Expected:** "Daemon stopped successfully"; `running: false` after stop.
 
-> **Note:** `daemon stop` only works when the daemon was started by `daemon start` (a managed daemon with a PID record). If the daemon is running without a PID record (e.g. after `rm -rf ~/.authsome`), stop is a no-op. Kill the process manually: `kill $(lsof -ti :7998)`.
+> **Note:** If no PID record exists (e.g. after `rm -rf ~/.authsome`), `daemon stop` falls back to finding the process by port and kills it.
 
 ```bash
 uv run authsome daemon start
