@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
-from authsome.auth import AuthService
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.server.analytics import get_posthog
+from authsome.server.credential_service import AuthService
 from authsome.server.routes._deps import get_protected_auth_service
 
 router = APIRouter(prefix="/providers", tags=["providers"])

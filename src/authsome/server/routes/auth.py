@@ -8,11 +8,11 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from authsome.auth import AuthService
 from authsome.auth.input_provider import InputField
 from authsome.auth.models.enums import AuthType, FlowType
 from authsome.auth.sessions import AuthSession, AuthSessionStatus, AuthSessionStore
 from authsome.server.analytics import get_posthog
+from authsome.server.credential_service import AuthService
 from authsome.server.routes._deps import (
     get_auth_service_for_identity,
     get_auth_sessions,

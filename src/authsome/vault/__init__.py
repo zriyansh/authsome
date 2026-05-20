@@ -40,11 +40,6 @@ class Vault:
             self._crypto = create_crypto(self._master_key_path, self._crypto_mode)
         return self._crypto
 
-    @property
-    def home(self) -> Path:
-        """Base directory for the storage system."""
-        return self._app_store.home
-
     # ── Index helpers ─────────────────────────────────────────────────────
 
     async def _get_index(self, collection: str) -> builtins.list[str]:

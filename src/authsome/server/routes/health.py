@@ -7,11 +7,11 @@ from typing import Literal, cast
 from fastapi import APIRouter, Depends, Request
 
 from authsome import __version__
-from authsome.auth import AuthService
 from authsome.identity import current_from_home
+from authsome.server.credential_service import AuthService
 from authsome.server.dependencies import get_deployment_mode
 from authsome.server.ownership import OwnershipResolver
-from authsome.server.routes._deps import get_auth_service, get_protected_auth_service, get_server_base_url
+from authsome.server.routes._deps import get_protected_auth_service, get_server_base_url
 from authsome.server.schemas import HealthResponse, ReadyResponse
 from authsome.utils import connection_is_active
 
@@ -26,16 +26,21 @@ def health() -> HealthResponse:
 
 
 @router.get("/ready", response_model=ReadyResponse)
-async def ready(request: Request, auth: AuthService = Depends(get_auth_service)) -> ReadyResponse:
+async def ready(request: Request) -> ReadyResponse:
     checks: dict[str, str] = {}
     issues: list[str] = []
     warnings: list[str] = []
 
     checks["spec_version"] = "ok"
 
+    vault = request.app.state.vault
+    store = request.app.state.store
+    ownership_resolver: OwnershipResolver = request.app.state.ownership_resolver
+
     # 1. Active Identity Check
+    active_identity = None
     try:
-        await auth.get_identity(auth.identity)
+        active_identity = await current_from_home(store.home)
         checks["identity"] = "ok"
     except Exception as exc:
         checks["identity"] = "failed"
@@ -43,7 +48,16 @@ async def ready(request: Request, auth: AuthService = Depends(get_auth_service))
 
     # 2. Providers List Check
     try:
-        await auth.list_providers()
+        if active_identity:
+            resolved = await ownership_resolver.resolve(identity=active_identity.handle)
+            probe_service = AuthService(
+                vault=vault,
+                identity=active_identity.handle,
+                principal_id=resolved.principal_id,
+                vault_id=resolved.vault_id,
+                deployment_mode=get_deployment_mode(),
+            )
+            await probe_service.list_providers()
         checks["providers"] = "ok"
     except Exception as exc:
         checks["providers"] = "failed"
@@ -51,38 +65,38 @@ async def ready(request: Request, auth: AuthService = Depends(get_auth_service))
 
     # 3. Connected Providers Check
     try:
-        active_identity = await current_from_home(auth.vault.home)
-        ownership_resolver: OwnershipResolver = request.app.state.ownership_resolver
-        resolved = await ownership_resolver.resolve(identity=active_identity.handle)
-        identity_auth = AuthService(
-            vault=auth.vault,
-            identity=active_identity.handle,
-            principal_id=resolved.principal_id,
-            vault_id=resolved.vault_id,
-            deployment_mode=get_deployment_mode(),
-        )
-        conn_list = await identity_auth.list_connections()
-        checks["connections"] = "ok"
-        connected_count = sum(1 for p in conn_list for c in p.get("connections", []) if connection_is_active(c))
-        if connected_count == 0:
-            warnings.append("no active provider connections found")
+        if active_identity:
+            resolved = await ownership_resolver.resolve(identity=active_identity.handle)
+            identity_auth = AuthService(
+                vault=vault,
+                identity=active_identity.handle,
+                principal_id=resolved.principal_id,
+                vault_id=resolved.vault_id,
+                deployment_mode=get_deployment_mode(),
+            )
+            conn_list = await identity_auth.list_connections()
+            checks["connections"] = "ok"
+            connected_count = sum(1 for p in conn_list for c in p.get("connections", []) if connection_is_active(c))
+            if connected_count == 0:
+                warnings.append("no active provider connections found")
+        else:
+            checks["connections"] = "skipped"
     except Exception as exc:
         checks["connections"] = "failed"
         issues.append(f"connections: {exc}")
 
     # 4. Vault Roundtrip & Store Integrity Check
     try:
-        await auth.vault.put("__ready_test__", "ok", collection=f"vault:{auth.identity}")
-        value = await auth.vault.get("__ready_test__", collection=f"vault:{auth.identity}")
-        await auth.vault.delete("__ready_test__", collection=f"vault:{auth.identity}")
-        checks["vault"] = "ok" if value == "ok" else "failed"
+        await vault.put("__ready_test__", "ok", collection="vault:__ready__")
+        value = await vault.get("__ready_test__", collection="vault:__ready__")
+        await vault.delete("__ready_test__", collection="vault:__ready__")
         if value != "ok":
             issues.append("vault: readiness roundtrip failed")
             checks["vault"] = "failed"
         else:
             checks["vault"] = "ok"
 
-        if not await auth.vault.check_integrity(identity=auth.identity):
+        if not await vault.check_integrity(identity="__ready__"):
             issues.append("vault: store failed integrity check")
             checks["integrity"] = "failed"
         else:
@@ -91,9 +105,6 @@ async def ready(request: Request, auth: AuthService = Depends(get_auth_service))
         checks["vault"] = "failed"
         checks["integrity"] = "failed"
         issues.append(f"vault: {exc}")
-
-    # TODO: Re-enable master.key permission checks once backend implementation stabilizes.
-    # (Previous implementation alerted users if file was world-readable)
 
     status = "ready" if not issues else "not_ready"
     return ReadyResponse(status=status, checks=checks, issues=issues, warnings=warnings)
@@ -106,15 +117,16 @@ async def whoami(
     server_base_url: str = Depends(get_server_base_url),
 ) -> dict[str, str]:
     enc_mode = request.app.state.server_config.encryption.mode
+    store_home = request.app.state.store.home
     if enc_mode == "local_key":
-        enc_desc = f"Local Key ({auth.vault.home / 'server' / 'master.key'})"
+        enc_desc = f"Local Key ({store_home / 'server' / 'master.key'})"
     elif enc_mode == "keyring":
         enc_desc = "OS Keyring"
     else:
         enc_desc = enc_mode
     return {
         "version": __version__,
-        "home": str(auth.vault.home),
+        "home": str(store_home),
         "identity": auth.identity,
         "active_identity": auth.identity,
         "principal_id": getattr(request.state, "principal_id", ""),

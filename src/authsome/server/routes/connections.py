@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
-from authsome.auth import AuthService
 from authsome.auth.models.enums import ExportFormat
 from authsome.server.analytics import get_posthog
-from authsome.server.routes._deps import get_protected_auth_service
+from authsome.server.credential_service import AuthService
+from authsome.server.registries import VaultRegistry
+from authsome.server.routes._deps import get_protected_auth_service, get_vault_registry
 
 router = APIRouter(tags=["connections"])
 
@@ -43,8 +44,14 @@ async def logout(provider: str, connection: str, auth: AuthService = Depends(get
 
 
 @router.post("/connections/{provider}/revoke")
-async def revoke(provider: str, auth: AuthService = Depends(get_protected_auth_service)):
-    await auth.revoke(provider)
+async def revoke(
+    provider: str,
+    auth: AuthService = Depends(get_protected_auth_service),
+    vault_registry: VaultRegistry = Depends(get_vault_registry),
+):
+    all_vaults = await vault_registry.list_all()
+    vault_ids: list[str] = [v.vault_id for v in all_vaults] or ([auth.vault_id] if auth.vault_id else [])
+    await auth.revoke(provider, vault_ids=vault_ids)
     ph = get_posthog()
     if ph is not None:
         ph.capture(
