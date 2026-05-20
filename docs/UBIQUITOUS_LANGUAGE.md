@@ -83,7 +83,7 @@
 
 ## Relationships
 
-- A **Principal** owns one or more **Identities** and owns the **Vault** namespace (`principal:<PrincipalHandle>:...`).
+- A **Principal** owns one or more **Identities** and is bound to one or more **Vaults** via a **PrincipalVaultBinding**. The credential namespace is keyed by the opaque **VaultId** (`vault:<vault_id>:...`), not by PrincipalHandle.
 - An **Identity** is owned by exactly one **Principal**; the ownership is recorded in **IdentityRegistration** as `principal_handle`.
 - Every Identity action is implicitly "on behalf of" its Principal — all accepted agents under a Principal share its **Connections**.
 - A **Principal** contains zero or more **Connections**, each scoped to one **Provider**.
@@ -94,7 +94,7 @@
 - An **AuthProxy** draws credentials from **Connections** owned by the active Principal via the **AuthLayer** and injects them as request headers.
 - **CliRuntime** wires **RuntimeClient** and **ProxyRunner** together; the CLI creates one runtime per invocation via `ContextObj.initialize()`.
 - **ClientCredentials** are server-scoped. A single `ProviderClientRecord` per Provider is shared by all Principals on a server instance. `ConnectionRecord` tokens are always principal-scoped.
-- A **PoP JWT** is issued by the CLI for each protected daemon request. The daemon validates the signature against the **DID** embedded in `iss`, checks the **Identity Registry** to confirm `sub` (the Handle) maps to that DID with `claim_status = accepted`, then resolves the **Principal** from `principal_handle` to serve the correct vault namespace.
+- A **PoP JWT** is issued by the CLI for each protected daemon request. The daemon validates the signature against the **DID** embedded in `iss`, checks the **Identity Registry** to confirm `sub` (the Handle) maps to that DID with `claim_status = accepted`, resolves the **Principal** via `IdentityClaimRecord.principal_id`, then looks up the default **VaultId** via **PrincipalVaultBindingRegistry** to construct **AuthService** with the correct credential namespace.
 
 ## Example dialogue
 

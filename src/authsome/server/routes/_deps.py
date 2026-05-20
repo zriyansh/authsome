@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from fastapi import HTTPException, Request
 
-from authsome.actors import current_from_home
-from authsome.actors.proof import POP_AUTH_SCHEME, ProofValidationError, validate_proof_jwt
 from authsome.auth import AuthService
 from authsome.auth.sessions import AuthSessionStore
+from authsome.identity import current_from_home
+from authsome.identity.proof import POP_AUTH_SCHEME, ProofValidationError, validate_proof_jwt
 from authsome.server.dependencies import get_deployment_mode
 from authsome.server.ui_sessions import UiSessionStore
 

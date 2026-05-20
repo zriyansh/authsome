@@ -15,7 +15,6 @@ from urllib.parse import urlparse
 from loguru import logger
 
 from authsome import audit
-from authsome.actors.registry import VaultRegistry
 from authsome.auth.flows.api_key import ApiKeyFlow
 from authsome.auth.flows.base import AuthFlow
 from authsome.auth.flows.dcr_pkce import DcrPkceFlow
@@ -45,6 +44,7 @@ from authsome.errors import (
     TokenExpiredError,
     UnsupportedFlowError,
 )
+from authsome.identity.principal import VaultRegistry
 from authsome.paths import get_server_home
 from authsome.utils import build_store_key, format_duration, is_filesystem_safe, parse_store_key, utc_now
 from authsome.vault import Vault
@@ -85,13 +85,15 @@ class AuthService:
         self._vault = vault
         self._identity = identity
         self._principal_id = principal_id
-        self._vault_id = vault_id or identity
+        self._vault_id = vault_id
         self._deployment_mode = "hosted" if deployment_mode == "hosted" else "local"
         self._bundled: dict[str, ProviderDefinition] = self._load_bundled_providers()
 
     @property
     def _coll(self) -> str:
         """Vault collection for the resolved credential scope."""
+        if self._vault_id is None:
+            raise ValueError("AuthService.vault_id is required for vault-scoped operations but was not set")
         return f"vault:{self._vault_id}"
 
     @property

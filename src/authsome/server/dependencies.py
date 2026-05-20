@@ -11,15 +11,15 @@ if TYPE_CHECKING:
     from authsome.auth import AuthService
     from authsome.store.interfaces import AppStore
 
-from authsome.actors import current_from_home
-from authsome.actors.identity_registry import IdentityRegistry
-from authsome.actors.registry import (
+from authsome.auth.models.config import ServerConfig
+from authsome.identity import current_from_home
+from authsome.identity.principal import (
     IdentityClaimRegistry,
     PrincipalRegistry,
     PrincipalVaultBindingRegistry,
     VaultRegistry,
 )
-from authsome.auth.models.config import ServerConfig
+from authsome.identity.registry import IdentityRegistry
 from authsome.paths import get_authsome_home as _get_authsome_home
 from authsome.paths import get_server_home as _get_server_home
 from authsome.paths import get_server_log_path as _get_server_log_path
@@ -158,15 +158,19 @@ async def create_vault(app_store: AppStore) -> Vault:
     )
 
 
-async def create_auth_service(home: Path | None = None, identity: str | None = None) -> AuthService:
-    """Create an auth service scoped to an identity handle."""
+async def create_auth_service(
+    home: Path | None = None, identity: str | None = None, vault_id: str | None = None
+) -> AuthService:
+    """Create an auth service scoped to an identity handle and an explicit vault_id."""
     from authsome.auth import AuthService
 
     if not identity:
         raise ValueError("create_auth_service requires an explicit identity handle")
+    if not vault_id:
+        raise ValueError("create_auth_service requires an explicit vault_id")
     store = await create_app_store(home)
     vault = await create_vault(store)
-    return AuthService(vault=vault, identity=identity, deployment_mode=get_deployment_mode())
+    return AuthService(vault=vault, identity=identity, vault_id=vault_id, deployment_mode=get_deployment_mode())
 
 
 def create_principal_registry(home: Path | None = None) -> PrincipalRegistry:

@@ -29,7 +29,7 @@ class TestAuthServiceRefreshLogs:
     @pytest.fixture
     def service(self) -> AuthService:
         mock_vault = mock.AsyncMock()
-        return AuthService(mock_vault, identity="test-profile")
+        return AuthService(mock_vault, identity="test-profile", vault_id="test-vault")
 
     async def test_refresh_failure_fallback_available(self, audit_log: Path, service: AuthService):
         """Verify behavior when refresh fails but current token is valid (close to expiry)."""
