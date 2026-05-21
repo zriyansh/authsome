@@ -16,7 +16,7 @@ The authsome daemon binds to `127.0.0.1:7998` by default. Most issues are one of
 | `Could not connect to daemon at http://127.0.0.1:7998` | The daemon didn't start, the port is firewalled, or `AUTHSOME_DAEMON_URL` points somewhere wrong. |
 | Browser opens to a blank form | Daemon started but the route is missing; usually a version mismatch between CLI and daemon. |
 | Login was mid-flight, then the terminal disconnected | Daemon restarted; session is gone. |
-| `Connection refused` from `uvx authsome run` | The proxy can't reach the daemon to resolve credentials. |
+| `Connection refused` from `authsome run` | The proxy can't reach the daemon to resolve credentials. |
 | `AUTHSOME_DAEMON_URL is set but unreachable` | Hosted daemon URL is wrong, or the host is down. |
 
 ## Port 7998 in use
@@ -31,7 +31,7 @@ If it's something else, free the port or run a per-user daemon at a different ho
 
 ```bash
 export AUTHSOME_HOME=/path/to/another/home
-uvx authsome doctor
+authsome doctor
 ```
 
 A second `AUTHSOME_HOME` starts a separate daemon on a separate ephemeral port and uses that. The two daemons do not interfere.
@@ -41,7 +41,7 @@ A second `AUTHSOME_HOME` starts a separate daemon on a separate ephemeral port a
 Run with verbose logging:
 
 ```bash
-uvx authsome --verbose whoami
+authsome --verbose whoami
 ```
 
 Common root causes:
@@ -50,7 +50,7 @@ Common root causes:
 - The current user doesn't have write permission to `AUTHSOME_HOME`.
 - `master.key` has the wrong mode and the daemon refuses to start in `local_key` mode.
 
-`uvx authsome doctor` reports each of these specifically.
+`authsome doctor` reports each of these specifically.
 
 ## CLI can't find the daemon
 
@@ -64,7 +64,7 @@ If it's set to a hosted URL that's currently unreachable:
 
 ```bash
 unset AUTHSOME_DAEMON_URL
-uvx authsome whoami
+authsome whoami
 ```
 
 The CLI will start a local daemon and verify it's reachable.
@@ -82,7 +82,7 @@ See [Hosted deployment model](/security/hosted-deployment).
 Active auth sessions live in the daemon's memory. A restart loses them. The provider may or may not have accepted the authorization on its side. Re-run the login:
 
 ```bash
-uvx authsome login <provider> --force
+authsome login <provider> --force
 ```
 
 The `--force` flag overwrites whatever partial state landed in the vault.
@@ -90,8 +90,8 @@ The `--force` flag overwrites whatever partial state landed in the vault.
 If the provider has a partial OAuth grant on file (you authorized but the callback never landed), revoke at the provider and start over:
 
 1. Revoke the OAuth app at the provider's UI.
-2. `uvx authsome revoke <provider>` locally to clear any partial state.
-3. `uvx authsome login <provider>` to start fresh.
+2. `authsome revoke <provider>` locally to clear any partial state.
+3. `authsome login <provider>` to start fresh.
 
 This is rare. Most flows recover automatically by re-running the login.
 
@@ -108,7 +108,7 @@ A healthy daemon returns a JSON status with vault and provider-registry readines
 The same information is available through:
 
 ```bash
-uvx authsome doctor --json
+authsome doctor --json
 ```
 
 which is the right call from monitoring scripts.
@@ -118,7 +118,7 @@ which is the right call from monitoring scripts.
 The daemon logs to the same loguru sink the CLI does. With verbose logging on:
 
 ```bash
-LOGURU_LEVEL=DEBUG uvx authsome list
+LOGURU_LEVEL=DEBUG authsome list
 tail -f ~/.authsome/logs/authsome.log
 ```
 
@@ -133,16 +133,16 @@ The daemon is stateless on disk except for what's already in the vault. To resta
 pkill -f authsome
 
 # next CLI call starts a fresh daemon
-uvx authsome whoami
+authsome whoami
 ```
 
 In-flight logins are lost. Stored connections are not.
 
 ## When to file a bug
 
-If the daemon fails to start after `pkill` + a fresh `uvx authsome whoami`, and `doctor` reports `OK`, open an issue at [github.com/agentrhq/authsome](https://github.com/agentrhq/authsome/issues) with:
+If the daemon fails to start after `pkill` + a fresh `authsome whoami`, and `doctor` reports `OK`, open an issue at [github.com/agentrhq/authsome](https://github.com/agentrhq/authsome/issues) with:
 
-- The output of `uvx authsome --verbose doctor`.
+- The output of `authsome --verbose doctor`.
 - The tail of `~/.authsome/logs/authsome.log` covering the failed start.
 - Your OS and Python version.
 

@@ -48,7 +48,7 @@ Dashboard: [https://discord.com/developers/applications](https://discord.com/dev
 ## Log in
 
 ```bash
-uvx authsome login discord
+authsome login discord
 ```
 
 The first time, authsome opens a local form at `http://127.0.0.1:7998` to collect your `client_id` and `client_secret`. They are encrypted under your profile and reused on every subsequent login. A second browser window then opens to `https://discord.com/oauth2/authorize` for the authorization step.
@@ -56,7 +56,7 @@ The first time, authsome opens a local form at `http://127.0.0.1:7998` to collec
 Verify:
 
 ```bash
-uvx authsome get discord --field status
+authsome get discord --field status
 # → connected
 ```
 
@@ -65,18 +65,18 @@ uvx authsome get discord --field status
 The bundled definition requests `identify`, `email`, `guilds`, `connections`. Override at login time:
 
 ```bash
-uvx authsome login discord --scopes "<comma-separated>"
+authsome login discord --scopes "<comma-separated>"
 ```
 
-The granted scopes are stored on the connection and visible in `uvx authsome get discord`.
+The granted scopes are stored on the connection and visible in `authsome get discord`.
 
 ## Multiple accounts
 
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login discord --connection personal
-uvx authsome login discord --connection work
+authsome login discord --connection personal
+authsome login discord --connection work
 ```
 
 ## Use the token
@@ -86,11 +86,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export discord --format env)"
+eval "$(authsome export discord --format env)"
 ```
 
 ```python Python library
@@ -107,9 +107,9 @@ Under the proxy, authsome sets `DISCORD_ACCESS_TOKEN=authsome-proxy-managed` in 
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect discord > ~/.authsome/providers/discord.json
+authsome inspect discord > ~/.authsome/providers/discord.json
 # edit scopes, base_url, or anything else
-uvx authsome list   # source now shows "custom" for discord
+authsome list   # source now shows "custom" for discord
 ```
 
 User-registered files always win over bundled definitions. See [Provider schema](/reference/provider-schema).

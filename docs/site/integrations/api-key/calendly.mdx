@@ -30,7 +30,7 @@ Create an API key in the Calendly dashboard at [https://calendly.com/app/setting
 ## Log in
 
 ```bash
-uvx authsome login calendly
+authsome login calendly
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get calendly --field status
+authsome get calendly --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export calendly --format env)"
+eval "$(authsome export calendly --format env)"
 echo $CALENDLY_API_KEY
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `CALENDLY_API_KEY=authsome-proxy-managed` in the 
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login calendly --connection personal
-uvx authsome login calendly --connection team
+authsome login calendly --connection personal
+authsome login calendly --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login calendly --force          # rotate
-uvx authsome logout calendly                  # remove local credential
-uvx authsome remove calendly                  # remove all local state for the provider
+authsome login calendly --force          # rotate
+authsome logout calendly                  # remove local credential
+authsome remove calendly                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Calendly.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect calendly > ~/.authsome/providers/calendly.json
+authsome inspect calendly > ~/.authsome/providers/calendly.json
 # edit fields
-uvx authsome list   # source now shows "custom" for calendly
+authsome list   # source now shows "custom" for calendly
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

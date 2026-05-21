@@ -33,7 +33,7 @@ Mailchimp's dashboard subdomain (`us1`, `us20`, etc.) varies per account. Naviga
 ## Log in
 
 ```bash
-uvx authsome login mailchimp
+authsome login mailchimp
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -43,7 +43,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get mailchimp --field status
+authsome get mailchimp --field status
 # → connected
 ```
 
@@ -54,11 +54,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export mailchimp --format env)"
+eval "$(authsome export mailchimp --format env)"
 echo $MAILCHIMP_API_KEY
 ```
 
@@ -78,16 +78,16 @@ Under the proxy, authsome sets `MAILCHIMP_API_KEY=authsome-proxy-managed` in the
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login mailchimp --connection personal
-uvx authsome login mailchimp --connection team
+authsome login mailchimp --connection personal
+authsome login mailchimp --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login mailchimp --force          # rotate
-uvx authsome logout mailchimp                  # remove local credential
-uvx authsome remove mailchimp                  # remove all local state for the provider
+authsome login mailchimp --force          # rotate
+authsome logout mailchimp                  # remove local credential
+authsome remove mailchimp                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Mailchimp.
@@ -95,9 +95,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect mailchimp > ~/.authsome/providers/mailchimp.json
+authsome inspect mailchimp > ~/.authsome/providers/mailchimp.json
 # edit fields
-uvx authsome list   # source now shows "custom" for mailchimp
+authsome list   # source now shows "custom" for mailchimp
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

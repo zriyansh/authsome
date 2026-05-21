@@ -1,9 +1,14 @@
 ---
 title: "Quickstart"
-description: "Install authsome, log in to a provider, and run an agent with injected credentials."
+description: "Install authsome, then either drive it from an AI agent via the skill or use the CLI directly to log in and run agents with injected credentials."
 ---
 
-This walkthrough takes you from a fresh install to running an agent with valid GitHub and OpenAI credentials in about five minutes.
+There are two ways to use authsome day-to-day, depending on who's driving:
+
+- **Agent-driven.** Install the skill and let your coding agent (Claude Code, Cursor, Codex, etc.) call authsome on your behalf.
+- **CLI-driven.** Run `authsome` commands yourself from your shell or scripts.
+
+This page covers both. Pick the one that matches how you'll actually use authsome.
 
 ## Prerequisites
 
@@ -13,76 +18,215 @@ This walkthrough takes you from a fresh install to running an agent with valid G
 ## Verify the install
 
 ```bash
-uvx authsome --version
-uvx authsome doctor
+authsome --version
+authsome doctor
 ```
 
 `doctor` runs health checks on the home directory layout, encryption availability, and provider parsing. All checks should pass. For other install paths, see [Installation](/installation).
 
-## Log in to your first provider
+<Tip>
+  When you're not sure of the right command or flag, read the built-in help before guessing. `authsome --help` lists every top-level command; `authsome <command> --help` shows the flags for that command. Agents driving the CLI should consult these before falling back to web search.
+</Tip>
+
+## Path 1: Agent-driven (recommended)
+
+Install the authsome skill into your agent. The skill teaches the agent how to call authsome at the right moments: login when a credential is missing, revoke + re-login on 401, `--scopes` on 403, and never asking you for tokens directly.
+
+See [Agent integrations](/integrations/agents/index) for per-agent install paths (Claude Code, Codex, Cursor, OpenCode, LangChain, LlamaIndex, OpenAI Agents SDK, Anthropic SDK). The pattern across all of them is the same: drop the skill into the agent's skill / context directory, then ask the agent to perform a task that needs an external service.
+
+Sample tasks that exercise the skill:
+
+```text
+Star the repo agentrhq/authsome.
+Get my last five emails from Gmail.
+Check my Stripe balance.
+```
+
+The agent runs `authsome login <provider>` itself when it hits a missing credential. The browser opens on your machine for the OAuth consent, then the agent picks up from there with the proxy-injected token. You do not paste any keys.
+
+## Path 2: CLI-driven
+
+If you're scripting against authsome directly or you want to manually pre-seed a credential before launching anything, drive the CLI yourself.
+
+Pick one of the two setup tracks below. The first uses GitHub plus OpenAI and produces a runnable demo agent; the second uses Notion via MCP and skips OAuth-app setup entirely.
+
+<Tabs>
+  <Tab title="GitHub + OpenAI (full walkthrough)">
+
+### Register the GitHub OAuth app (first-time setup)
+
+GitHub doesn't support Dynamic Client Registration, so before your first `authsome login github` you need to register an OAuth app once. This is a one-time setup.
+
+<Steps>
+  <Step title="Open GitHub developer settings">
+    Visit [github.com/settings/developers](https://github.com/settings/developers).
+  </Step>
+
+  <Step title="Click 'New OAuth App'">
+    The button sits at the top right of the OAuth Apps list.
+  </Step>
+
+  <Step title="Fill the registration form">
+    | Field | Value |
+    |---|---|
+    | Application name | Anything memorable, e.g. `authsome (local)` |
+    | Homepage URL | `http://localhost:3000` (any URL works; GitHub doesn't validate it for OAuth functionality) |
+    | Application description | Optional |
+    | Authorization callback URL | `http://127.0.0.1:7998/auth/callback/oauth` |
+    | Enable Device Flow | ☑ check it on |
+
+    <Warning>
+      The **Authorization callback URL** must be exactly `http://127.0.0.1:7998/auth/callback/oauth`. Authsome's PKCE flow listens only on this address; any other value will fail with `redirect_uri_mismatch` at login time.
+    </Warning>
+
+    Click **Register application**.
+  </Step>
+
+  <Step title="Copy the Client ID and generate a Client Secret">
+    GitHub now shows your new app's settings.
+
+    1. Copy the **Client ID**.
+    2. Click **Generate a new client secret** and copy the secret immediately.
+
+    <Warning>
+      Save the **Client Secret** somewhere safe (a password manager) before navigating away. GitHub shows the secret only once. If you lose it, you'll need to generate another one and update your authsome connection.
+    </Warning>
+  </Step>
+</Steps>
+
+You'll paste both values into authsome's local browser bridge on the next step. They're stored encrypted under your profile and reused on every subsequent login. They are never accepted as command-line arguments.
+
+### Log in to a provider
 
 <Steps>
   <Step title="Run the login command">
     ```bash
-    uvx authsome login github
+    authsome login github
     ```
 
-    A browser window opens to GitHub's authorization page. Authsome runs the PKCE flow with a callback on `http://127.0.0.1:7998/auth/callback/oauth`.
+    Authsome opens a local form at `http://127.0.0.1:7998` asking for your GitHub OAuth credentials.
   </Step>
-  <Step title="Approve access">
-    Click **Authorize** in the browser. The terminal prints `Successfully logged in to github (default).`
+  <Step title="Paste the Client ID and Client Secret">
+    Paste the values you saved during the OAuth app registration. They're encrypted and stored locally; you won't be asked for them again unless you `authsome revoke github`.
+
+    <Frame caption="Authsome's local bridge form for GitHub OAuth credentials">
+      <img src="/images/login-github-authsome.png" alt="Authsome local browser form prompting for GitHub Client ID and Client Secret" />
+    </Frame>
+  </Step>
+  <Step title="Approve access on GitHub">
+    A second browser window opens to `https://github.com/login/oauth/authorize`. Click **Authorize** to grant the requested scopes (`repo` and `read:user` by default). GitHub exchanges the authorization for an OAuth access token, the callback lands on `http://127.0.0.1:7998/auth/callback/oauth`, and authsome stores the token encrypted under your profile. The terminal prints `Successfully logged in to github (default).`
+
+    The stored access token is what later commands inject. `client_id` and `client_secret` identify your OAuth app to GitHub; the access token is the user-level credential that makes API calls on your behalf. You don't need a separate PAT.
   </Step>
   <Step title="Confirm the connection">
     ```bash
-    uvx authsome list
+    authsome list
     ```
 
     GitHub should show as `connected`.
   </Step>
 </Steps>
 
-<Tip>
-  The first time you log in to an OAuth2 provider, authsome collects your `client_id` and `client_secret` through a secure local browser form. They are encrypted and stored under your profile, then reused on every subsequent login. They are never accepted as command-line arguments.
-</Tip>
+For other providers, see [Agent integrations](/integrations/agents/index) or the per-provider page under [OAuth providers](/integrations/oauth/index). API-key providers like OpenAI don't need an OAuth app — see the next section.
 
-## Add an API-key provider
+### Add an API-key provider
 
-API-key providers like OpenAI use the same login command, but the flow is different. Authsome opens a local form so you can paste the key without it appearing in shell history or process listings.
+API-key providers like OpenAI use the same login command, but the flow opens a local form so you can paste the key without it appearing in shell history or process listings.
 
 ```bash
-uvx authsome login openai
+authsome login openai
 ```
 
 Verify the key was captured:
 
 ```bash
-uvx authsome get openai --field status
+authsome get openai --field status
 # → connected
 ```
 
-## Run an agent with injected credentials
+### Run an agent with injected credentials
 
-You have two ways to give credentials to an agent.
+A minimal agent that uses both credentials you just set up: it stars `agentrhq/authsome` on GitHub (a small thank-you to the project) and asks OpenAI to write a one-line celebration. The same script works whether you export env vars first or wrap the command with `authsome run --`. Save it as `my_agent.py`.
 
-### Option 1: Export to environment variables
+<Accordion title="View my_agent.py (Python, standard library only)" icon="file-code">
+  ```python
+  # my_agent.py
+  # Stars agentrhq/authsome on GitHub and asks OpenAI to write a one-line
+  # celebration. The same script works whether you eval $(authsome export ...)
+  # first or wrap the command with `authsome run --`. Under the proxy,
+  # the env vars below hold the placeholder `authsome-proxy-managed`;
+  # the proxy substitutes real values in outbound HTTPS to api.github.com
+  # and api.openai.com.
+  import json
+  import os
+  import urllib.request
+
+
+  def http(method: str, url: str, token: str, body: dict | None = None) -> dict | None:
+      req = urllib.request.Request(
+          url,
+          method=method,
+          headers={"Authorization": f"Bearer {token}"},
+      )
+      if body is not None:
+          req.data = json.dumps(body).encode()
+          req.add_header("Content-Type", "application/json")
+      with urllib.request.urlopen(req) as r:
+          raw = r.read()
+          return json.loads(raw) if raw else None
+
+
+  # 1. Star agentrhq/authsome with your GitHub OAuth token.
+  http(
+      "PUT",
+      "https://api.github.com/user/starred/agentrhq/authsome",
+      os.environ["GITHUB_ACCESS_TOKEN"],
+  )
+  print("Starred agentrhq/authsome.")
+
+  # 2. Ask OpenAI to celebrate the moment.
+  answer = http(
+      "POST",
+      "https://api.openai.com/v1/chat/completions",
+      os.environ["OPENAI_API_KEY"],
+      {
+          "model": "gpt-5",
+          "messages": [
+              {
+                  "role": "user",
+                  "content": (
+                      "Write a single playful sentence to celebrate "
+                      "that I just starred the authsome credential broker."
+                  ),
+              }
+          ],
+      },
+  )
+  print(answer["choices"][0]["message"]["content"])
+  ```
+</Accordion>
+
+Zero pip dependencies — just the standard library. Now pick how to give it credentials.
+
+#### Option 1: Export to environment variables
 
 Best for quick scripts and existing tooling that reads from environment variables.
 
 ```bash
-uvx authsome export openai --format env
-uvx authsome export github --format env
+authsome export openai --format env
+authsome export github --format env
 
 python my_agent.py
 ```
 
-`export` prints valid `KEY=value` lines on stdout. Use `eval "$(uvx authsome export <provider> --format env)"` to load them into the current shell.
+`export` prints valid `KEY=value` lines on stdout. Use `eval "$(authsome export <provider> --format env)"` to load them into the current shell.
 
-### Option 2: Run behind the auth proxy
+#### Option 2: Run behind the auth proxy
 
 Best for production-style agents. Authsome starts a local HTTP proxy that intercepts outbound requests to known provider hosts and injects the auth headers. The child process never sees the raw secret.
 
 ```bash
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 Inside the child process, `OPENAI_API_KEY` is set to the placeholder `authsome-proxy-managed`. The real key is added to outbound requests at the proxy layer.
@@ -91,9 +235,62 @@ Inside the child process, `OPENAI_API_KEY` is set to the placeholder `authsome-p
   HTTPS interception requires the mitmproxy CA certificate to be trusted on your machine. See [Proxy networking](/troubleshooting/proxy-networking) if you see TLS errors.
 </Note>
 
+  </Tab>
+  <Tab title="Notion via MCP (zero setup)">
+
+Notion's MCP endpoint at `mcp.notion.com` supports Dynamic Client Registration. You don't need to create an OAuth app — authsome registers a client for you on first login.
+
+### Log in
+
+```bash
+authsome login notion_dcr
+```
+
+What happens:
+
+<Steps>
+  <Step title="Authsome registers a client">
+    Authsome POSTs to `https://mcp.notion.com/register` and Notion's OIDC server issues a fresh `client_id` and `client_secret`. They are stored encrypted under your profile.
+  </Step>
+  <Step title="Approve access in the browser">
+    A browser window opens to `https://mcp.notion.com/authorize`. Click **Authorize** to grant access to your Notion workspace. The callback lands on `http://127.0.0.1:7998/auth/callback/oauth` and the terminal prints `Successfully logged in to notion_dcr (default).`
+  </Step>
+  <Step title="Confirm the connection">
+    ```bash
+    authsome list
+    ```
+
+    `notion_dcr` should show as `connected`.
+  </Step>
+</Steps>
+
+That's the entire setup. No OAuth app to create, no client credentials to paste.
+
+### Use the connection
+
+The Notion DCR token authenticates requests to `mcp.notion.com`, which is an MCP (Model Context Protocol) endpoint, not a REST API. To put the connection to work, wire it into an MCP-aware agent:
+
+- [Claude Code](/integrations/agents/claude-code) — add an MCP server entry wrapped in `authsome run --`.
+- [Cursor](/integrations/agents/cursor) — same pattern in Cursor's MCP config.
+- See [Notion (DCR)](/integrations/oauth/notion-dcr) for the per-provider details.
+
+For a runnable Python demo, switch to the **GitHub + OpenAI** tab above. The MCP protocol requires a client library beyond the scope of the quickstart.
+
+  </Tab>
+</Tabs>
+
+## When things go wrong
+
+- **401 / 403 from a provider.** See [Authentication errors](/troubleshooting/auth-errors) for the recovery decision tree.
+- **Install or layout issues.** Run `authsome doctor`, then check [Diagnose with doctor](/troubleshooting/doctor).
+- **TLS errors during `authsome run`.** See [Proxy networking](/troubleshooting/proxy-networking).
+
 ## Next steps
 
 <Columns cols={2}>
+  <Card title="Agent integrations" icon="robot" href="/integrations/agents/index">
+    Per-agent setup: Claude Code, Codex, Cursor, OpenCode, LangChain, and more.
+  </Card>
   <Card title="Login flows" icon="right-to-bracket" href="/guides/login-with-oauth">
     Pick the right flow for each provider: PKCE, device code, DCR.
   </Card>
@@ -102,8 +299,5 @@ Inside the child process, `OPENAI_API_KEY` is set to the placeholder `authsome-p
   </Card>
   <Card title="CLI reference" icon="terminal" href="/reference/cli">
     Every command, every flag.
-  </Card>
-  <Card title="Troubleshooting" icon="stethoscope" href="/troubleshooting/doctor">
-    Diagnose login failures, refresh errors, and proxy issues.
   </Card>
 </Columns>

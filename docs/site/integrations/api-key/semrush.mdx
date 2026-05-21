@@ -30,7 +30,7 @@ Create an API key in the SEMrush dashboard at [https://www.semrush.com/accounts/
 ## Log in
 
 ```bash
-uvx authsome login semrush
+authsome login semrush
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get semrush --field status
+authsome get semrush --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export semrush --format env)"
+eval "$(authsome export semrush --format env)"
 echo $SEMRUSH_API_KEY
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `SEMRUSH_API_KEY=authsome-proxy-managed` in the c
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login semrush --connection personal
-uvx authsome login semrush --connection team
+authsome login semrush --connection personal
+authsome login semrush --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login semrush --force          # rotate
-uvx authsome logout semrush                  # remove local credential
-uvx authsome remove semrush                  # remove all local state for the provider
+authsome login semrush --force          # rotate
+authsome logout semrush                  # remove local credential
+authsome remove semrush                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for SEMrush.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect semrush > ~/.authsome/providers/semrush.json
+authsome inspect semrush > ~/.authsome/providers/semrush.json
 # edit fields
-uvx authsome list   # source now shows "custom" for semrush
+authsome list   # source now shows "custom" for semrush
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

@@ -32,7 +32,7 @@ Clearbit was acquired by HubSpot; new keys are issued through HubSpot. The legac
 ## Log in
 
 ```bash
-uvx authsome login clearbit
+authsome login clearbit
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -42,7 +42,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get clearbit --field status
+authsome get clearbit --field status
 # → connected
 ```
 
@@ -53,11 +53,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export clearbit --format env)"
+eval "$(authsome export clearbit --format env)"
 echo $CLEARBIT_API_KEY
 ```
 
@@ -77,16 +77,16 @@ Under the proxy, authsome sets `CLEARBIT_API_KEY=authsome-proxy-managed` in the 
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login clearbit --connection personal
-uvx authsome login clearbit --connection team
+authsome login clearbit --connection personal
+authsome login clearbit --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login clearbit --force          # rotate
-uvx authsome logout clearbit                  # remove local credential
-uvx authsome remove clearbit                  # remove all local state for the provider
+authsome login clearbit --force          # rotate
+authsome logout clearbit                  # remove local credential
+authsome remove clearbit                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Clearbit.
@@ -94,9 +94,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect clearbit > ~/.authsome/providers/clearbit.json
+authsome inspect clearbit > ~/.authsome/providers/clearbit.json
 # edit fields
-uvx authsome list   # source now shows "custom" for clearbit
+authsome list   # source now shows "custom" for clearbit
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

@@ -46,7 +46,7 @@ Authsome ships with 31 bundled API-key providers. Each is a service with a singl
 For all providers (OAuth and API-key) in one CLI view:
 
 ```bash
-uvx authsome list
+authsome list
 ```
 
 ## How the API-key flow works
@@ -56,7 +56,7 @@ There is no OAuth dance. The flow is:
 <Steps>
   <Step title="Run the login">
     ```bash
-    uvx authsome login openai
+    authsome login openai
     ```
   </Step>
   <Step title="Paste the key into the browser form">
@@ -77,7 +77,7 @@ On a headless machine without a graphical session, authsome falls back to masked
 ### Through the proxy
 
 ```bash
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 Authsome sets a placeholder like `OPENAI_API_KEY=authsome-proxy-managed` in the child's environment so the SDK initializes. The real key is added to outbound requests at the proxy layer. The child process never sees the actual key.
@@ -85,7 +85,7 @@ Authsome sets a placeholder like `OPENAI_API_KEY=authsome-proxy-managed` in the 
 ### As an environment variable
 
 ```bash
-eval "$(uvx authsome export openai --format env)"
+eval "$(authsome export openai --format env)"
 ```
 
 `export` prints `KEY=value` lines suitable for shell sourcing. The names come from each provider's `export.env` map.
@@ -107,7 +107,7 @@ For a service authsome doesn't bundle (Anthropic, Stripe, Twilio, and many other
 
 1. Find the header shape (`Authorization: Bearer ...`, `X-API-Key: ...`, etc.).
 2. Write a JSON definition. See [Custom providers](/guides/custom-providers) for the template.
-3. `uvx authsome register ./<name>.json`.
+3. `authsome register ./<name>.json`.
 
 The schema is in [Provider schema](/reference/provider-schema).
 

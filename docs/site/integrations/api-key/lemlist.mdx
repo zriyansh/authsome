@@ -30,7 +30,7 @@ Create an API key in the Lemlist dashboard at [https://app.lemlist.com/settings/
 ## Log in
 
 ```bash
-uvx authsome login lemlist
+authsome login lemlist
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get lemlist --field status
+authsome get lemlist --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export lemlist --format env)"
+eval "$(authsome export lemlist --format env)"
 echo $LEMLIST_API_KEY
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `LEMLIST_API_KEY=authsome-proxy-managed` in the c
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login lemlist --connection personal
-uvx authsome login lemlist --connection team
+authsome login lemlist --connection personal
+authsome login lemlist --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login lemlist --force          # rotate
-uvx authsome logout lemlist                  # remove local credential
-uvx authsome remove lemlist                  # remove all local state for the provider
+authsome login lemlist --force          # rotate
+authsome logout lemlist                  # remove local credential
+authsome remove lemlist                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Lemlist.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect lemlist > ~/.authsome/providers/lemlist.json
+authsome inspect lemlist > ~/.authsome/providers/lemlist.json
 # edit fields
-uvx authsome list   # source now shows "custom" for lemlist
+authsome list   # source now shows "custom" for lemlist
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

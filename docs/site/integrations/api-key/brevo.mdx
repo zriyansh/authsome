@@ -30,7 +30,7 @@ Create an API key in the Brevo dashboard at [https://app.brevo.com/settings/keys
 ## Log in
 
 ```bash
-uvx authsome login brevo
+authsome login brevo
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get brevo --field status
+authsome get brevo --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export brevo --format env)"
+eval "$(authsome export brevo --format env)"
 echo $BREVO_API_KEY
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `BREVO_API_KEY=authsome-proxy-managed` in the chi
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login brevo --connection personal
-uvx authsome login brevo --connection team
+authsome login brevo --connection personal
+authsome login brevo --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login brevo --force          # rotate
-uvx authsome logout brevo                  # remove local credential
-uvx authsome remove brevo                  # remove all local state for the provider
+authsome login brevo --force          # rotate
+authsome logout brevo                  # remove local credential
+authsome remove brevo                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Brevo.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect brevo > ~/.authsome/providers/brevo.json
+authsome inspect brevo > ~/.authsome/providers/brevo.json
 # edit fields
-uvx authsome list   # source now shows "custom" for brevo
+authsome list   # source now shows "custom" for brevo
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

@@ -12,6 +12,7 @@ from authsome.auth import AuthService
 from authsome.auth.input_provider import InputField
 from authsome.auth.models.enums import AuthType, FlowType
 from authsome.auth.sessions import AuthSession, AuthSessionStatus, AuthSessionStore
+from authsome.server.analytics import get_posthog
 from authsome.server.routes._deps import (
     get_auth_service_for_identity,
     get_auth_sessions,
@@ -40,8 +41,8 @@ def _ui_session_required(session: AuthSession) -> bool:
 async def _ensure_browser_session_identity(request: Request, session: AuthSession) -> bool:
     if not _ui_session_required(session):
         return True
-    identity = await resolve_ui_request_identity(request)
-    return identity == session.identity
+    await resolve_ui_request_identity(request)
+    return getattr(request.state, "ui_principal_id", None) == session.principal_id
 
 
 async def _load_session_or_404(sessions: AuthSessionStore, session_id: str) -> AuthSession:
@@ -65,6 +66,7 @@ async def start_session(
     session = await sessions.create(
         provider=body.provider,
         identity=auth.identity,
+        principal_id=auth.principal_id,
         connection_name=body.connection,
         flow_type=flow.value,
     )
@@ -107,6 +109,21 @@ async def start_session(
         _update_device_code_expiry(sessions, session)
         background_tasks.add_task(auth.background_resume, session)
     await sessions.index_oauth_state(session)
+    ph = get_posthog()
+    if ph is not None:
+        from posthog import identify_context, new_context
+
+        with new_context():
+            identify_context(session.identity)
+            ph.capture(
+                "auth session started",
+                distinct_id=session.identity,
+                properties={
+                    "provider": session.provider,
+                    "flow_type": session.flow_type,
+                    "principal_id": session.principal_id,
+                },
+            )
     return _session_response(session, server_base_url)
 
 
@@ -141,11 +158,41 @@ async def resume_session(
         else:
             session.state = AuthSessionStatus.COMPLETED
             session.status_message = "Login successful"
+            ph = get_posthog()
+            if ph is not None:
+                from posthog import identify_context, new_context
+
+                with new_context():
+                    identify_context(session.identity)
+                    ph.capture(
+                        "auth session completed",
+                        distinct_id=session.identity,
+                        properties={
+                            "provider": session.provider,
+                            "flow_type": session.flow_type,
+                            "principal_id": session.principal_id,
+                        },
+                    )
         await sessions.save(session)
     except Exception as exc:
         session.state = AuthSessionStatus.FAILED
         session.error_message = str(exc)
         await sessions.save(session)
+        ph = get_posthog()
+        if ph is not None:
+            from posthog import identify_context, new_context
+
+            with new_context():
+                identify_context(session.identity)
+                ph.capture(
+                    "auth session failed",
+                    distinct_id=session.identity,
+                    properties={
+                        "provider": session.provider,
+                        "flow_type": session.flow_type,
+                        "principal_id": session.principal_id,
+                    },
+                )
         raise
     return _session_response(session, server_base_url)
 
@@ -171,16 +218,46 @@ async def oauth_callback(
             status_code=401,
         )
     callback_data = dict(request.query_params)
-    auth = get_auth_service_for_identity(request, session.identity)
+    auth = await get_auth_service_for_identity(request, session.identity)
     try:
         await auth.resume_login_flow(session, callback_data)
         session.state = AuthSessionStatus.COMPLETED
         session.status_message = "Login successful"
         await sessions.save(session)
+        ph = get_posthog()
+        if ph is not None:
+            from posthog import identify_context, new_context
+
+            with new_context():
+                identify_context(session.identity)
+                ph.capture(
+                    "auth session completed",
+                    distinct_id=session.identity,
+                    properties={
+                        "provider": session.provider,
+                        "flow_type": session.flow_type,
+                        "principal_id": session.principal_id,
+                    },
+                )
     except Exception as exc:
         session.state = AuthSessionStatus.FAILED
         session.error_message = str(exc)
         await sessions.save(session)
+        ph = get_posthog()
+        if ph is not None:
+            from posthog import identify_context, new_context
+
+            with new_context():
+                identify_context(session.identity)
+                ph.capture(
+                    "auth session failed",
+                    distinct_id=session.identity,
+                    properties={
+                        "provider": session.provider,
+                        "flow_type": session.flow_type,
+                        "principal_id": session.principal_id,
+                    },
+                )
         return HTMLResponse(pages.message_page("Authentication failed", str(exc)), status_code=400)
     if return_url := session.payload.get("return_url"):
         return RedirectResponse(str(return_url), status_code=303)
@@ -206,7 +283,7 @@ async def input_page(
             pages.message_page("Dashboard session expired", "Run 'authsome ui' to reopen the hosted dashboard."),
             status_code=401,
         )
-    auth = get_auth_service_for_identity(request, session.identity)
+    auth = await get_auth_service_for_identity(request, session.identity)
     definition = await auth.get_provider(session.provider)
     fields = session.payload.get("input_fields", [])
 
@@ -250,7 +327,7 @@ async def device_page(
         return HTMLResponse(
             pages.message_page("Invalid session", "This session does not have a device code."), status_code=400
         )
-    auth = get_auth_service_for_identity(request, session.identity)
+    auth = await get_auth_service_for_identity(request, session.identity)
     definition = await auth.get_provider(session.provider)
     return HTMLResponse(
         pages.device_code_page(definition.display_name, user_code, verification_uri, verification_uri_complete)
@@ -277,7 +354,7 @@ async def submit_input(
             pages.message_page("Dashboard session expired", "Run 'authsome ui' to reopen the hosted dashboard."),
             status_code=401,
         )
-    auth = get_auth_service_for_identity(request, session.identity)
+    auth = await get_auth_service_for_identity(request, session.identity)
     form = await request.form()
     inputs = {key: str(value) for key, value in form.items()}
 
@@ -289,6 +366,21 @@ async def submit_input(
         session.state = AuthSessionStatus.COMPLETED
         session.status_message = "Login successful"
         await sessions.save(session)
+        ph = get_posthog()
+        if ph is not None:
+            from posthog import identify_context, new_context
+
+            with new_context():
+                identify_context(session.identity)
+                ph.capture(
+                    "auth session completed",
+                    distinct_id=session.identity,
+                    properties={
+                        "provider": session.provider,
+                        "flow_type": session.flow_type,
+                        "principal_id": session.principal_id,
+                    },
+                )
         if return_url := session.payload.get("return_url"):
             return RedirectResponse(str(return_url), status_code=303)
         return HTMLResponse(pages.message_page("Authentication successful", "You can close this window."))

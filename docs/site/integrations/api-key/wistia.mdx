@@ -32,7 +32,7 @@ Wistia's API keys live at `<your-subdomain>.wistia.com/account/api`.
 ## Log in
 
 ```bash
-uvx authsome login wistia
+authsome login wistia
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -42,7 +42,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get wistia --field status
+authsome get wistia --field status
 # → connected
 ```
 
@@ -53,11 +53,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export wistia --format env)"
+eval "$(authsome export wistia --format env)"
 echo $WISTIA_API_KEY
 ```
 
@@ -77,16 +77,16 @@ Under the proxy, authsome sets `WISTIA_API_KEY=authsome-proxy-managed` in the ch
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login wistia --connection personal
-uvx authsome login wistia --connection team
+authsome login wistia --connection personal
+authsome login wistia --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login wistia --force          # rotate
-uvx authsome logout wistia                  # remove local credential
-uvx authsome remove wistia                  # remove all local state for the provider
+authsome login wistia --force          # rotate
+authsome logout wistia                  # remove local credential
+authsome remove wistia                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Wistia.
@@ -94,9 +94,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect wistia > ~/.authsome/providers/wistia.json
+authsome inspect wistia > ~/.authsome/providers/wistia.json
 # edit fields
-uvx authsome list   # source now shows "custom" for wistia
+authsome list   # source now shows "custom" for wistia
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.

@@ -33,8 +33,8 @@ cat > /tmp/anthropic.json <<EOF
 }
 EOF
 
-uvx authsome register /tmp/anthropic.json
-uvx authsome login anthropic
+authsome register /tmp/anthropic.json
+authsome login anthropic
 ```
 
 Get a key from [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys).
@@ -44,7 +44,7 @@ See [Custom providers](/guides/custom-providers) for the full template.
 ## Recommended: run the agent under the proxy
 
 ```bash
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 The SDK initializes with `ANTHROPIC_API_KEY=authsome-proxy-managed`. Outbound requests to `api.anthropic.com` are intercepted and authenticated at the proxy layer.
@@ -69,8 +69,8 @@ print(resp.content[0].text)
 ## Multi-account workflows
 
 ```bash
-uvx authsome login anthropic --connection personal
-uvx authsome login anthropic --connection team
+authsome login anthropic --connection personal
+authsome login anthropic --connection team
 ```
 
 In code:

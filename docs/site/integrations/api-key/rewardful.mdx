@@ -30,7 +30,7 @@ Create an API key in the Rewardful dashboard at [https://app.getrewardful.com/co
 ## Log in
 
 ```bash
-uvx authsome login rewardful
+authsome login rewardful
 ```
 
 A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the masked input and submit.
@@ -40,7 +40,7 @@ A local browser form opens at `http://127.0.0.1:7998`. Paste the key into the ma
 Verify:
 
 ```bash
-uvx authsome get rewardful --field status
+authsome get rewardful --field status
 # → connected
 ```
 
@@ -51,11 +51,11 @@ Run the agent under the proxy. The library tab is for embedding authsome inside 
 <CodeGroup>
 
 ```bash Proxy (recommended)
-uvx authsome run -- python my_agent.py
+authsome run -- python my_agent.py
 ```
 
 ```bash Environment
-eval "$(uvx authsome export rewardful --format env)"
+eval "$(authsome export rewardful --format env)"
 echo $REWARDFUL_API_KEY
 ```
 
@@ -75,16 +75,16 @@ Under the proxy, authsome sets `REWARDFUL_API_KEY=authsome-proxy-managed` in the
 <MultiConnectionsCta />
 
 ```bash
-uvx authsome login rewardful --connection personal
-uvx authsome login rewardful --connection team
+authsome login rewardful --connection personal
+authsome login rewardful --connection team
 ```
 
 ## Rotate or remove the key
 
 ```bash
-uvx authsome login rewardful --force          # rotate
-uvx authsome logout rewardful                  # remove local credential
-uvx authsome remove rewardful                  # remove all local state for the provider
+authsome login rewardful --force          # rotate
+authsome logout rewardful                  # remove local credential
+authsome remove rewardful                  # remove all local state for the provider
 ```
 
 API-key providers have no revocation endpoint, so `revoke` and `remove` are equivalent for Rewardful.
@@ -92,9 +92,9 @@ API-key providers have no revocation endpoint, so `revoke` and `remove` are equi
 ## Override the bundled definition
 
 ```bash
-uvx authsome inspect rewardful > ~/.authsome/providers/rewardful.json
+authsome inspect rewardful > ~/.authsome/providers/rewardful.json
 # edit fields
-uvx authsome list   # source now shows "custom" for rewardful
+authsome list   # source now shows "custom" for rewardful
 ```
 
 See [Provider schema](/reference/provider-schema) for every field.
