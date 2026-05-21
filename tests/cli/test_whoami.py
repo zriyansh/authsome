@@ -21,7 +21,9 @@ def _make_whoami(version: str = "1.2.3") -> dict:
         "vault_id": "vault_default",
         "did": "did:key:z6MkTest",
         "registration_status": "registered",
-        "encryption_backend": "local_key",
+        "configured_encryption_mode": "auto",
+        "effective_encryption_source": "keyring",
+        "encryption_backend": "OS Keyring",
     }
 
 
@@ -49,6 +51,8 @@ class TestWhoamiCommand:
         assert data["principal_id"] == "principal_1"
         assert data["vault_id"] == "vault_default"
         assert data["vault_status"] == "OK"
+        assert data["configured_encryption_mode"] == "auto"
+        assert data["effective_encryption_source"] == "keyring"
         assert "connected_providers_count" in data
         assert "connected_providers" in data
 
@@ -70,6 +74,7 @@ class TestWhoamiCommand:
         result = runner.invoke(cli, ["--log-file", "", "whoami", "--no-color"])
         assert result.exit_code == 0
         assert "2.0.0" in result.output
+        assert "OS Keyring (mode: auto)" in result.output
 
     def test_connected_providers_counted(self, runner: CliRunner, mock_client: MagicMock) -> None:
         from datetime import UTC, datetime, timedelta
