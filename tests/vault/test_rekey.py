@@ -11,7 +11,7 @@ import pytest
 
 from authsome.store.local import LocalAppStore
 from authsome.vault import Vault
-from authsome.vault.crypto import _AesGcmCrypto
+from authsome.vault.crypto import LocalFileCrypto
 
 
 @pytest.mark.asyncio
@@ -65,16 +65,54 @@ class TestVaultRekey:
         assert raw_val is not None
         ciphertext = raw_val["data"]
 
-        old_crypto = _AesGcmCrypto(old_key_bytes)
+        old_key_path = tmp_path / "server" / "old-master.key"
+        old_key_path.write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "key": base64.b64encode(old_key_bytes).decode("ascii"),
+                    "algorithm": "AES-256-GCM",
+                    "note": "Local master key for authsome. Protect this file.",
+                }
+            ),
+            encoding="utf-8",
+        )
+        old_crypto = LocalFileCrypto(old_key_path)
         from authsome.errors import EncryptionUnavailableError
 
         with pytest.raises(EncryptionUnavailableError):
             old_crypto.decrypt(ciphertext)
 
         # But new crypto decrypts it successfully!
-        new_crypto = _AesGcmCrypto(new_key_bytes)
+        new_key_path = tmp_path / "server" / "new-master.key"
+        new_key_path.write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "key": base64.b64encode(new_key_bytes).decode("ascii"),
+                    "algorithm": "AES-256-GCM",
+                    "note": "Local master key for authsome. Protect this file.",
+                }
+            ),
+            encoding="utf-8",
+        )
+        new_crypto = LocalFileCrypto(new_key_path)
         assert new_crypto.decrypt(ciphertext) == "secret-value-1"
 
+        await app_store.close()
+
+    async def test_rekey_rejects_env_mode(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        app_store = LocalAppStore(tmp_path)
+        await app_store.ensure_initialized()
+        monkeypatch.setenv("AUTHSOME_MASTER_KEY", base64.b64encode(secrets.token_bytes(32)).decode("ascii"))
+
+        vault = Vault(app_store=app_store, crypto_mode="env")
+        await vault.put("key1", "secret-value-1", collection="col1")
+
+        with pytest.raises(ValueError, match="AUTHSOME_MASTER_KEY"):
+            await vault.rekey(secrets.token_bytes(32))
+
+        assert await vault.get("key1", collection="col1") == "secret-value-1"
         await app_store.close()
 
     async def test_rekey_keyring_mode(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

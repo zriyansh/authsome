@@ -13,12 +13,7 @@ from key_value.aio._utils.compound import uncompound_key
 from loguru import logger
 
 from authsome.store.interfaces import AppStore
-from authsome.vault.crypto import (
-    _KEYRING_SERVICE,
-    _KEYRING_USERNAME,
-    _AesGcmCrypto,
-    create_crypto,
-)
+from authsome.vault.crypto import _KEYRING_SERVICE, _KEYRING_USERNAME, VaultCrypto, _AesGcmCrypto, create_crypto
 
 kr: Any
 try:
@@ -125,11 +120,34 @@ class Vault:
         _ = identity
         return await self._app_store.check_integrity()
 
+    def _build_rekey_crypto(self, new_key_bytes: bytes) -> VaultCrypto:
+        """Return an in-memory crypto backend used only during re-encryption."""
+
+        class _RekeyCrypto(_AesGcmCrypto):
+            def __init__(self, master_key: bytes) -> None:
+                super().__init__(master_key)
+
+            @property
+            def source_id(self) -> str:
+                return "rekey"
+
+            @property
+            def source_description(self) -> str:
+                return "In-memory rekey backend"
+
+        return _RekeyCrypto(new_key_bytes)
+
     async def rekey(self, new_key_bytes: bytes) -> None:
         """Re-encrypt all encrypted keys in the underlying KV store using a new master key."""
-        # 1. Create a new crypto instance using the new key
-        new_crypto = _AesGcmCrypto(new_key_bytes)
         old_crypto = self.crypto
+        if old_crypto.source_id == "env":
+            raise ValueError(
+                "Vault rekey is unavailable while using AUTHSOME_MASTER_KEY. "
+                "Update the external master key and migrate data from a writable backend first."
+            )
+
+        # 1. Create a new crypto instance using the new key
+        new_crypto = self._build_rekey_crypto(new_key_bytes)
 
         # 2. Iterate over all entries in the underlying DiskStore cache
         # DiskStore stores compound keys as collection::key
@@ -160,7 +178,7 @@ class Vault:
                 reencrypted_count += 1
 
         # 3. Swap the key file or keyring entry
-        if self._crypto_mode == "local_key":
+        if old_crypto.source_id == "local_key":
             if self._master_key_path is None:
                 raise ValueError("master_key_path is required for 'local_key' mode")
 
@@ -181,7 +199,7 @@ class Vault:
             # Replace old key file atomically
             temp_path.replace(self._master_key_path)
 
-        elif self._crypto_mode == "keyring":
+        elif old_crypto.source_id == "keyring":
             if kr is None:
                 raise RuntimeError(
                     "The 'keyring' package is required for keyring mode. Install it with: pip install keyring"
@@ -192,6 +210,8 @@ class Vault:
                 kr.set_password(_KEYRING_SERVICE, _KEYRING_USERNAME, key_b64_str)
             except Exception as exc:
                 raise RuntimeError(f"Failed to store new master key in OS keyring: {exc}") from exc
+        else:
+            raise ValueError(f"Vault rekey is unsupported for encryption source '{old_crypto.source_id}'")
 
         # 4. Clear the active crypto in memory so it reloads on next access
         self._crypto = None
