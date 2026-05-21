@@ -69,10 +69,12 @@ def test_whoami_accepts_valid_pop_and_scopes_identity(monkeypatch, tmp_path: Pat
 def test_health_and_ready_report_encryption_details(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("AUTHSOME_HOME", str(tmp_path))
     monkeypatch.setenv("AUTHSOME_MASTER_KEY", base64.b64encode(b"\x02" * 32).decode("ascii"))
+    identity = create_identity(tmp_path, "steady-wisely-boldly-0042")
 
     with TestClient(create_app()) as client:
+        client.post("/identities/register", json={"handle": identity.handle, "did": identity.did})
         health_response = client.get("/health")
-        ready_response = client.get("/ready")
+        ready_response = client.get("/ready", headers=_auth_header(tmp_path, "GET", "/ready"))
 
     assert health_response.status_code == 200
     assert health_response.json()["configured_encryption_mode"] == "auto"
@@ -173,6 +175,7 @@ def test_ready_uses_active_identity_connections_for_warning_check(monkeypatch, t
     identity = create_identity(tmp_path, "steady-wisely-boldly-0042")
 
     with TestClient(create_app()) as client:
+        client.post("/identities/register", json={"handle": identity.handle, "did": identity.did})
         resolved = asyncio.run(client.app.state.ownership_resolver.resolve(identity=identity.handle))
         key = build_store_key(
             vault=resolved.vault_id,
@@ -190,7 +193,7 @@ def test_ready_uses_active_identity_connections_for_warning_check(monkeypatch, t
         )
         asyncio.run(client.app.state.vault.put(key, record.model_dump_json(), collection=f"vault:{resolved.vault_id}"))
 
-        response = client.get("/ready")
+        response = client.get("/ready", headers=_auth_header(tmp_path, "GET", "/ready"))
 
     assert response.status_code == 200
     assert response.json()["checks"]["connections"] == "ok"

@@ -7,10 +7,8 @@ from typing import Literal, cast
 from fastapi import APIRouter, Depends, Request
 
 from authsome import __version__
-from authsome.identity import current_from_home
 from authsome.server.credential_service import AuthService
 from authsome.server.dependencies import get_deployment_mode
-from authsome.server.ownership import OwnershipResolver
 from authsome.server.routes._deps import get_protected_auth_service, get_server_base_url
 from authsome.server.schemas import HealthResponse, ReadyResponse
 from authsome.utils import connection_is_active
@@ -42,7 +40,10 @@ def health(request: Request) -> HealthResponse:
 
 
 @router.get("/ready", response_model=ReadyResponse)
-async def ready(request: Request) -> ReadyResponse:
+async def ready(
+    request: Request,
+    auth: AuthService = Depends(get_protected_auth_service),
+) -> ReadyResponse:
     checks: dict[str, str] = {}
     issues: list[str] = []
     warnings: list[str] = []
@@ -50,31 +51,14 @@ async def ready(request: Request) -> ReadyResponse:
     checks["spec_version"] = "ok"
 
     vault = request.app.state.vault
-    store = request.app.state.store
-    ownership_resolver: OwnershipResolver = request.app.state.ownership_resolver
     configured_mode = vault.crypto_mode
 
-    # 1. Active Identity Check
-    active_identity = None
-    try:
-        active_identity = await current_from_home(store.home)
-        checks["identity"] = "ok"
-    except Exception as exc:
-        checks["identity"] = "failed"
-        issues.append(f"identity: {exc}")
+    # 1. Active Identity Check — scoped to the authenticated caller
+    checks["identity"] = "ok"
 
     # 2. Providers List Check
     try:
-        if active_identity:
-            resolved = await ownership_resolver.resolve(identity=active_identity.handle)
-            probe_service = AuthService(
-                vault=vault,
-                identity=active_identity.handle,
-                principal_id=resolved.principal_id,
-                vault_id=resolved.vault_id,
-                deployment_mode=get_deployment_mode(),
-            )
-            await probe_service.list_providers()
+        await auth.list_providers()
         checks["providers"] = "ok"
     except Exception as exc:
         checks["providers"] = "failed"
@@ -82,22 +66,11 @@ async def ready(request: Request) -> ReadyResponse:
 
     # 3. Connected Providers Check
     try:
-        if active_identity:
-            resolved = await ownership_resolver.resolve(identity=active_identity.handle)
-            identity_auth = AuthService(
-                vault=vault,
-                identity=active_identity.handle,
-                principal_id=resolved.principal_id,
-                vault_id=resolved.vault_id,
-                deployment_mode=get_deployment_mode(),
-            )
-            conn_list = await identity_auth.list_connections()
-            checks["connections"] = "ok"
-            connected_count = sum(1 for p in conn_list for c in p.get("connections", []) if connection_is_active(c))
-            if connected_count == 0:
-                warnings.append("no active provider connections found")
-        else:
-            checks["connections"] = "skipped"
+        conn_list = await auth.list_connections()
+        checks["connections"] = "ok"
+        connected_count = sum(1 for p in conn_list for c in p.get("connections", []) if connection_is_active(c))
+        if connected_count == 0:
+            warnings.append("no active provider connections found")
     except Exception as exc:
         checks["connections"] = "failed"
         issues.append(f"connections: {exc}")
