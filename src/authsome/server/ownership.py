@@ -5,7 +5,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from authsome.actors.registry import (
+from authsome.identity.principal import ClaimStatus
+from authsome.server.registries import (
     IdentityClaimRegistry,
     PrincipalRegistry,
     PrincipalVaultBindingRegistry,
@@ -80,6 +81,10 @@ class HostedOwnershipResolver(OwnershipResolver):
 
     async def resolve(self, *, identity: str) -> ResolvedOwnership:
         claim = await self._claims.require_claim(identity)
+        if claim.claim_status == ClaimStatus.REJECTED:
+            raise ValueError(f"Identity '{identity}' claim has been rejected")
+        if claim.claim_status != ClaimStatus.ACCEPTED:
+            raise ValueError(f"Identity '{identity}' claim is pending principal approval")
         binding = await self._bindings.require_default_vault(claim.principal_id)
         return ResolvedOwnership(identity=identity, principal_id=claim.principal_id, vault_id=binding.vault_id)
 
@@ -90,4 +95,5 @@ class HostedOwnershipResolver(OwnershipResolver):
             vault = await self._vaults.create_default()
             binding = await self._bindings.bind_default(principal.principal_id, vault.vault_id)
         await self._claims.claim_identity(identity, principal.principal_id)
+        await self._claims.accept_claim(identity)
         return ResolvedOwnership(identity=identity, principal_id=principal.principal_id, vault_id=binding.vault_id)

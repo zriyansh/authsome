@@ -2,8 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from authsome.actors import current_from_home
-from authsome.actors.identity import (
+from authsome.cli.client_config import ClientConfig, load_client_config, save_client_config
+from authsome.identity import current_from_home
+from authsome.identity.local import (
     IdentityStatus,
     create_identity,
     ensure_local_identity,
@@ -13,7 +14,6 @@ from authsome.actors.identity import (
     public_key_from_did_key,
     public_key_to_did_key,
 )
-from authsome.cli.client_config import ClientConfig, load_client_config, save_client_config
 
 
 @pytest.mark.asyncio

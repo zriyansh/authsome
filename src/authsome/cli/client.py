@@ -13,14 +13,14 @@ from urllib.parse import urlparse
 
 import requests
 
-from authsome.actors import (
+from authsome.identity import (
     ensure_local_identity,
     load_private_key,
     mark_claimed,
     mark_registered,
 )
-from authsome.actors.identity import IdentityMetadata
-from authsome.actors.proof import POP_AUTH_SCHEME, create_proof_jwt
+from authsome.identity.local import IdentityMetadata
+from authsome.identity.proof import POP_AUTH_SCHEME, create_proof_jwt
 from authsome.server.urls import DEFAULT_SERVER_BASE_URL
 
 DEFAULT_DAEMON_URL = DEFAULT_SERVER_BASE_URL
@@ -197,7 +197,7 @@ class AuthsomeApiClient:
         return await self._get("/health", protected=False)
 
     async def ready(self) -> dict[str, Any]:
-        return await self._get("/ready", protected=False)
+        return await self._get("/ready")
 
     async def start_login(self, **kwargs: Any) -> dict[str, Any]:
         return await self._post("/auth/sessions", kwargs)

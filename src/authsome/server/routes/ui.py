@@ -16,11 +16,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from authsome import __version__
-from authsome.auth import AuthService
 from authsome.auth.models.connection import ConnectionRecord, ProviderClientRecord
 from authsome.auth.models.enums import AuthType, FlowType
 from authsome.auth.models.provider import ProviderDefinition
 from authsome.auth.sessions import AuthSession, AuthSessionStore
+from authsome.server.credential_service import AuthService
 from authsome.server.dependencies import (
     create_principal_vault_binding_registry,
     create_vault_registry,

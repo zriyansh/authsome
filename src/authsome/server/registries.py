@@ -1,51 +1,30 @@
-"""Actor-domain registries for principals, vaults, and ownership bindings."""
+"""Server-owned filesystem-backed registries.
+
+All state under ~/.authsome/server/ is owned here.
+Domain models (IdentityRegistration, PrincipalRecord, etc.) live in
+identity/ and are imported freely; only the persistence implementations
+belong in this module.
+"""
 
 from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
+from authsome.identity.local import public_key_from_did_key, validate_handle
+from authsome.identity.principal import (
+    ClaimStatus,
+    IdentityClaimRecord,
+    PrincipalRecord,
+    PrincipalVaultBindingRecord,
+    VaultRecord,
+)
+from authsome.identity.registry import IdentityRegistration
 from authsome.utils import utc_now
-
-
-class PrincipalRecord(BaseModel):
-    """Principal account record."""
-
-    principal_id: str
-    email: str
-    created_at: datetime = Field(default_factory=utc_now)
-    updated_at: datetime = Field(default_factory=utc_now)
-
-
-class VaultRecord(BaseModel):
-    """Vault record owned as a first-class resource."""
-
-    vault_id: str
-    handle: str = "default"
-    created_at: datetime = Field(default_factory=utc_now)
-    updated_at: datetime = Field(default_factory=utc_now)
-
-
-class IdentityClaimRecord(BaseModel):
-    """Immutable binding from identity to principal."""
-
-    identity_handle: str
-    principal_id: str
-    created_at: datetime = Field(default_factory=utc_now)
-
-
-class PrincipalVaultBindingRecord(BaseModel):
-    """Binding from principal to a vault."""
-
-    principal_id: str
-    vault_id: str
-    is_default: bool = False
-    created_at: datetime = Field(default_factory=utc_now)
-    updated_at: datetime = Field(default_factory=utc_now)
 
 
 class _JsonRegistry[T: BaseModel]:
@@ -72,7 +51,53 @@ class _JsonRegistry[T: BaseModel]:
 
     def _save_all(self, records: list[T]) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(json.dumps([r.model_dump(mode="json") for r in records], indent=2), encoding="utf-8")
+        self._path.write_text(
+            json.dumps([r.model_dump(mode="json") for r in records], indent=2),
+            encoding="utf-8",
+        )
+
+
+class IdentityRegistrationError(ValueError):
+    """Raised when an identity registration conflicts with existing registry state."""
+
+
+class IdentityRegistry(_JsonRegistry[IdentityRegistration]):
+    """Filesystem-backed authoritative registry for daemon identity handles."""
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(path, IdentityRegistration)
+
+    async def register(self, *, handle: str, did: str) -> IdentityRegistration:
+        """Register a handle/DID binding, idempotent only for the same pair."""
+        handle = validate_handle(handle)
+        public_key_from_did_key(did)
+
+        registrations = self._load_all()
+
+        existing = next((r for r in registrations if r.handle == handle), None)
+        if existing is not None:
+            if existing.did == did:
+                return existing
+            raise IdentityRegistrationError(f"Identity handle '{handle}' is already registered")
+
+        for r in registrations:
+            if r.did == did:
+                raise IdentityRegistrationError(f"DID is already registered to identity handle '{r.handle}'")
+
+        now = datetime.now(UTC)
+        registration = IdentityRegistration(handle=handle, did=did, created_at=now, updated_at=now)
+        registrations.append(registration)
+        self._save_all(registrations)
+        return registration
+
+    async def resolve(self, handle: str) -> IdentityRegistration | None:
+        for r in self._load_all():
+            if r.handle == handle:
+                return r
+        return None
+
+    async def list_handles(self) -> list[str]:
+        return sorted(r.handle for r in self._load_all())
 
 
 class PrincipalRegistry(_JsonRegistry[PrincipalRecord]):
@@ -82,11 +107,11 @@ class PrincipalRegistry(_JsonRegistry[PrincipalRecord]):
         super().__init__(path, PrincipalRecord)
 
     async def get(self, principal_id: str) -> PrincipalRecord | None:
-        return next((record for record in self._load_all() if record.principal_id == principal_id), None)
+        return next((r for r in self._load_all() if r.principal_id == principal_id), None)
 
     async def get_by_email(self, email: str) -> PrincipalRecord | None:
         normalized = email.strip().lower()
-        return next((record for record in self._load_all() if record.email == normalized), None)
+        return next((r for r in self._load_all() if r.email == normalized), None)
 
     async def get_or_create_by_email(self, email: str) -> PrincipalRecord:
         normalized = email.strip().lower()
@@ -113,7 +138,7 @@ class VaultRegistry(_JsonRegistry[VaultRecord]):
         super().__init__(path, VaultRecord)
 
     async def get(self, vault_id: str) -> VaultRecord | None:
-        return next((record for record in self._load_all() if record.vault_id == vault_id), None)
+        return next((r for r in self._load_all() if r.vault_id == vault_id), None)
 
     async def list_all(self) -> list[VaultRecord]:
         return self._load_all()
@@ -139,7 +164,7 @@ class IdentityClaimRegistry(_JsonRegistry[IdentityClaimRecord]):
         super().__init__(path, IdentityClaimRecord)
 
     async def resolve(self, identity_handle: str) -> IdentityClaimRecord | None:
-        return next((record for record in self._load_all() if record.identity_handle == identity_handle), None)
+        return next((r for r in self._load_all() if r.identity_handle == identity_handle), None)
 
     async def require_claim(self, identity_handle: str) -> IdentityClaimRecord:
         claim = await self.resolve(identity_handle)
@@ -153,11 +178,33 @@ class IdentityClaimRegistry(_JsonRegistry[IdentityClaimRecord]):
             if existing.principal_id != principal_id:
                 raise ValueError(f"Identity '{identity_handle}' is already claimed")
             return existing
-        record = IdentityClaimRecord(identity_handle=identity_handle, principal_id=principal_id)
+        now = utc_now()
+        record = IdentityClaimRecord(
+            identity_handle=identity_handle,
+            principal_id=principal_id,
+            claim_status=ClaimStatus.PENDING,
+            created_at=now,
+            updated_at=now,
+        )
         records = self._load_all()
         records.append(record)
         self._save_all(records)
         return record
+
+    async def accept_claim(self, identity_handle: str) -> IdentityClaimRecord:
+        return await self._set_status(identity_handle, ClaimStatus.ACCEPTED)
+
+    async def reject_claim(self, identity_handle: str) -> IdentityClaimRecord:
+        return await self._set_status(identity_handle, ClaimStatus.REJECTED)
+
+    async def _set_status(self, identity_handle: str, status: ClaimStatus) -> IdentityClaimRecord:
+        records = self._load_all()
+        for i, record in enumerate(records):
+            if record.identity_handle == identity_handle:
+                records[i] = record.model_copy(update={"claim_status": status, "updated_at": utc_now()})
+                self._save_all(records)
+                return records[i]
+        raise ValueError(f"No claim found for identity '{identity_handle}'")
 
 
 class PrincipalVaultBindingRegistry(_JsonRegistry[PrincipalVaultBindingRecord]):
@@ -167,11 +214,11 @@ class PrincipalVaultBindingRegistry(_JsonRegistry[PrincipalVaultBindingRecord]):
         super().__init__(path, PrincipalVaultBindingRecord)
 
     async def list_for_principal(self, principal_id: str) -> list[PrincipalVaultBindingRecord]:
-        return [record for record in self._load_all() if record.principal_id == principal_id]
+        return [r for r in self._load_all() if r.principal_id == principal_id]
 
     async def get_default_vault(self, principal_id: str) -> PrincipalVaultBindingRecord | None:
         return next(
-            (record for record in self._load_all() if record.principal_id == principal_id and record.is_default),
+            (r for r in self._load_all() if r.principal_id == principal_id and r.is_default),
             None,
         )
 

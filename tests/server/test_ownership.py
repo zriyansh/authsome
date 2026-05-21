@@ -4,16 +4,16 @@ from pathlib import Path
 
 import pytest
 
-from authsome.actors.registry import (
-    IdentityClaimRegistry,
-    PrincipalRegistry,
-    PrincipalVaultBindingRegistry,
-    VaultRegistry,
-)
 from authsome.server.ownership import (
     LOCAL_PRINCIPAL_EMAIL,
     HostedOwnershipResolver,
     LocalOwnershipResolver,
+)
+from authsome.server.registries import (
+    IdentityClaimRegistry,
+    PrincipalRegistry,
+    PrincipalVaultBindingRegistry,
+    VaultRegistry,
 )
 
 
@@ -27,6 +27,7 @@ async def test_hosted_resolution_maps_identity_to_default_vault(tmp_path: Path) 
     vault = await vaults.create_default()
     await bindings.bind_default(principal.principal_id, vault.vault_id)
     await claims.claim_identity("steady-wisely-boldly-0042", principal.principal_id)
+    await claims.accept_claim("steady-wisely-boldly-0042")
 
     resolver = HostedOwnershipResolver(
         principals=principals,

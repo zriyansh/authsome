@@ -2,13 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from authsome.actors import create_identity
-from authsome.actors.identity_registry import IdentityRegistry
-from authsome.actors.registry import IdentityClaimRegistry
+from authsome.identity import create_identity
 from authsome.server.identity_bootstrap import (
     HostedIdentityBootstrapService,
     LocalIdentityBootstrapService,
 )
+from authsome.server.registries import IdentityClaimRegistry, IdentityRegistry
 from authsome.server.ui_sessions import UiSessionStore
 
 
@@ -58,6 +57,7 @@ async def test_hosted_bootstrap_returns_claimed_status_after_claim(tmp_path: Pat
 
     await registry.register(handle=identity.handle, did=identity.did)
     await claims.claim_identity(identity.handle, "principal_123")
+    await claims.accept_claim(identity.handle)
 
     status = await service.get_identity_status(handle=identity.handle)
 

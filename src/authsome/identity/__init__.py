@@ -1,6 +1,10 @@
-"""Actor-domain exports."""
+"""Identity-domain exports.
 
-from authsome.actors.identity import (
+Contains cryptographic primitives and domain models.
+Filesystem-backed registry implementations live in server/registries.py.
+"""
+
+from authsome.identity.local import (
     IdentityMetadata,
     IdentityStatus,
     create_identity,
@@ -19,12 +23,14 @@ from authsome.actors.identity import (
     remove_legacy_default_identity,
     validate_handle,
 )
-from authsome.actors.identity_registry import (
-    IdentityRegistration,
-    IdentityRegistrationError,
-    IdentityRegistry,
+from authsome.identity.principal import (
+    ClaimStatus,
+    IdentityClaimRecord,
+    PrincipalRecord,
+    PrincipalVaultBindingRecord,
+    VaultRecord,
 )
-from authsome.actors.proof import (
+from authsome.identity.proof import (
     POP_AUTH_SCHEME,
     ProofClaims,
     ProofValidationError,
@@ -32,35 +38,21 @@ from authsome.actors.proof import (
     create_proof_jwt,
     validate_proof_jwt,
 )
-from authsome.actors.registry import (
-    IdentityClaimRecord,
-    IdentityClaimRegistry,
-    PrincipalRecord,
-    PrincipalRegistry,
-    PrincipalVaultBindingRecord,
-    PrincipalVaultBindingRegistry,
-    VaultRecord,
-    VaultRegistry,
-)
+from authsome.identity.registry import IdentityRegistration
 
 __all__ = [
+    "ClaimStatus",
     "IdentityClaimRecord",
-    "IdentityClaimRegistry",
     "IdentityMetadata",
     "IdentityStatus",
     "IdentityRegistration",
-    "IdentityRegistrationError",
-    "IdentityRegistry",
     "PrincipalRecord",
-    "PrincipalRegistry",
     "PrincipalVaultBindingRecord",
-    "PrincipalVaultBindingRegistry",
     "POP_AUTH_SCHEME",
     "ProofClaims",
     "ProofValidationError",
     "ReplayCache",
     "VaultRecord",
-    "VaultRegistry",
     "current_from_home",
     "create_identity",
     "create_proof_jwt",

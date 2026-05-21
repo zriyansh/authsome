@@ -5,8 +5,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from authsome.actors.identity_registry import IdentityRegistration, IdentityRegistry
-from authsome.actors.registry import IdentityClaimRegistry
+from authsome.identity.principal import ClaimStatus
+from authsome.identity.registry import IdentityRegistration
+from authsome.server.registries import IdentityClaimRegistry, IdentityRegistry
 from authsome.server.ui_sessions import UiSessionStore
 
 
@@ -93,9 +94,23 @@ class HostedIdentityBootstrapService(IdentityBootstrapService):
                 registration_status="claim_required",
                 claim_url=f"{self._server_base_url}/ui/claim/{bootstrap.token}",
             )
+        if claim.claim_status == ClaimStatus.ACCEPTED:
+            return IdentityBootstrapStatus(
+                identity=registration.handle,
+                did=registration.did,
+                registration_status="claimed",
+                principal_id=claim.principal_id,
+            )
+        if claim.claim_status == ClaimStatus.REJECTED:
+            return IdentityBootstrapStatus(
+                identity=registration.handle,
+                did=registration.did,
+                registration_status="rejected",
+                principal_id=claim.principal_id,
+            )
         return IdentityBootstrapStatus(
             identity=registration.handle,
             did=registration.did,
-            registration_status="claimed",
+            registration_status="pending",
             principal_id=claim.principal_id,
         )
