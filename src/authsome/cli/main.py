@@ -941,22 +941,27 @@ async def whoami(ctx_obj: ContextObj) -> None:
     # Get info from daemon
     whoami_data = await actx.runtime_client.whoami()
     doctor_results = await actx.doctor()
+    issues = list(doctor_results.get("issues", []))
 
-    vault_status = "OK" if doctor_results.get("checks", {}).get("vault") == "ok" else "ERROR"
+    vault_status = "OK" if doctor_results.get("status") == "ready" else "ERROR"
 
     # Connected providers with counts
     connected_providers = []
-    connections_data = await actx.runtime_client.list_connections()
-    for provider_group in connections_data["connections"]:
-        active_conns = [c["connection_name"] for c in provider_group["connections"] if connection_is_active(c)]
-        if active_conns:
-            connected_providers.append(
-                {
-                    "name": provider_group["name"],
-                    "count": len(active_conns),
-                    "connections": active_conns,
-                }
-            )
+    try:
+        connections_data = await actx.runtime_client.list_connections()
+        for provider_group in connections_data["connections"]:
+            active_conns = [c["connection_name"] for c in provider_group["connections"] if connection_is_active(c)]
+            if active_conns:
+                connected_providers.append(
+                    {
+                        "name": provider_group["name"],
+                        "count": len(active_conns),
+                        "connections": active_conns,
+                    }
+                )
+    except Exception as exc:
+        issues.append(f"connections: {exc}")
+        vault_status = "ERROR"
 
     data = {
         "authsome_version": whoami_data["version"],
@@ -973,6 +978,7 @@ async def whoami(ctx_obj: ContextObj) -> None:
         "vault_status": vault_status,
         "connected_providers_count": len(connected_providers),
         "connected_providers": connected_providers,
+        "issues": issues,
     }
 
     if ctx_obj.json_output:
@@ -994,6 +1000,11 @@ async def whoami(ctx_obj: ContextObj) -> None:
         ctx_obj.echo(f"Encryption:        {_render_encryption_backend(data)} [", nl=False)
         ctx_obj.echo(vault_status, color=status_color, nl=False)
         ctx_obj.echo("]")
+
+        if issues:
+            ctx_obj.echo("\nIssues:", color="red")
+            for issue in issues:
+                ctx_obj.echo(f"  - {issue}", color="red")
 
         ctx_obj.echo(f"\nConnected Providers: {data['connected_providers_count']}")
         if connected_providers:
