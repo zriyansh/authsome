@@ -33,6 +33,7 @@ def input_page(
     docs_url: str | None,
     fields: list[dict[str, Any]],
     callback_url: str | None = None,
+    warning_message: str | None = None,
 ) -> str:
     """Generate a dynamic input form for provider credentials."""
     required_rows = []
@@ -90,6 +91,22 @@ def input_page(
     if optional_rows:
         optional = f"<details><summary>Advanced options</summary>{''.join(optional_rows)}</details>"
 
+    warning = ""
+    if warning_message:
+        warning = f"""
+        <div style="
+          margin: 16px 0 24px;
+          padding: 12px 14px;
+          border: 1px solid #6b4f1d;
+          border-radius: 8px;
+          background: rgba(245, 158, 11, 0.12);
+          color: #f7d08a;
+        ">
+          <strong style="display: block; margin-bottom: 4px;">Warning</strong>
+          <span>{html.escape(warning_message)}</span>
+        </div>
+        """
+
     script = ""
     if callback_url:
         script = """
@@ -122,6 +139,7 @@ def input_page(
       <h1>{html.escape(display_name)}</h1>
       {docs}
       {callback_hint}
+      {warning}
       <form method="post" action="/auth/sessions/{html.escape(session_id)}/input">
         {"".join(required_rows)}
         {optional}

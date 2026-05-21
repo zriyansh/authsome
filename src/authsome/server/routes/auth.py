@@ -260,6 +260,9 @@ async def input_page(
     callback_url = None
     if definition.auth_type == AuthType.OAUTH2:
         callback_url = build_callback_url(server_base_url)
+    warning_message = None
+    if session.payload.get("provider_config_only") and session.payload.get("existing_provider_client"):
+        warning_message = "Changing these credentials will revoke existing connections for this provider."
 
     return HTMLResponse(
         pages.input_page(
@@ -268,6 +271,7 @@ async def input_page(
             definition.docs_url,
             fields,
             callback_url=callback_url,
+            warning_message=warning_message,
         )
     )
 
@@ -327,6 +331,17 @@ async def submit_input(
     auth = await get_auth_service_for_identity(request, session.identity)
     form = await request.form()
     inputs = {key: str(value) for key, value in form.items()}
+
+    if session.payload.get("provider_config_only"):
+        all_vaults = await request.app.state.vault_registry.list_all()
+        vault_ids = [vault.vault_id for vault in all_vaults] or ([auth.vault_id] if auth.vault_id else [])
+        await auth.update_provider_configuration(session.provider, inputs, vault_ids=vault_ids)
+        session.state = AuthSessionStatus.COMPLETED
+        session.status_message = "Provider configuration updated"
+        await sessions.save(session)
+        if return_url := session.payload.get("return_url"):
+            return RedirectResponse(str(return_url), status_code=303)
+        return HTMLResponse(pages.message_page("Provider configuration updated", "You can close this window."))
 
     await auth.save_inputs(session, inputs)
 

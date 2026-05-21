@@ -198,8 +198,8 @@ async def _provider_connection_groups(
     if not principal_id:
         return []
 
-    bindings = create_principal_vault_binding_registry(request.app.state.vault.home)
-    vaults = create_vault_registry(request.app.state.vault.home)
+    bindings = create_principal_vault_binding_registry(request.app.state.store.home)
+    vaults = create_vault_registry(request.app.state.store.home)
     groups: list[dict[str, Any]] = []
 
     for binding in await bindings.list_for_principal(principal_id):
@@ -478,17 +478,14 @@ async def connection_detail(
     provider_name: str,
     connection_name: str,
     request: Request,
-    server_base_url: str = Depends(get_server_base_url),
 ) -> Response:
     auth = await _resolve_ui_auth(request)
     if auth is None:
         return _ui_session_expired_response()
     provider = await auth.get_provider(provider_name)
     connection_record = await auth.get_connection(provider_name, connection_name)
-    client_record = await auth.get_provider_client(provider_name)
     api_url = provider.api_url or (provider.oauth.base_url if provider.oauth else None) or provider.name
     common = _connection_detail_context(request, provider, connection_record, api_url)
-    policy = _ui_policy()
 
     if provider.auth_type == AuthType.OAUTH2:
         return templates.TemplateResponse(
@@ -496,15 +493,6 @@ async def connection_detail(
             "app_detail_oauth.html",
             {
                 **common,
-                "client_id": (
-                    client_record.client_id if client_record and policy["show_provider_client_details"] else None
-                ),
-                "has_client_secret": bool(
-                    client_record and client_record.client_secret and policy["show_provider_client_details"]
-                ),
-                "redirect_uri": build_callback_url(server_base_url),
-                "auth_url": provider.oauth.authorization_url if provider.oauth else "",
-                "token_url": provider.oauth.token_url if provider.oauth else "",
                 "access_token": connection_record.access_token,
                 "refresh_token": connection_record.refresh_token,
             },
@@ -550,7 +538,7 @@ async def connect_app(
     if auth is None:
         return _redirect(request, "/ui/")
     form = await request.form()
-    connection_name = str(form.get("connection", "default") or "default")
+    connection_name = str(form.get("connection") or form.get("connection_name") or "default")
     force = str(form.get("force", "false")).lower() in {"1", "true", "on", "yes"}
 
     definition = await auth.get_provider(provider_name)
@@ -599,6 +587,39 @@ async def connect_app(
         return _redirect(request, str(auth_url))
     await sessions.save(session)
     return _redirect(request, f"/ui/apps/{provider_name}")
+
+
+@router.post("/apps/{provider_name}/configure")
+async def configure_provider(
+    provider_name: str,
+    request: Request,
+    sessions: AuthSessionStore = Depends(get_auth_sessions),
+    server_base_url: str = Depends(get_server_base_url),
+) -> Response:
+    """Open the provider configuration flow for deployment-scoped credentials."""
+    auth = await _resolve_ui_auth(request)
+    if auth is None:
+        return _redirect(request, "/ui/")
+    provider = await auth.get_provider(provider_name)
+    if provider.auth_type != AuthType.OAUTH2 or _is_hosted_ui():
+        return _redirect(request, f"/ui/apps/{provider_name}")
+
+    session = await sessions.create(
+        provider=provider_name,
+        identity=auth.identity,
+        principal_id=auth.principal_id,
+        connection_name="default",
+        flow_type=provider.flow.value,
+    )
+    session.payload["provider_config_only"] = True
+    session.payload["existing_provider_client"] = (await auth.get_provider_client(provider_name)) is not None
+    session.payload["callback_url_override"] = build_callback_url(server_base_url)
+    session.payload["return_url"] = f"{server_base_url.rstrip('/')}/ui/apps/{provider_name}"
+    session.payload["input_fields"] = [
+        field.model_dump(mode="json", exclude_none=True) for field in await auth.get_required_inputs(session)
+    ]
+    await sessions.save(session)
+    return _redirect(request, build_auth_input_url(server_base_url, session.session_id))
 
 
 @router.post("/session", response_model=UiBootstrapResponse)
