@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import base64
 import builtins
 import json
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -13,15 +11,7 @@ from key_value.aio._utils.compound import uncompound_key
 from loguru import logger
 
 from authsome.store.interfaces import AppStore
-from authsome.vault.crypto import _KEYRING_SERVICE, _KEYRING_USERNAME, VaultCrypto, _AesGcmCrypto, create_crypto
-
-kr: Any
-try:
-    import keyring
-
-    kr = keyring
-except ImportError:
-    kr = None
+from authsome.vault.crypto import VaultCrypto, create_crypto, create_rekey_crypto
 
 if TYPE_CHECKING:
     from authsome.vault.crypto import VaultCrypto
@@ -120,34 +110,13 @@ class Vault:
         _ = identity
         return await self._app_store.check_integrity()
 
-    def _build_rekey_crypto(self, new_key_bytes: bytes) -> VaultCrypto:
-        """Return an in-memory crypto backend used only during re-encryption."""
-
-        class _RekeyCrypto(_AesGcmCrypto):
-            def __init__(self, master_key: bytes) -> None:
-                super().__init__(master_key)
-
-            @property
-            def source_id(self) -> str:
-                return "rekey"
-
-            @property
-            def source_description(self) -> str:
-                return "In-memory rekey backend"
-
-        return _RekeyCrypto(new_key_bytes)
-
     async def rekey(self, new_key_bytes: bytes) -> None:
         """Re-encrypt all encrypted keys in the underlying KV store using a new master key."""
         old_crypto = self.crypto
-        if old_crypto.source_id == "env":
-            raise ValueError(
-                "Vault rekey is unavailable while using AUTHSOME_MASTER_KEY. "
-                "Update the external master key and migrate data from a writable backend first."
-            )
+        old_crypto.assert_rekey_supported()
 
         # 1. Create a new crypto instance using the new key
-        new_crypto = self._build_rekey_crypto(new_key_bytes)
+        new_crypto = create_rekey_crypto(new_key_bytes)
 
         # 2. Iterate over all entries in the underlying DiskStore cache
         # DiskStore stores compound keys as collection::key
@@ -177,41 +146,8 @@ class Vault:
                 await self._app_store.kv.put(key, {"data": new_ciphertext}, collection=collection)
                 reencrypted_count += 1
 
-        # 3. Swap the key file or keyring entry
-        if old_crypto.source_id == "local_key":
-            if self._master_key_path is None:
-                raise ValueError("master_key_path is required for 'local_key' mode")
-
-            # Atomic swap of master key file
-            temp_path = self._master_key_path.with_suffix(".tmp")
-            key_data = {
-                "version": 1,
-                "key": base64.b64encode(new_key_bytes).decode("ascii"),
-                "algorithm": "AES-256-GCM",
-                "note": "Local master key for authsome. Protect this file.",
-            }
-            temp_path.write_text(json.dumps(key_data, indent=2), encoding="utf-8")
-            try:
-                os.chmod(temp_path, 0o600)
-            except OSError:
-                pass
-
-            # Replace old key file atomically
-            temp_path.replace(self._master_key_path)
-
-        elif old_crypto.source_id == "keyring":
-            if kr is None:
-                raise RuntimeError(
-                    "The 'keyring' package is required for keyring mode. Install it with: pip install keyring"
-                )
-
-            key_b64_str = base64.b64encode(new_key_bytes).decode("ascii")
-            try:
-                kr.set_password(_KEYRING_SERVICE, _KEYRING_USERNAME, key_b64_str)
-            except Exception as exc:
-                raise RuntimeError(f"Failed to store new master key in OS keyring: {exc}") from exc
-        else:
-            raise ValueError(f"Vault rekey is unsupported for encryption source '{old_crypto.source_id}'")
+        # 3. Delegate persistence to the active backend
+        old_crypto.persist_rekeyed_key(new_key_bytes)
 
         # 4. Clear the active crypto in memory so it reloads on next access
         self._crypto = None

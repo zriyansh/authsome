@@ -131,7 +131,6 @@ class TestVaultRekey:
         import sys
 
         sys.modules["keyring"] = MockKeyring  # type: ignore
-        monkeypatch.setattr("authsome.vault.kr", MockKeyring)
 
         # 1. Initialize store and vault in keyring mode
         app_store = LocalAppStore(tmp_path)
