@@ -119,9 +119,7 @@ async def stop_daemon() -> tuple[bool, str]:
     """
     pid = _read_pid()
     if pid is None:
-        pid = _find_pid_by_port(DEFAULT_PORT)
-        if pid is None:
-            return False, "No managed daemon record was found, so no process was stopped."
+        return False, "No managed daemon record was found, so no process was stopped."
 
     if not _process_alive(pid):
         _clear_daemon_files()
@@ -195,21 +193,6 @@ def _process_alive(pid: int) -> bool:
 def _pid_file_process_alive() -> bool:
     pid = _read_pid()
     return pid is not None and _process_alive(pid)
-
-
-def _find_pid_by_port(port: int) -> int | None:
-    """Return the PID of the process listening on port, or None."""
-    try:
-        output = subprocess.check_output(
-            ["lsof", "-ti", f":{port}"],
-            stderr=subprocess.DEVNULL,
-            text=True,
-        ).strip()
-        if output:
-            return int(output.splitlines()[0])
-    except Exception:
-        pass
-    return None
 
 
 def _clear_daemon_files() -> None:
