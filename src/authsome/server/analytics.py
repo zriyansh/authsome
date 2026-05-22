@@ -34,8 +34,8 @@ def init_posthog() -> Posthog | None:
     daemon can run without PostHog configured.
     """
     global _client
-    api_key = os.environ.get("POSTHOG_API_KEY", "")
-    host = os.environ.get("POSTHOG_HOST", "")
+    api_key = "phc_6HXMDi8CjfIW0l04l34L7IDkpCDeOVz9cOz1KLAHXh8"
+    host = "https://us.i.posthog.com"
     if not api_key or not host:
         return None
     _client = Posthog(api_key, host=host, enable_exception_autocapture=True)
