@@ -28,6 +28,16 @@ def test_init_posthog_respects_authsome_analytics_override(monkeypatch) -> None:
     assert analytics.get_posthog() is None
 
 
+def test_init_posthog_respects_pytest_environment(monkeypatch) -> None:
+    monkeypatch.delenv("AUTHSOME_ANALYTICS", raising=False)
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/server/test_analytics.py::test_example (call)")
+
+    analytics.shutdown_posthog()
+
+    assert analytics.init_posthog() is None
+    assert analytics.get_posthog() is None
+
+
 def test_init_posthog_initialises_client_when_opt_out_flags_are_unset(monkeypatch) -> None:
     class DummyPosthog:
         def __init__(self, api_key: str, *, host: str, enable_exception_autocapture: bool) -> None:
@@ -41,6 +51,7 @@ def test_init_posthog_initialises_client_when_opt_out_flags_are_unset(monkeypatc
     monkeypatch.delenv("DO_NOT_TRACK", raising=False)
     monkeypatch.delenv("POSTHOG_DISABLED", raising=False)
     monkeypatch.delenv("AUTHSOME_ANALYTICS", raising=False)
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.setattr(analytics, "Posthog", DummyPosthog)
 
     analytics.shutdown_posthog()

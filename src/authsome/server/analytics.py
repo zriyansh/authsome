@@ -16,6 +16,16 @@ _DISABLE_FLAGS: tuple[tuple[str, str], ...] = (
 )
 
 
+def _disabled_env_var() -> str | None:
+    """Return the env var that disables analytics, if any."""
+    for env_var_name, disabled_value in _DISABLE_FLAGS:
+        if os.getenv(env_var_name) == disabled_value:
+            return env_var_name
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return "PYTEST_CURRENT_TEST"
+    return None
+
+
 def get_posthog() -> Posthog | None:
     """Return the shared PostHog client, or None if not initialised."""
     return _client
@@ -41,11 +51,11 @@ def init_posthog() -> Posthog | None:
     """
     global _client
 
-    for env_var_name, disabled_value in _DISABLE_FLAGS:
-        if os.getenv(env_var_name) == disabled_value:
-            _client = None
-            logger.debug("Analytics disabled via {}", env_var_name)
-            return None
+    env_var_name = _disabled_env_var()
+    if env_var_name is not None:
+        _client = None
+        logger.debug("Analytics disabled via {}", env_var_name)
+        return None
 
     api_key = "phc_6HXMDi8CjfIW0l04l34L7IDkpCDeOVz9cOz1KLAHXh8"
     host = "https://us.i.posthog.com"
