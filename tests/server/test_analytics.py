@@ -1,34 +1,7 @@
 from authsome.server import analytics
 
 
-def test_init_posthog_respects_do_not_track(monkeypatch) -> None:
-    monkeypatch.setenv("DO_NOT_TRACK", "1")
-
-    analytics.shutdown_posthog()
-
-    assert analytics.init_posthog() is None
-    assert analytics.get_posthog() is None
-
-
-def test_init_posthog_respects_posthog_disabled(monkeypatch) -> None:
-    monkeypatch.setenv("POSTHOG_DISABLED", "1")
-
-    analytics.shutdown_posthog()
-
-    assert analytics.init_posthog() is None
-    assert analytics.get_posthog() is None
-
-
-def test_init_posthog_respects_authsome_analytics_override(monkeypatch) -> None:
-    monkeypatch.setenv("AUTHSOME_ANALYTICS", "0")
-
-    analytics.shutdown_posthog()
-
-    assert analytics.init_posthog() is None
-    assert analytics.get_posthog() is None
-
-
-def test_init_posthog_initialises_client_when_opt_out_flags_are_unset(monkeypatch) -> None:
+def test_init_posthog_respects_disable_flags_and_initialises_when_enabled(monkeypatch) -> None:
     class DummyPosthog:
         def __init__(self, api_key: str, *, host: str, enable_exception_autocapture: bool) -> None:
             self.api_key = api_key
@@ -38,10 +11,26 @@ def test_init_posthog_initialises_client_when_opt_out_flags_are_unset(monkeypatc
         def shutdown(self) -> None:
             return None
 
+    monkeypatch.setattr(analytics, "Posthog", DummyPosthog)
+
+    for env_var_name, disabled_value in (
+        ("DO_NOT_TRACK", "1"),
+        ("POSTHOG_DISABLED", "1"),
+        ("AUTHSOME_ANALYTICS", "0"),
+    ):
+        monkeypatch.delenv("DO_NOT_TRACK", raising=False)
+        monkeypatch.delenv("POSTHOG_DISABLED", raising=False)
+        monkeypatch.delenv("AUTHSOME_ANALYTICS", raising=False)
+        monkeypatch.setenv(env_var_name, disabled_value)
+
+        analytics.shutdown_posthog()
+
+        assert analytics.init_posthog() is None
+        assert analytics.get_posthog() is None
+
     monkeypatch.delenv("DO_NOT_TRACK", raising=False)
     monkeypatch.delenv("POSTHOG_DISABLED", raising=False)
     monkeypatch.delenv("AUTHSOME_ANALYTICS", raising=False)
-    monkeypatch.setattr(analytics, "Posthog", DummyPosthog)
 
     analytics.shutdown_posthog()
     client = analytics.init_posthog()
